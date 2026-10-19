@@ -4,6 +4,7 @@
   schedule.csv / grades.csv / exams.csv —— 由「从教务刷新」或 CLI fetch 生成
   schemes.json  —— 命名绩点方案（保研/综测…）：{"方案名": ["学期|课程", ...]}
   settings.json —— {"first_monday": "YYYY-MM-DD"}
+  schedule_overlay.json —— 同学自己对课表的增/删/改（刷新不覆盖，见 overlay.py）
 所有数据只在本机；网页不引用任何外部资源。
 """
 from __future__ import annotations
@@ -80,9 +81,58 @@ class Store:
             return
         self.p(name).write_text(json.dumps(obj, ensure_ascii=False, indent=1), encoding="utf-8")
 
-    def courses(self) -> list[core.Course]:
+    def official_courses(self) -> list[core.Course]:
+        """教务原课表（已含调停课合并）；刷新会整份覆盖。"""
         f = self.p("schedule.csv")
         return core.load_courses(str(f)) if f.exists() else []
+
+    # ---- 课表个人修改层：schedule_overlay.json，刷新永不覆盖 ----
+    OVERLAY = "schedule_overlay.json"
+    OVERLAY_UNDO = "schedule_overlay.undo.json"
+
+    def overlay_doc(self) -> dict:
+        from . import overlay as ov
+        try:
+            return ov.validate_doc(self._json(self.OVERLAY, None) or ov.empty())
+        except ValueError:
+            return ov.empty()
+
+    def schedule_view(self) -> tuple[list[dict], list[dict]]:
+        from . import overlay as ov
+        return ov.apply_overlay(self.official_courses(), self.overlay_doc()["ops"])
+
+    def courses(self) -> list[core.Course]:
+        """同学看到的课表 = 教务 + 调停课 + 个人修改（日历导出等都用这个）。"""
+        from . import overlay as ov
+        return ov.to_courses(self.schedule_view()[0])
+
+    def overlay_action(self, body: dict) -> None:
+        from . import overlay as ov
+        action = body.get("action")
+        with self.lock:
+            doc = self.overlay_doc()
+            if action in ("add", "hide", "edit"):
+                doc = {**doc, "ops": doc["ops"] + [ov.make_op(action, body, self.official_courses())]}
+            elif action == "remove":
+                doc = ov.remove(doc, str(body.get("id") or ""))
+            elif action == "ack":
+                doc = ov.rebase(doc, str(body.get("id") or ""), self.official_courses())
+            elif action == "detach":
+                doc = ov.detach(doc, str(body.get("id") or ""))
+            elif action == "reset":  # 恢复教务原样；留一份可撤销
+                if doc["ops"]:
+                    self._write_json(self.OVERLAY_UNDO, doc)
+                doc = ov.empty()
+            elif action == "undo_reset":
+                prev = self._json(self.OVERLAY_UNDO, None)
+                if not prev:
+                    raise ValueError("没有可以撤销的恢复操作")
+                doc = ov.validate_doc(prev)
+            elif action == "import":
+                doc = ov.validate_doc(body.get("doc"))
+            else:
+                raise ValueError("未知的课表修改操作")
+            self._write_json(self.OVERLAY, doc)
 
     def grades(self) -> list[core.Grade]:
         f = self.p("grades.csv")
@@ -222,6 +272,12 @@ class Store:
                 s["grade_help_seen"] = bool(upd["grade_help_seen"])
             self._write_json("settings.json", s)
 
+    def _schedule_snapshot(self) -> dict:
+        rows, issues = self.schedule_view()
+        return {"courses": rows, "schedule_issues": issues,
+                "schedule_edits": len(self.overlay_doc()["ops"]),
+                "schedule_can_undo_reset": self.p(self.OVERLAY_UNDO).exists()}
+
     def snapshot(self, source: str = "jwxt") -> dict:
         gs = self.grades()
         saved_import = self._json("imported_grades.json", None)
@@ -235,7 +291,7 @@ class Store:
         mtimes = [self.p(n).stat().st_mtime for n in ("schedule.csv", "grades.csv", "exams.csv")
                   if self.p(n).exists()]
         return {
-            "courses": [c.__dict__ for c in self.courses()],
+            **self._schedule_snapshot(),
             "grades": self.grade_records(source),
             "grade_source": "import" if imported else "jwxt",
             "has_imported_grades": saved_import is not None,
@@ -858,6 +914,10 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                 from urllib.parse import parse_qs
                 source = parse_qs(self.path.partition("?")[2]).get("grade_source", ["jwxt"])[0]
                 return self._json(store.snapshot("import" if source == "import" else "jwxt"))
+            if path == "/api/schedule/overlay":  # 备份导出：只含同学自己的修改
+                return self._send(200, json.dumps(store.overlay_doc(), ensure_ascii=False, indent=1).encode(),
+                                  "application/json; charset=utf-8",
+                                  {"Content-Disposition": 'attachment; filename="superjlu-schedule-edits.json"'})
             if path == "/api/grades/colleges":
                 links = json.loads((Path(__file__).parent / "data" / "grade_colleges.json").read_text(encoding="utf-8"))
                 return self._json({"ok": True, "links": [x for x in links["links"] if _link_ok(x["url"])]})
@@ -891,6 +951,9 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                                        **store.snapshot()})
                 elif self.path == "/api/schemes/delete":
                     store.delete_scheme(body.get("name", ""))
+                elif self.path == "/api/schedule/overlay":
+                    store.overlay_action(body)
+                    return self._json({"ok": True, **store._schedule_snapshot()})
                 elif self.path == "/api/settings":
                     store.save_settings(body)
                 elif self.path == "/api/rooms":
