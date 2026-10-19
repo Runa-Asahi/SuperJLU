@@ -57,7 +57,7 @@ def test_whitelist_and_limits(tmp_path):
     p = ui_prefs.update(tmp_path, {f"jlu-k{i}": "v" for i in range(100)})
     assert len(p) <= ui_prefs.MAX_KEYS
     assert len(json.dumps(ui_prefs.load(tmp_path))) <= ui_prefs.MAX_TOTAL
-    (tmp_path / ui_prefs.FILE).write_text("not json")
+    (tmp_path / ui_prefs.FILE).write_text("not json", encoding="utf-8")
     assert ui_prefs.load(tmp_path) == {}
 
 
@@ -93,5 +93,5 @@ window.__setTheme("system");
 if("jlu-theme" in store||JSON.stringify(posts[posts.length-1])!=='{"remove":["jlu-theme"]}')throw new Error("no sync");
 localStorage.setItem("other","1");if(posts.length!==1)throw new Error("non jlu synced");
 """
-    f = tmp_path / "h.js"; f.write_text(harness)
+    f = tmp_path / "h.js"; f.write_text(harness, encoding="utf-8")
     subprocess.run(["node", str(f)], check=True)
