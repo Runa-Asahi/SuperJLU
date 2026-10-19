@@ -261,6 +261,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  </div>
  <details id="rmore"><summary>更多条件</summary><div class="rgrid" id="rextra"><p class="sub">加载中…</p></div></details>
  <div class="row" style="margin-top:8px"><span style="flex:1"></span><button class="btn pri" id="rq">查询</button></div>
+ <p class="sub" id="rauto" role="status" style="margin:8px 0 0"></p>
  <p class="sub" id="rinfo" style="margin:8px 0 0">需要已保存会话；结果实时来自教务，自动翻页取全。</p></div>
  <div class="banner err room-error" id="room-error" role="alert" hidden><div><b>查询未成功</b><p class="sub" id="room-error-message"></p></div><button class="btn" id="room-switch-login" type="button">检查登录方式</button></div>
  <div class="card" id="rres" hidden></div></section>
@@ -627,12 +628,18 @@ function periodMap(){const p=D&&D.periods;return(p&&Object.keys(p).length)?p:DEF
 function periodsToStudy(){const a=+$("#rp1").value,b=+$("#rp2").value,m=periodMap(),x=m[a]||m[String(a)],y=m[b]||m[String(b)];if(x&&x[0])$("#rst").value=x[0];if(y&&y[1])$("#ret").value=y[1]}
 function studyToPeriods(){const s=$("#rst").value,e=$("#ret").value,m=periodMap();if(!s||!e||s>=e)return;let lo=null,hi=null;Object.keys(m).forEach(k=>{const n=+k,t=m[k];if(!(n>=1)||!t||t.length<2)return;if(t[0]<e&&t[1]>s){if(lo===null||n<lo)lo=n;if(hi===null||n>hi)hi=n}});if(lo!==null){$("#rp1").value=lo;$("#rp2").value=hi}}
 let _rSync=false;
-(function(){$("#rd").value=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);rdToWeek();periodsToStudy()})();
+/* 按当前时间自动选好「接下来两节」：正在上的或下一节开始，连续两节；当天课都结束了就选次日第 1-2 节。
+   用户手动改过日期或节次后不再覆盖。 */
+function roomNextSlot(map,now){const toM=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?+m[1]*60+ +m[2]:NaN};const ks=Object.keys(map).map(Number).filter(n=>n>=1&&map[n]&&map[n].length>=2&&!isNaN(toM(map[n][1]))).sort((a,b)=>a-b);const d=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(!ks.length)return{date:d,a:1,b:2};const cur=now.getHours()*60+now.getMinutes();const k=ks.find(n=>toM(map[n][1])>cur);if(k===undefined){d.setDate(d.getDate()+1);return{date:d,a:ks[0],b:ks[Math.min(1,ks.length-1)]}}const i=ks.indexOf(k);return{date:d,a:k,b:ks[Math.min(i+1,ks.length-1)]}}
+let _rTouched=false;
+function roomAutoSlot(){if(_rTouched)return;const s=roomNextSlot(periodMap(),new Date()),dd=s.date;$("#rd").value=dd.getFullYear()+"-"+String(dd.getMonth()+1).padStart(2,"0")+"-"+String(dd.getDate()).padStart(2,"0");$("#rp1").value=s.a;$("#rp2").value=s.b;rdToWeek();periodsToStudy();const n=new Date(),tomorrow=dd.getDate()!==n.getDate(),h=$("#rauto");if(h)h.textContent=`已按现在的时间选好${tomorrow?"明天":"今天"}第 ${s.a}${s.b!==s.a?"-"+s.b:""} 节，可以直接查询，也可以自己改。`}
+roomAutoSlot();
+["#rd","#rp1","#rp2","#rst","#ret","#rw","#rwd"].forEach(q=>{const e=$(q);if(e)["input","change"].forEach(ev=>e.addEventListener(ev,()=>{_rTouched=true;const h=$("#rauto");if(h)h.textContent=""}))});
 $("#rp1").addEventListener("change",()=>{if(_rSync)return;_rSync=true;try{if(+$("#rp2").value<+$("#rp1").value)$("#rp2").value=$("#rp1").value;periodsToStudy()}finally{_rSync=false}});
 $("#rp2").addEventListener("change",()=>{if(_rSync)return;_rSync=true;try{if(+$("#rp1").value>+$("#rp2").value)$("#rp1").value=$("#rp2").value;periodsToStudy()}finally{_rSync=false}});
 $("#rst").addEventListener("change",()=>{if(_rSync)return;_rSync=true;try{studyToPeriods()}finally{_rSync=false}});
 $("#ret").addEventListener("change",()=>{if(_rSync)return;_rSync=true;try{studyToPeriods()}finally{_rSync=false}});
-document.querySelectorAll("#rst-presets [data-sp]").forEach(b=>b.onclick=()=>{const[a,c]=b.dataset.sp.split("-").map(Number);$("#rp1").value=a;$("#rp2").value=c;periodsToStudy()});
+document.querySelectorAll("#rst-presets [data-sp]").forEach(b=>b.onclick=()=>{_rTouched=true;const[a,c]=b.dataset.sp.split("-").map(Number);$("#rp1").value=a;$("#rp2").value=c;periodsToStudy()});
 let RM="date",RR=[],RS={k:"name",d:1};
 function setRoomMode(m){RM=m;document.querySelectorAll("#rmode button").forEach(x=>x.classList.toggle("on",x.dataset.m===m));
  document.querySelectorAll(".m-date").forEach(e=>e.hidden=!(m==="date"||m==="study"));
@@ -654,7 +661,7 @@ $("#rcs").innerHTML=CAMPUSES.map(c=>`<button type="button" role="radio" data-c="
 document.querySelectorAll("#rcs button").forEach(b=>b.onclick=()=>pickCampus(b.dataset.c));
 let RMETA=false;
 async function roomsInit(){const last=lsGet(RCKEY);pickCampus(CAMPUSES.some(c=>c.code===last)?last:CAMPUSES[0].code);if(RMETA)return;RMETA=true;try{const t=await api("/api/rooms/types",{});$("#rt").innerHTML=opts(t.types,"全部");const f=await api("/api/rooms/fields",{});$("#rextra").innerHTML=f.fields.map(x=>`<label>${esc(x.caption||x.name)}<input data-f="${esc(x.name)}" placeholder="${esc(x.name)}"></label>`).join("")||'<p class="sub">元数据中没有其它检索字段</p>'}catch(e){RMETA=false;showRoomFailure(e)}}
-document.querySelector('nav button[data-t="js"]').addEventListener("click",()=>{if(!window.__rm){window.__rm=1;roomsInit()}});
+document.querySelector('nav button[data-t="js"]').addEventListener("click",()=>{roomAutoSlot();if(!window.__rm){window.__rm=1;roomsInit()}});
 const RCOLS=[["building","教学楼"],["kind","教室类型"],["name","教室名称"],["seats","上课座位数"],["exam_seats","考试座位数"]];
 function renderRooms(j){const box=$("#rres");box.hidden=false;const n=k=>["seats","exam_seats"].includes(k);const rs=[...RR].sort((a,b)=>{const x=a[RS.k],y=b[RS.k];return RS.d*(n(RS.k)?(+x||0)-(+y||0):String(x).localeCompare(String(y),"zh"))});
  const head=j.mode==="week"?`第${esc(j.weeks)}周 周${"一二三四五六日"[j.weekday-1]}`:`${esc(j.date)} <span class="sub">${j.week>0?"第"+j.week+"周 ":""}周${"一二三四五六日"[j.weekday-1]}</span>`;

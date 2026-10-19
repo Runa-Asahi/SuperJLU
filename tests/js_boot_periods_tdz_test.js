@@ -11,10 +11,12 @@ assert.ok(scripts.length >= 1, 'expected inline scripts');
 const main = scripts[scripts.length - 1];
 
 const defIdx = main.indexOf('const DEF_PERIODS=');
-const iifeIdx = main.indexOf('periodsToStudy()})();');
+const iifeIdx = main.indexOf('\nroomAutoSlot();');  // 打开页面时按当前时间选节次（原 IIFE）
+const touchedIdx = main.indexOf('let _rTouched=');
 assert.ok(defIdx >= 0, 'DEF_PERIODS missing');
 assert.ok(iifeIdx >= 0, 'rooms init IIFE missing');
-assert.ok(defIdx < iifeIdx, 'DEF_PERIODS must be initialized before periodsToStudy() IIFE (TDZ)');
+assert.ok(defIdx < iifeIdx, 'DEF_PERIODS must be initialized before roomAutoSlot() (TDZ)');
+assert.ok(touchedIdx >= 0 && touchedIdx < iifeIdx, '_rTouched must be declared before roomAutoSlot() (TDZ)');
 assert.ok(main.includes('setRoomMode'), 'setRoomMode must be restored');
 assert.ok(main.includes('rdToWeek'), 'date↔week sync must remain');
 assert.ok(main.includes('weekToRd'), 'week↔date sync must remain');

@@ -91,5 +91,6 @@ def test_roundtrip_presets():
 def test_def_periods_before_boot_iife():
     """v1.0.9 回归：IIFE 在 const DEF_PERIODS 前调用 periodsToStudy → TDZ → #boot 卡住。"""
     i_def = PAGE.index("const DEF_PERIODS=")
-    i_iife = PAGE.index("periodsToStudy()})();")
+    i_iife = PAGE.index("\nroomAutoSlot();")  # 原 IIFE，现在按当前时间自动选节次
     assert i_def < i_iife
+    assert PAGE.index("let _rTouched=") < i_iife
