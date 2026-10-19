@@ -34,10 +34,41 @@ def check_one(target, timeout=6):
     return result
 
 
+def _by_id(services):
+    return {s.get("id"): s for s in services if isinstance(s, dict) and s.get("id")}
+
+
+def advice_from_services(services):
+    """Plain-language hint from anonymous direct probes. Never claims VPN/OA proven."""
+    by = _by_id(services)
+    cas, jwxt, oa, vpn = by.get("cas"), by.get("jwxt"), by.get("oa"), by.get("vpn")
+    if not all((cas, jwxt, oa, vpn)):
+        return None
+    if not (cas.get("reachable") and vpn.get("reachable")):
+        return None
+    if jwxt.get("reachable") and oa.get("reachable"):
+        return None
+    parts = []
+    if not jwxt.get("reachable"):
+        parts.append("教务直连未通")
+    if not oa.get("reachable"):
+        parts.append("学校 OA 直连未通")
+    head = "、".join(parts) if parts else "校内入口直连未通"
+    # Do not claim OA-via-VPN works on this device; only guide login mode.
+    return (f"{head}，但统一认证与 WebVPN 门户可达，多见于校外网络。"
+            f"请到「更多 → 登录」选择「校外 WebVPN」后再登录/同步；"
+            f"本检测只测直连，不代表教务或 OA 已通过应用内 WebVPN 验收。")
+
+
 def check_all():
     with ThreadPoolExecutor(max_workers=len(TARGETS)) as executor:
         results = list(executor.map(check_one, TARGETS))
-    return {"ok": True, "checked_at": dt.datetime.now().isoformat(timespec="seconds"),
-            "python": sys.version.split()[0], "tls_library": ssl.OPENSSL_VERSION,
-            "services": results,
-            "note": "仅检测直连 HTTPS，不验证账号。学校 OA 可经校园网或学校 VPN 访问；应用内 WebVPN 模式下教务与 OA 同步均走 VPN。学院官网独立访问。"}
+    out = {"ok": True, "checked_at": dt.datetime.now().isoformat(timespec="seconds"),
+           "python": sys.version.split()[0], "tls_library": ssl.OPENSSL_VERSION,
+           "services": results,
+           "note": "仅检测直连 HTTPS，不验证账号。学校 OA 可经校园网或学校 VPN 访问；应用内 WebVPN 模式下教务与 OA 同步均走 VPN。学院官网独立访问。"}
+    hint = advice_from_services(results)
+    if hint:
+        out["hint"] = hint
+        out["pattern"] = "offcampus_direct_gap"
+    return out

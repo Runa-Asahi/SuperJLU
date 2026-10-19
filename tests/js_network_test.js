@@ -68,7 +68,25 @@ function verifyShortRoomFailures(){
  assert.equal(node('#room-error-message').textContent,'请选择校区');
  assert.equal(node('#room-switch-login').hidden,true);
 }
+
+function verifyNetworkCheckFooter(){
+ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+ const page=fs.readFileSync('jlu_toolkit/ui_page.py','utf8');
+ const line=page.split('\n').find(l=>l.startsWith('function networkCheckFooter('));
+ assert.ok(line, 'networkCheckFooter must exist');
+ const c=vm.createContext({esc});
+ vm.runInContext(line,c);
+ const withHint=c.networkCheckFooter({hint:'教务直连未通，请到「更多 → 登录」选择「校外 WebVPN」后再登录/同步；本检测只测直连，不代表已通过应用内 WebVPN 验收。'});
+ assert.match(withHint,/校外提示/);
+ assert.match(withHint,/校外 WebVPN/);
+ assert.match(withHint,/不会切换/);
+ assert.doesNotMatch(withHint,/校园服务/);
+ const plain=c.networkCheckFooter({services:[]});
+ assert.match(plain,/校外 WebVPN/);
+ assert.doesNotMatch(plain,/校外提示/);
+}
 (async()=>{
+ verifyNetworkCheckFooter();
  verifyChoice();
  verifyShortRoomFailures();
  await verifyManualStart();
