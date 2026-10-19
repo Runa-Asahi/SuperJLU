@@ -78,20 +78,27 @@ async function main(){
   await Promise.resolve();await Promise.resolve();
   assert.equal(refreshes,0);assert.equal(opened,0);
  }
+ // loadSubs must appear before fullRefresh so isolated extracts / early calls see it.
+ const loadSubsAt=page.indexOf('async function loadSubs(');
+ const fullRefreshAt=page.indexOf('async function fullRefresh(');
+ assert.ok(loadSubsAt!==-1&&fullRefreshAt!==-1&&loadSubsAt<fullRefreshAt,'loadSubs must be defined before fullRefresh');
  // A successful full refresh (including the one after login) updates the other
  // modules while retaining the imported transcript and unsaved selection.
  const refresh=page.split('\n').find(line=>line.startsWith('async function fullRefresh('));
+ let loadSubsCalls=0;
  const refreshed=vm.createContext({D:{...local},dirty:true,bootRefreshing:false,
   $:()=>({innerHTML:'refresh',disabled:false}),window:{__rm:1},
   setSyncInd:()=>{},
   api:async()=>({...remote,result:{}}),renderAll:()=>{},toast:()=>{},
-  refreshSummary:()=>'',loadOA:()=>Promise.resolve()});
+  refreshSummary:()=>'',loadOA:()=>Promise.resolve(),loadSubs:()=>{loadSubsCalls++;return Promise.resolve()}});
  vm.runInContext(helpers+refresh,refreshed);
  await refreshed.fullRefresh({});
+ await Promise.resolve();await Promise.resolve();
  assert.equal(refreshed.D.grade_source,'import');
  assert.equal(refreshed.D.grades,local.grades);
  assert.equal(refreshed.D.courses,remote.courses);
  assert.equal(refreshed.dirty,true);
+ assert.equal(loadSubsCalls,1,'fullRefresh must chain loadSubs after loadOA');
  console.log('Grade import: offline states, refresh preservation, file limits and document-wide drops passed.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1});

@@ -138,6 +138,8 @@ def test_oa_tab_always_loads_subscriptions():
     assert 'if(!OA){loadOA().then(loadSubs)}' not in PAGE
     # fullRefresh should also warm subscriptions after loadOA.
     assert 'loadOA().then(loadSubs).catch(()=>{})' in PAGE
+    # Avoid TDZ / isolated-extract ReferenceError: loadSubs before fullRefresh.
+    assert PAGE.index('async function loadSubs(') < PAGE.index('async function fullRefresh(')
 
 
 def test_oa_webvpn_link_only_redirects_to_official_portal(srv):
