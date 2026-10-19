@@ -17,7 +17,8 @@ assert.ok(defIdx >= 0, 'DEF_PERIODS missing');
 assert.ok(iifeIdx >= 0, 'rooms init IIFE missing');
 assert.ok(defIdx < iifeIdx, 'DEF_PERIODS must be initialized before roomAutoSlot() (TDZ)');
 assert.ok(touchedIdx >= 0 && touchedIdx < iifeIdx, '_rTouched must be declared before roomAutoSlot() (TDZ)');
-assert.ok(main.includes('setRoomMode'), 'setRoomMode must be restored');
+assert.ok(!main.includes('setRoomMode'), 'rooms mode tabs were removed (#113)');
+assert.ok(main.includes('roomQueryMode'), 'roomQueryMode must pick date/week query');
 assert.ok(main.includes('rdToWeek'), 'date↔week sync must remain');
 assert.ok(main.includes('weekToRd'), 'week↔date sync must remain');
 
