@@ -913,10 +913,9 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                         return self._json({"ok": True, **login.start(body.get("username", ""), body.get("password", ""),
                                                                      body.get("remember", True) is not False)})
                     except jwxt.NetworkError as e:
-                        from . import netstatus
                         return self._json({
                             "ok": False,
-                            "error": netstatus.with_direct_hint(str(e)),
+                            "error": str(e),
                             "network": True,
                             "vpn_hint": True,
                             "vpn_url": vpn_portal_url(),
