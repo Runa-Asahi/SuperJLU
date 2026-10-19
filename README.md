@@ -69,11 +69,7 @@
 
 ## 微信小程序（实验版）
 
-[wechat/](wechat/README.md) 提供独立的微信原生小程序。默认通过本人手机 Safari 的学校教务会话读取数据，经复制、预览和确认后导入本机，可离线查看课表；更新时需手动重新读取，不需要电脑常开。可选后端和原生直连适配仍属试验功能，受学校网络与页面校验限制。运行方式、数据处理和已验证范围见该目录说明。
-
-## 致谢
-
-感谢 [@Aohpup](https://github.com/Aohpup) 在 [PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44) 中贡献教务成绩优先的加权分析、自定义模板与可选成绩单导入；该贡献经 [PR #45](https://github.com/Runa-Asahi/SuperJLU/pull/45) 保留作者署名并集成至开发分支。
+仓库 [`wechat/`](wechat/README.md) 里有一份实验版微信原生小程序（手机浏览器辅助同步课表等）。**本仓库其他维护者与贡献者不负责小程序的使用支持与后续开发。** 若你有微信小程序的使用需求，请直接联系小程序负责人 [@Dramadan-wow](https://github.com/Dramadan-wow)：`dramadan070925@qq.com`。
 
 ## 常见问题
 
@@ -104,6 +100,13 @@
 SuperJLU 也提供命令行工具、本地 API，以及接入 AI 助手（MCP）的能力，可以让 Claude、Cursor 等直接回答「我明天有什么课」「这学期绩点多少」。安装方式和全部命令见 [命令行与开发者文档](docs/cli.md)。
 
 本地修改源码后，Windows 可运行仓库内的 `启动SuperJLU.cmd`（需先安装 uv），或在项目目录执行 `uv run --extra captcha python start_local.py`。启动器会运行当前源码、自动打开浏览器，并打印实际地址；8765 已占用时使用其他端口，测试时以本次输出的网址为准。使用期间请保留启动窗口，按 Ctrl+C 停止。
+
+## 特别鸣谢
+
+- **[@Dramadan-wow](https://github.com/Dramadan-wow)**：通过 [PR #82](https://github.com/Runa-Asahi/SuperJLU/pull/82) 独立完成微信小程序端（实验版），是目前最大的一次外部贡献。小程序相关需求请联系：`dramadan070925@qq.com`。
+- **[@Aohpup](https://github.com/Aohpup)**：持续改进成绩页与校外网络——[PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44) / [#45](https://github.com/Runa-Asahi/SuperJLU/pull/45) 成绩加权与模板导入、[PR #67](https://github.com/Runa-Asahi/SuperJLU/pull/67) 模板反馈与安卓确认框、[PR #81](https://github.com/Runa-Asahi/SuperJLU/pull/81) 成绩单解析与核对、[PR #85](https://github.com/Runa-Asahi/SuperJLU/pull/85) 应用内 WebVPN 与校外登录。
+
+欢迎关注他们的 GitHub。其他项目参与者的贡献属于桌面端 / Android App 等主线功能，**与微信小程序无关**。
 
 ---
 
