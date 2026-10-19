@@ -71,4 +71,8 @@ def check_all():
     if hint:
         out["hint"] = hint
         out["pattern"] = "offcampus_direct_gap"
+    from . import netstatus
+    device_hint = netstatus.current_direct_hint()
+    if device_hint:
+        out["device_hint"] = device_hint
     return out

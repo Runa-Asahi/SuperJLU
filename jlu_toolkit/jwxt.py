@@ -1090,8 +1090,11 @@ class JwxtClient:
                 code, html, final, _ = self._follow_redirects(final, html, code)
             except NetworkError as error:
                 hint = "可通过应用内 WebVPN 继续，无需重发验证码。" if can_connect else ""
-                raise NetworkError("二次认证已返回跳转，但后续连接失败；尚未完成登录。" + str(error) + hint,
-                                   error.kind, can_connect) from error
+                message = "二次认证已返回跳转，但后续连接失败；尚未完成登录。" + str(error) + hint
+                if self.route == "direct":
+                    from . import netstatus
+                    message = netstatus.with_direct_hint(message)
+                raise NetworkError(message, error.kind, can_connect) from error
         host = urllib.parse.urlparse(final).hostname or ""
         if "验证码错误" in html:
             return LoginStep.FAILED
