@@ -130,6 +130,16 @@ def test_page_has_oa_tab():
     # CLI watch/notices wording may appear in empty-state copy; do not require it.
 
 
+def test_oa_tab_always_loads_subscriptions():
+    """Keyword subscription UI must load even when OA was already filled by refresh."""
+    from jlu_toolkit.ui_page import PAGE
+    # Tab click must call loadSubs whether or not OA is already loaded.
+    assert '(OA?Promise.resolve():loadOA()).then(loadSubs)' in PAGE
+    assert 'if(!OA){loadOA().then(loadSubs)}' not in PAGE
+    # fullRefresh should also warm subscriptions after loadOA.
+    assert 'loadOA().then(loadSubs).catch(()=>{})' in PAGE
+
+
 def test_oa_webvpn_link_only_redirects_to_official_portal(srv):
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, *args, **kwargs): return None
