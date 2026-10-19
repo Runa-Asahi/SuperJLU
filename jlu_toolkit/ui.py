@@ -804,6 +804,11 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
             if path == "/api/network/state":
                 from . import webvpn
                 return self._json(webvpn.state())
+            if path == "/api/network/device":
+                # 只读：Android 默认网络是 Wi-Fi 还是移动数据；桌面端恒为 unknown、无提示
+                from . import netstatus
+                info = netstatus.status()
+                return self._json({"ok": True, **info, "direct_hint": netstatus.direct_hint(info)})
             if path == "/api/oa/webvpn":
                 # Navigation only: never forwards app cookies or user input.
                 self.send_response(302)
@@ -827,6 +832,13 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                         return self._json(r or {"ok": False, "error": "本地没有这条通知"}, 200 if r else 404)
                 except ValueError as e:
                     return self._json({"ok": False, "error": str(e)}, 400)
+            if path == "/api/update":  # 只读：查询公开发布页是否有新版本，不强制更新
+                from . import update_check
+                from urllib.parse import parse_qs, urlsplit
+                q = parse_qs(urlsplit(self.path).query)
+                if q.get("local") == ["1"]:  # 关闭自动检查时只显示本机版本，不联网
+                    return self._json({"ok": True, "current": update_check.__version__, "has_update": False})
+                return self._json(update_check.check(force=q.get("force") == ["1"]))
             if path == "/api/links":
                 from . import sso
                 j = campus_links_api()
@@ -906,9 +918,10 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                         return self._json({"ok": True, **login.start(body.get("username", ""), body.get("password", ""),
                                                                      body.get("remember", True) is not False)})
                     except jwxt.NetworkError as e:
+                        from . import netstatus
                         return self._json({
                             "ok": False,
-                            "error": str(e),
+                            "error": netstatus.with_direct_hint(str(e)),
                             "network": True,
                             "vpn_hint": True,
                             "vpn_url": vpn_portal_url(),
