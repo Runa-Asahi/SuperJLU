@@ -162,11 +162,19 @@ def _note(a: Adjustment, template: Optional[core.Course]) -> str:
 def apply_adjustments(courses: Iterable[core.Course], adjustments: Iterable[Adjustment]
                       ) -> tuple[list[core.Course], list[dict]]:
     """返回 (合并后课表, 变动说明)。不修改入参。有教学班 ID 时按它匹配，否则按课程名。"""
+    out, notes, _ = merge(courses, adjustments)
+    return out, notes
+
+
+def merge(courses: Iterable[core.Course], adjustments: Iterable[Adjustment]
+          ) -> tuple[list[core.Course], list[dict], list[core.Course]]:
+    """同 apply_adjustments，另返回「停课」的那几节（周次只含停掉的周、adj 为说明），供课表灰显。"""
     out = [replace(c, weeks=list(c.weeks)) for c in courses]
     notes: list[dict] = []
+    cancelled: list[core.Course] = []
     for a in adjustments:
         note = {"course": a.name, "kind": a.kind, "removed_weeks": [], "added_weeks": [],
-                "skipped": ""}
+                "skipped": "", "applied_at": a.applied_at}
         template: Optional[core.Course] = None
         if a.old is not None:
             gone = set(a.old.weeks)
@@ -176,6 +184,8 @@ def apply_adjustments(courses: Iterable[core.Course], adjustments: Iterable[Adju
                     hit = sorted(gone & set(c.weeks))
                     note["removed_weeks"] = sorted(set(note["removed_weeks"]) | set(hit))
                     out[i] = replace(c, weeks=[w for w in c.weeks if w not in gone])
+                    if a.new is None:  # 停课：留一份灰显用
+                        cancelled.append(replace(c, weeks=hit, adj=_note(a, c)))
         if a.new is not None:
             if template is None:
                 template = next((c for c in out if _same(c, a)), None)
@@ -194,7 +204,7 @@ def apply_adjustments(courses: Iterable[core.Course], adjustments: Iterable[Adju
         if not note["removed_weeks"] and not note["added_weeks"]:
             note["skipped"] = "课表中未找到原安排或已包含该调整"
         notes.append(note)
-    return [c for c in out if c.weeks], notes
+    return [c for c in out if c.weeks], notes, cancelled
 
 
 def fetch_adjustments(client, xnxqdm: str) -> list[Adjustment]:

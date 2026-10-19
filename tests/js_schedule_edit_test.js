@@ -77,5 +77,9 @@ const K=ctx.KB,J=x=>x===undefined?x:JSON.parse(JSON.stringify(x)),eq=(a,b)=>asse
  assert.equal(node('#adj-on').checked,false);assert.match(node('#adj-info').textContent,/已关闭/);
  ctx.D={};K.renderAdjToggle();assert.equal(node('#adj-on').checked,true);  // 默认开
  for(const a of [{enabled:false},{enabled:true,applied:1},{}])assert.ok(!/SUPERJLU|环境变量|json|api/i.test(K.adjInfoText(a)));
+ // 停课灰显
+ assert.equal(K.kbCls({src:'cancelled',adj:'停课：原 周一'}),' cancelled');
+ assert.match(K.kbSrcText({src:'cancelled',adj:'停课：原 周一 第1-2节 第8周 · 经信A101（2026-10-01 申请）'}),/^教务停课：原 周一.*申请/);
+ assert.match(K.adjInfoText({enabled:true,applied:2}),/灰色带「停」字/);
  console.log('js_schedule_edit_test ok');
 })().catch(e=>{console.error(e);process.exit(1)});

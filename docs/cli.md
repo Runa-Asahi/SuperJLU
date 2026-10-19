@@ -46,6 +46,7 @@ jlu-toolkit ics examples/schedule.csv --first-monday 2026-09-07 -o 课表.ics
 jlu-toolkit gpa examples/grades.csv --term 2025-2026-1   # 简单学分加权，见下方「绩点说明」
 jlu-toolkit today examples/schedule.csv --week 3 --weekday 1
 ```
+省略 CSV 路径时，`ics` / `today` 读 App 的数据目录，和 App 看到的是同一份课表（教务课表 + 调课/停课〔按 App 设置〕+ 自己的修改）；`fetch` 导出的 `schedule.csv` 也是这一份。MCP 的 `courses_on_day` 同理。
 CSV 格式参考 `examples/`。周次支持 `1-16`、`1-15单`、`2-16双`、`1,3,5`。
 
 ## 从教务系统自动拉取（含二次认证）

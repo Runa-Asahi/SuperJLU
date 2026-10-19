@@ -81,31 +81,22 @@ class Store:
             return
         self.p(name).write_text(json.dumps(obj, ensure_ascii=False, indent=1), encoding="utf-8")
 
+    # ---- 课表：读取统一走 timetable.py（App / iCal / 命令行 / MCP 同一份） ----
+    OVERLAY = "schedule_overlay.json"
+    OVERLAY_UNDO = "schedule_overlay.undo.json"
+
     def jwxt_courses(self) -> list[core.Course]:
         """教务原课表（schedule.csv，刷新整份覆盖；不含调课）。"""
-        f = self.p("schedule.csv")
-        return core.load_courses(str(f)) if f.exists() else []
+        from . import timetable
+        return timetable.jwxt_courses(self.root)
 
     def adjustments_enabled(self) -> bool:
-        v = self.settings().get("apply_adjustments")
-        return v is None or bool(v)
+        from . import timetable
+        return timetable.adjustments_enabled(self.root)
 
     def _adjustments(self) -> list:
-        """本学期已取到的调停课（schedule_adjustments.json）；学期不符或文件损坏时为空。"""
-        from . import adjust
-        d = self._json("schedule_adjustments.json", None)
-        if not isinstance(d, dict) or not isinstance(d.get("items"), list):
-            return []
-        term = self.current_term()
-        if term and d.get("term") and d["term"] != term:
-            return []
-        out = []
-        for x in d["items"]:
-            try:
-                out.append(adjust.Adjustment.from_dict(x))
-            except (KeyError, TypeError, ValueError):
-                continue
-        return out
+        from . import timetable
+        return timetable.load_adjustments(self.root, self.current_term())
 
     def official_courses(self) -> list[core.Course]:
         """教务课表 + 调停课（设置开着时）；个人修改叠加在它之上。"""
@@ -117,45 +108,43 @@ class Store:
                 cs, _ = adjust.apply_adjustments(cs, adjs)
         return cs
 
-    def adjustments_info(self) -> dict:
+    def timetable_view(self) -> dict:
+        from . import timetable
+        return timetable.view(self.root)
+
+    def adjustments_info(self, v: Optional[dict] = None) -> dict:
+        from . import adjust
+        v = v or self.timetable_view()
         d = self._json("schedule_adjustments.json", None)
         d = d if isinstance(d, dict) else {}
-        adjs = self._adjustments()
-        applied = 0
-        if adjs:
-            from . import adjust
+        adjs = v["adjustments"]
+        applied = v["applied"]
+        if not v["enabled"] and adjs:  # 关着时也告诉同学「有几处」
             applied = sum(1 for n in adjust.apply_adjustments(self.jwxt_courses(), adjs)[1] if not n["skipped"])
-        return {"enabled": self.adjustments_enabled(), "count": len(adjs), "applied": applied,
-                "fetched_at": d.get("fetched_at") if adjs or d.get("term") == self.current_term() else None}
-
-    # ---- 课表个人修改层：schedule_overlay.json，刷新永不覆盖 ----
-    OVERLAY = "schedule_overlay.json"
-    OVERLAY_UNDO = "schedule_overlay.undo.json"
+        return {"enabled": v["enabled"], "count": len(adjs), "applied": applied,
+                "cancelled": sum(1 for r in v["rows"] if r["src"] == "cancelled"),
+                "fetched_at": d.get("fetched_at") if adjs else None}
 
     def current_term(self) -> str:
-        """课表所属学期：刷新课表时记下的学期代码，没有就用校历的。"""
-        return str((self._json("schedule_meta.json", {}) or {}).get("term")
-                   or self.calendar().get("term") or "")
+        from . import timetable
+        return timetable.current_term(self.root)
 
     def overlay_doc(self) -> dict:
-        from . import overlay as ov
-        try:
-            return ov.normalize(self._json(self.OVERLAY, None) or ov.empty(), self.current_term())
-        except ValueError:
-            return ov.empty()
+        from . import timetable
+        return timetable.load_overlay(self.root, self.current_term())
 
     def overlay_ops(self) -> list:
         from . import overlay as ov
         return ov.term_ops(self.overlay_doc(), self.current_term())
 
     def schedule_view(self) -> tuple[list[dict], list[dict]]:
-        from . import overlay as ov
-        return ov.apply_overlay(self.official_courses(), self.overlay_ops())
+        v = self.timetable_view()
+        return v["rows"], v["issues"]
 
     def courses(self) -> list[core.Course]:
-        """同学看到的课表 = 教务 + 调停课 + 个人修改（日历导出等都用这个）。"""
-        from . import overlay as ov
-        return ov.to_courses(self.schedule_view()[0])
+        """同学看到的课表 = 教务 + 调停课 + 个人修改（日历导出等都用这个；不含灰显的停课）。"""
+        from . import timetable
+        return timetable.courses(self.root)
 
     def overlay_action(self, body: dict) -> None:
         from . import overlay as ov
@@ -337,12 +326,13 @@ class Store:
             self._write_json("settings.json", s)
 
     def _schedule_snapshot(self) -> dict:
-        rows, issues = self.schedule_view()
+        v = self.timetable_view()
+        rows, issues = v["rows"], v["issues"]
         doc, term = self.overlay_doc(), self.current_term()
         ops = doc["terms"].get(term, [])
         undo = self._json(self.OVERLAY_UNDO, None)
         return {"courses": rows, "schedule_issues": issues, "schedule_ops": ops,
-                "schedule_adjust": self.adjustments_info(),
+                "schedule_adjust": self.adjustments_info(v),
                 "schedule_edits": len(ops), "schedule_term": term,
                 "schedule_other_terms": sum(len(v) for k, v in doc["terms"].items() if k != term),
                 "schedule_can_undo_reset": isinstance(undo, dict) and undo.get("term") == term

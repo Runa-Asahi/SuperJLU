@@ -1459,6 +1459,7 @@ def row_to_course(row: dict) -> Optional[core.Course]:
         weeks=weeks,
         jxbid=_emap_str(row.get("JXBID")),
         kch=_emap_str(row.get("KCH")),
+        istk=_emap_str(row.get("ISTK")) in ("1", "是") or _emap_str(row.get("ISTK_DISPLAY")) == "是",
     )
 
 
@@ -1508,7 +1509,7 @@ def _first_float(row: dict, keys) -> Optional[float]:
 def export_courses_csv(courses: Iterable[core.Course], path: str) -> None:
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(
-            f, fieldnames=["课程", "教师", "地点", "星期", "开始节", "结束节", "周次", "教学班", "课程号"]
+            f, fieldnames=["课程", "教师", "地点", "星期", "开始节", "结束节", "周次", "教学班", "课程号", "教务调课标记"]
         )
         w.writeheader()
         for c in courses:
@@ -1523,6 +1524,7 @@ def export_courses_csv(courses: Iterable[core.Course], path: str) -> None:
                     "周次": _weeks_to_csv(c.weeks),
                     "教学班": getattr(c, "jxbid", ""),
                     "课程号": getattr(c, "kch", ""),
+                    "教务调课标记": "是" if getattr(c, "istk", False) else "",
                 }
             )
 

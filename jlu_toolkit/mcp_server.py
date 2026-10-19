@@ -1,5 +1,5 @@
 """MCP 接口：让 Claude、Cursor 等 AI 助手直接查询你的课表和绩点。数据只从本地文件读取。
-环境变量 JLU_SCHEDULE_CSV / JLU_GRADES_CSV 指定文件路径。"""
+环境变量 JLU_SCHEDULE_CSV / JLU_GRADES_CSV 指定文件路径；课表省略时读数据目录（与 App 同一份）。"""
 import os
 from typing import Optional
 from . import core
@@ -10,8 +10,11 @@ def main():
 
     @mcp.tool()
     def courses_on_day(week: int, weekday: int) -> list:
-        """查询第 week 周星期 weekday（1-7）的课程。"""
-        return [c.__dict__ for c in core.courses_on(core.load_courses(os.environ["JLU_SCHEDULE_CSV"]), week, weekday)]
+        """查询第 week 周星期 weekday（1-7）的课程（与 App 同一份：教务 + 调停课 + 个人修改）。"""
+        from . import timetable, ui
+        csv_path = os.environ.get("JLU_SCHEDULE_CSV")
+        cs = timetable.courses_from_csv(csv_path) if csv_path else timetable.courses(ui.data_dir())
+        return [c.__dict__ for c in core.courses_on(cs, week, weekday)]
 
     @mcp.tool()
     def compute_gpa(term: str = "") -> dict:

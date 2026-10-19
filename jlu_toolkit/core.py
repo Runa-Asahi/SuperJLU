@@ -12,6 +12,7 @@ class Course:
     jxbid: str = ""   # 教学班 ID（教务 JXBID）；旧 7 列 CSV 没有，为空
     kch: str = ""     # 课程号（KCH）
     adj: str = ""     # 由教务调课生成的这节课的说明（只在读取时合并产生，不写入 CSV）
+    istk: bool = False  # 教务课表 ISTK=1：教务标记这门课有调/停课（只作提示，详情以调课接口为准）
 
 @dataclass
 class Grade:
@@ -35,7 +36,8 @@ def load_courses(path):
     with open(path, encoding="utf-8-sig") as f:
         return [Course(r["课程"], r.get("教师",""), r.get("地点",""), int(r["星期"]),
                        int(r["开始节"]), int(r["结束节"]), parse_weeks(r["周次"]),
-                       (r.get("教学班") or "").strip(), (r.get("课程号") or "").strip())
+                       (r.get("教学班") or "").strip(), (r.get("课程号") or "").strip(), "",
+                       (r.get("教务调课标记") or "").strip() == "是")
                 for r in csv.DictReader(f)]
 
 def load_grades(path):

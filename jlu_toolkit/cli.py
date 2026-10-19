@@ -59,9 +59,9 @@ def _main(argv=None):
     st.add_argument("--check", action="store_true", help="访问教务一次确认会话是否仍有效")
     st.add_argument("--json", action="store_true")
 
-    a = sub.add_parser("ics", help="课表 CSV 导出 iCal")
-    a.add_argument("csv")
-    a.add_argument("--first-monday", required=True)
+    a = sub.add_parser("ics", help="课表导出 iCal（与 App 同一份：教务 + 调停课 + 个人修改）")
+    a.add_argument("csv", nargs="?", help="schedule.csv 路径；省略则读数据目录")
+    a.add_argument("--first-monday", help="第一周周一 YYYY-MM-DD；省略则用校历/设置")
     a.add_argument("-o", default="schedule.ics")
 
     b = sub.add_parser("gpa", help="计算绩点；或 --probe 扫描教务官方绩点接口")
@@ -71,8 +71,8 @@ def _main(argv=None):
     b.add_argument("-o", "--out", help="--probe 报告路径")
     b.add_argument("--debug", action="store_true")
 
-    c = sub.add_parser("today", help="查看某周某天的课")
-    c.add_argument("csv")
+    c = sub.add_parser("today", help="查看某周某天的课（与 App 同一份课表）")
+    c.add_argument("csv", nargs="?", help="schedule.csv 路径；省略则读数据目录")
     c.add_argument("--week", type=int, required=True)
     c.add_argument("--weekday", type=int, required=True)
 
@@ -221,9 +221,14 @@ def _main(argv=None):
 
     x = p.parse_args(argv)
     if x.cmd == "ics":
-        open(x.o, "w", encoding="utf-8").write(
-            core.to_ics(core.load_courses(x.csv), x.first_monday)
-        )
+        from . import timetable, ui
+        root = timetable.root_for_csv(x.csv) if x.csv else ui.data_dir()
+        st = ui.Store(root)
+        fm = x.first_monday or st.first_monday()
+        if not fm:
+            print("缺少开学日期：请加 --first-monday YYYY-MM-DD，或先同步校历", file=sys.stderr); sys.exit(2)
+        cs = timetable.courses_from_csv(x.csv) if x.csv else timetable.courses(root)
+        open(x.o, "w", encoding="utf-8").write(core.to_ics(cs, fm, st.periods() or None))
         print(f"已导出 {x.o}")
     elif x.cmd == "gpa":
         if x.probe:
@@ -242,7 +247,9 @@ def _main(argv=None):
                 return
             print(json.dumps(core.gpa(core.load_grades(x.csv), x.term), ensure_ascii=False))
     elif x.cmd == "today":
-        for k in core.courses_on(core.load_courses(x.csv), x.week, x.weekday):
+        from . import timetable, ui
+        cs = timetable.courses_from_csv(x.csv) if x.csv else timetable.courses(ui.data_dir())
+        for k in core.courses_on(cs, x.week, x.weekday):
             print(f"第{k.start}-{k.end}节 {k.name} @ {k.location}")
     elif x.cmd == "sessions":
         _cmd_sessions(x)
@@ -484,6 +491,34 @@ def _ensure_login(x) -> jwxt.JwxtClient:
     return client
 
 
+def _fetch_merged_schedule(client, term, out_path):
+    """命令行导出与 App 同一份课表：教务 + 调停课（按 App 设置）+ 个人修改（读数据目录，不写）。
+
+    导出目标正好是数据目录的 schedule.csv 时只写教务原样（App 读取时再合并，避免合并两次）。"""
+    from pathlib import Path
+    from . import adjust, overlay as ov, timetable, ui
+    term = term or client.current_semester() or ""
+    raw = client.fetch_schedule(term)
+    root = ui.data_dir()
+    try:
+        if Path(out_path).expanduser().resolve() == (root / "schedule.csv").resolve():
+            return raw, "（教务原样；App 读取时合并调课和个人修改）"
+    except OSError:
+        pass
+    enabled = timetable.adjustments_enabled(root)
+    adjs: list = []
+    if enabled:
+        try:
+            adjs = adjust.fetch_adjustments(client, term)
+        except Exception as e:  # noqa: BLE001 —— 调课读不到不影响课表导出
+            print(f"（调课信息暂未获取：{type(e).__name__}，按教务原课表导出）", file=sys.stderr)
+    ops = ov.term_ops(timetable.load_overlay(root, term), term)
+    v = timetable.build(raw, adjs, ops, enabled)
+    for i in v["issues"]:
+        print(f"（个人修改提示：{i.get('name', '')} {i['message']}）", file=sys.stderr)
+    return timetable.to_courses(v["rows"]), f"（调课 {v['applied']} 处，个人修改 {len(ops)} 处）"
+
+
 def _cmd_fetch(x):
     if x.probe:
         print(json.dumps(jwxt.probe_reachability(), ensure_ascii=False, indent=2))
@@ -497,9 +532,9 @@ def _cmd_fetch(x):
 
     try:
         if x.what in ("all", "schedule"):
-            courses = client.fetch_schedule(x.term)
+            courses, extra = _fetch_merged_schedule(client, x.term, x.schedule_out)
             jwxt.export_courses_csv(courses, x.schedule_out)
-            print(f"课表 {len(courses)} 门 → {x.schedule_out}")
+            print(f"课表 {len(courses)} 门{extra} → {x.schedule_out}")
         if x.what in ("all", "grades"):
             grades = client.fetch_grades()
             jwxt.export_grades_csv(grades, x.grades_out)

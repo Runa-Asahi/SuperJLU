@@ -217,7 +217,7 @@ def test_real_row_regression(tmp_path):
     snap = ui.Store(tmp_path).snapshot()
     adj_rows = [r for r in snap["courses"] if r.get("adj")]
     assert len(adj_rows) == 1 and adj_rows[0]["weekday"] == 4 and adj_rows[0]["jxbid"] == a.jxbid
-    assert snap["schedule_adjust"] == {"enabled": True, "count": 1, "applied": 1, "fetched_at": None}
+    assert snap["schedule_adjust"] == {"enabled": True, "count": 1, "applied": 1, "cancelled": 0, "fetched_at": None}
 
 
 def test_match_by_jxbid_not_name():
