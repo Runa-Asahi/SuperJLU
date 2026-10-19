@@ -13,7 +13,7 @@ from typing import Optional
 from . import core
 from . import exams as ex
 
-LOGIN_HINT = "请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步"
+LOGIN_HINT = "请先用新版 SuperJLU App 登录同步一次，或运行 jlu-toolkit sync"
 
 
 def _root(root=None) -> Path:
@@ -57,13 +57,18 @@ def adjustments(root=None) -> dict:
     r = _root(root)
     if not (r / "schedule_adjustments.json").exists() and not (r / "schedule.csv").exists():
         return _err("课表和调课记录")
+    synced = (r / "schedule_adjustments.json").exists()
     v = timetable.view(r)
     items = []
     for a in v["adjustments"]:
         items.append({"course": a.name, "kind": a.kind or "调课", "before": _slot(a.old), "after": _slot(a.new),
                       "new_location": a.new_location, "new_teacher": a.new_teacher, "applied_at": a.applied_at})
-    return {"term": v.get("term", ""), "auto_apply": v["enabled"], "count": len(items),
-            "applied_to_timetable": v["applied"], "items": items}
+    out = {"term": v.get("term", ""), "auto_apply": v["enabled"], "count": len(items),
+           "applied_to_timetable": v["applied"], "items": items, "synced": synced}
+    if not synced:
+        out["count"] = None
+        out["note"] = f"还没同步过调课信息，不代表没有调课；{LOGIN_HINT}。"
+    return out
 
 
 # ───────── 成绩 / 绩点 ─────────
@@ -160,6 +165,8 @@ def _exams(root=None) -> list:
 def exams(include_past: bool = False, root=None, now: Optional[dt.datetime] = None):
     es = _exams(root)
     if not es:
+        if os.environ.get("JLU_EXAMS_CSV") or (_root(root) / "exams.csv").exists():
+            return {"count": 0, "exams": [], "note": "已经同步过考试安排，目前没有安排考试。"}
         return _err("考试安排")
     now = now or dt.datetime.now()
     lst = sorted(es, key=lambda e: (not e.start, e.start)) if include_past else ex.upcoming(es, now)

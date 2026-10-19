@@ -27,7 +27,7 @@
    ```
    然后直接问 AI：「我明天有什么课？」「离下一场考试还有几天？」「按保研加权我的绩点是多少？」「我还差哪些课组的学分？」「这周有没有调课？」「计算机学院最近有什么通知？」
 
-说明：登录需要微信验证码，所以 **MCP 从不自己登录**，只读取 App 或命令行保存的会话和数据。数据在本机 `~/.config/jlu-toolkit/data`（Windows 为 `%USERPROFILE%\.config\jlu-toolkit\data`）。同一台电脑上，Windows 版 `SuperJLU.exe`、`jlu-toolkit` 和 MCP 用的是同一份数据和登录状态，在 App 里登录同步过就能直接用；安卓 App 的数据存在手机上，电脑上的 MCP 读不到，需要在电脑上再登录一次。会话过期时，工具会提示「请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步」。
+说明：登录需要微信验证码，所以 **MCP 从不自己登录**，只读取 App 或命令行保存的会话和数据。数据在本机 `~/.config/jlu-toolkit/data`（Windows 为 `%USERPROFILE%\.config\jlu-toolkit\data`）。同一台电脑上，Windows 版 `SuperJLU.exe`、`jlu-toolkit` 和 MCP 用的是同一份数据和登录状态，在 App 里登录同步过就能直接用；安卓 App 的数据存在手机上，电脑上的 MCP 读不到，需要在电脑上再登录一次。会话过期时，工具会提示「请先用新版 SuperJLU App 登录同步一次，或运行 jlu-toolkit sync」。
 
 ## 安装命令行版
 
@@ -265,7 +265,7 @@ MCP 默认读数据目录 `~/.config/jlu-toolkit/data`（Windows：`%USERPROFILE
 | `college_notices(college, keyword, limit, refresh)` | 学院官网通知（refresh 才联网，公开页面无需登录） |
 | `session_status` / `sessions_status` | 登录会话状态（不联网） |
 
-本地没有数据或会话过期时，工具返回「请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步」。
+本地没有数据或会话过期时，工具返回「请先用新版 SuperJLU App 登录同步一次，或运行 jlu-toolkit sync」。还没同步过调课时，`timetable_adjustments` 会说明「还没同步过调课信息」，不会显示成 0 条；同步过但没有考试时，`exams` 会返回「目前没有安排考试」。
 
 ## 其它只读命令
 

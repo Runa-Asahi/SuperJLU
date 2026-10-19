@@ -31,7 +31,7 @@ def _schedule(root):
 def test_empty_data_gives_friendly_hint(root):
     for r in (T.compute_gpa(), T.list_grades(), T.exams(), T.academic_progress(), T.adjustments(),
               T.compute_gpa_with_scheme("保研加权")):
-        assert "请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步" in r["error"]
+        assert T.LOGIN_HINT in r["error"] and "jlu-toolkit sync" in r["error"]
 
 
 def test_grades_read_app_data_without_env(root):
@@ -119,6 +119,11 @@ def test_cli_exams_no_data(root, capsys):
     with pytest.raises(SystemExit):
         cli._main(["exams"])
     assert "登录同步" in capsys.readouterr().err
+    (root / "exams.csv").write_text("课程,开始,结束,地点,座位号,考试名称,学期\n", encoding="utf-8")
+    cli._main(["exams"])
+    assert "目前没有安排考试" in capsys.readouterr().out
+    r = T.exams()
+    assert r["count"] == 0 and "error" not in r
 
 
 def test_cli_route_show_and_set(root, capsys):
@@ -132,6 +137,11 @@ def test_cli_route_show_and_set(root, capsys):
 
 def test_cli_adjustments_and_college(root, capsys):
     _schedule(root)
+    cli._main(["adjustments"])
+    out = capsys.readouterr().out
+    assert "还没同步过调课" in out and "0 条" not in out
+    assert T.adjustments()["count"] is None and T.adjustments()["synced"] is False
+    (root / "schedule_adjustments.json").write_text(json.dumps({"items": []}), encoding="utf-8")
     cli._main(["adjustments"])
     assert "0 条调整" in capsys.readouterr().out
     cli._main(["college"])

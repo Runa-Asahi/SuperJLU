@@ -594,7 +594,10 @@ def _cmd_exams(x):
         from . import ui
         exs = ui.Store(ui.data_dir()).exams()
         if not exs:
-            print("本地还没有考试安排；请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步", file=sys.stderr)
+            if (ui.data_dir() / "exams.csv").exists():
+                print("已经同步过考试安排，目前没有安排考试。")
+                return
+            print("本地还没有考试安排；请先用新版 SuperJLU App 登录同步一次，或运行 jlu-toolkit sync", file=sys.stderr)
             sys.exit(1)
         _print_countdown(exs, show_all=x.all)
         return
@@ -613,6 +616,8 @@ def _cmd_adjustments(x):
         print(json.dumps(d, ensure_ascii=False, indent=1)); return
     if "error" in d:
         print(d["error"], file=sys.stderr); sys.exit(1)
+    if not d.get("synced", True):
+        print(d["note"]); return
     print(f"学期 {d['term'] or '未知'}：{d['count']} 条调整，自动应用{'已开' if d['auto_apply'] else '已关'}")
     f = lambda s: f"{s['weekday_text']} 第{s['periods']}节 第{','.join(map(str, s['weeks']))}周" if s else "—"
     for i in d["items"]:
