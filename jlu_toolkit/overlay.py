@@ -8,14 +8,15 @@
     刷新后若教务那门课变了（周次 / 教室 / 教师），修改照常生效，但标记「教务有变动」；
     若教务已找不到那门课，修改不丢，标记「未生效」，等同学选择保留为自定义课或删掉。
 
-schedule_overlay.json::
+schedule_overlay.json（明文，按学期分开；旧版不分学期的 {"version": 1, "ops": [...]} 自动归到当前学期）::
 
-    {"version": 1, "ops": [
+    {"version": 2, "terms": {"2026-2027-1": [...]}}   # 每学期一个列表，条目有三种
+    [
       {"id": "a1", "op": "add",  "course": {name, teacher, location, weekday, start, end, weeks}},
       {"id": "h1", "op": "hide", "target": "高等数学|1|1-2", "weeks": [8] | null, "base": {...}},
       {"id": "e1", "op": "edit", "target": "高等数学|1|1-2", "weeks": [9] | null,
        "set": {"location": "逸夫楼301", ...}, "base": {...}}
-    ]}
+    ]
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ from typing import Iterable, Optional
 
 from . import core
 
-VERSION = 1
+VERSION = 2
 OPS = ("add", "hide", "edit")
 EDITABLE = ("name", "teacher", "location", "weekday", "start", "end")
 
@@ -91,12 +92,15 @@ def apply_overlay(courses: Iterable[core.Course], ops: Iterable[dict]
             hits = [r for r in rows if r["src"] == "official" and r["key"] == target
                     and (scope is None or scope & set(r["weeks"]))]
             if not hits:
-                issues.append({"oid": oid, "kind": "missing", "target": target, "op": kind,
-                               "message": "教务课表里已找不到这门课（可能调课或取消了），这条修改暂未生效"})
+                if not op.get("quiet"):
+                    issues.append({"oid": oid, "kind": "missing", "target": target, "op": kind,
+                                   **_who(target),
+                                   "message": "教务课表里已找不到这门课（可能调课或取消了），这条修改暂未生效"})
                 continue
             base = op.get("base")
             if base and not any(_same_base(base, b, scope) for b in orig.get(target, [])):
                 issues.append({"oid": oid, "kind": "changed", "target": target, "op": kind,
+                               **_who(target),
                                "message": "你修改之后教务又更新了这门课，请核对一下"})
             for r in hits:
                 take = sorted(set(r["weeks"]) & scope) if scope is not None else list(r["weeks"])
@@ -108,6 +112,13 @@ def apply_overlay(courses: Iterable[core.Course], ops: Iterable[dict]
         except (ValueError, TypeError, KeyError):
             issues.append({"oid": oid, "kind": "invalid", "op": kind, "message": "这条修改的数据已损坏，已跳过"})
     return [r for r in rows if r["weeks"]], issues
+
+
+def _who(target) -> dict:
+    try:
+        return parse_target(target)
+    except (ValueError, AttributeError):
+        return {}
 
 
 def _same_base(saved: dict, now: dict, scope: Optional[set]) -> bool:
@@ -128,10 +139,63 @@ def to_courses(rows: Iterable[dict]) -> list[core.Course]:
     return [_as_course(r) for r in rows]
 
 
-# ---- 对 overlay 文档的增删（Store 调用；均返回新文档，不原地改） ----
+# ---- 文档：按学期分开存（v2）；兼容 v1 {"ops": [...]} ----
 
 def empty() -> dict:
-    return {"version": VERSION, "ops": []}
+    return {"version": VERSION, "terms": {}}
+
+
+def _clean_ops(ops) -> list:
+    return [o for o in (ops if isinstance(ops, list) else [])
+            if isinstance(o, dict) and o.get("op") in OPS and o.get("id")]
+
+
+def normalize(raw, term: str = "") -> dict:
+    """任何版本的文档 → v2。v1（不分学期）和学期未知时存的修改，归到当前学期。
+
+    结构不对抛 ValueError（导入备份时给同学看）。"""
+    if not isinstance(raw, dict):
+        raise ValueError("这不是 SuperJLU 课表修改备份文件")
+    if isinstance(raw.get("terms"), dict):
+        terms = {str(k): _clean_ops(v.get("ops") if isinstance(v, dict) else v)
+                 for k, v in raw["terms"].items()}
+    elif isinstance(raw.get("ops"), list):
+        terms = {"": _clean_ops(raw["ops"])}
+    else:
+        raise ValueError("这不是 SuperJLU 课表修改备份文件")
+    if term and "" in terms:
+        terms[term] = terms.get(term, []) + terms.pop("")
+    return {"version": VERSION, "terms": {k: v for k, v in terms.items() if v}}
+
+
+def validate_doc(doc, term: str = "") -> dict:
+    return normalize(doc, term)
+
+
+def term_ops(doc: dict, term: str) -> list:
+    return list(doc.get("terms", {}).get(term, []))
+
+
+def with_ops(doc: dict, term: str, ops: list) -> dict:
+    terms = dict(doc.get("terms", {}))
+    if ops:
+        terms[term] = ops
+    else:
+        terms.pop(term, None)
+    return {"version": VERSION, "terms": terms}
+
+
+def merge_import(doc: dict, imported: dict) -> dict:
+    """导入备份：备份里有的学期整体替换，其它学期保留。"""
+    return {"version": VERSION, "terms": {**doc.get("terms", {}), **imported.get("terms", {})}}
+
+
+# ---- 对某学期修改列表的增删（Store 调用；均返回新列表，不原地改） ----
+
+def parse_target(target: str) -> dict:
+    name, wd, se = str(target).rsplit("|", 2)
+    s, e = se.split("-")
+    return {"name": name, "weekday": int(wd), "start": int(s), "end": int(e)}
 
 
 def make_op(action: str, body: dict, official: list[core.Course]) -> dict:
@@ -146,49 +210,66 @@ def make_op(action: str, body: dict, official: list[core.Course]) -> dict:
     weeks = sorted({int(w) for w in body.get("weeks") or []}) or None
     op = {"id": new_id(), "op": action, "target": target, "weeks": weeks, "base": base_of(match)}
     if action == "edit":
-        patch = {k: v for k, v in (body.get("set") or {}).items() if k in EDITABLE}
-        if not patch:
-            raise ValueError("没有要修改的内容")
-        _course({**match.__dict__, **patch})  # 提前校验
-        op["set"] = patch
+        op["set"] = _patch(body.get("set"), match.__dict__)
     return op
 
 
-def remove(doc: dict, oid: str) -> dict:
-    return {**doc, "ops": [o for o in doc.get("ops", []) if o.get("id") != oid]}
+def _patch(raw, current: dict) -> dict:
+    patch = {k: v for k, v in (raw or {}).items() if k in EDITABLE and v != current.get(k)}
+    if not patch:
+        raise ValueError("没有要修改的内容")
+    _course({**current, **patch, "weeks": [1]})  # 提前校验
+    return patch
 
 
-def rebase(doc: dict, oid: str, official: list[core.Course]) -> dict:
-    """「教务有变动」时同学点「我知道了」：把 base 更新成当前教务原样，不再提示。"""
-    ops = []
-    for o in doc.get("ops", []):
+def remove(ops: list, oid: str) -> list:
+    return [o for o in ops if o.get("id") != oid]
+
+
+def update(ops: list, oid: str, body: dict) -> list:
+    """改一条已有修改：自定义课换内容 / 已修改的课换改法。"""
+    out = []
+    for o in ops:
+        if o.get("id") == oid:
+            if o["op"] == "add":
+                c = _course(body.get("course") or {})
+                o = {**o, "course": {**c.__dict__, "weeks": c.weeks}}
+            elif o["op"] == "edit":
+                cur = {**parse_target(o["target"]), **(o.get("base") or {})}
+                o = {**o, "set": _patch(body.get("set"), cur)}
+            else:
+                raise ValueError("这条修改不能这样改")
+        out.append(o)
+    return out
+
+
+def ack(ops: list, oid: str, official: list[core.Course]) -> list:
+    """同学点「我知道了」：教务有变动 → 以现在的教务为准不再提示；找不到 → 先不提示（课回来了照常生效）。"""
+    out = []
+    for o in ops:
         if o.get("id") == oid and o.get("target"):
             m = next((c for c in official if course_key(c) == o["target"]), None)
+            o = {**o, "base": base_of(m)} if m is not None else {**o, "quiet": True}
             if m is not None:
-                o = {**o, "base": base_of(m)}
-        ops.append(o)
-    return {**doc, "ops": ops}
+                o.pop("quiet", None)
+        out.append(o)
+    return out
 
 
-def detach(doc: dict, oid: str) -> dict:
-    """「未生效」的修改改成自定义课保留下来（只对 edit 有意义：用 base + set 还原出那门课）。"""
-    ops = []
-    for o in doc.get("ops", []):
-        if o.get("id") == oid and o.get("op") == "edit" and o.get("base"):
-            name, wd, se = o["target"].split("|")
-            s, e = se.split("-")
-            src = {"name": name, "weekday": int(wd), "start": int(s), "end": int(e),
-                   "teacher": o["base"].get("teacher", ""), "location": o["base"].get("location", ""),
+rebase = ack  # 旧名
+
+
+def detach(ops: list, oid: str) -> list:
+    """「未生效」的修改保留为自定义课（用 base + set 还原出那门课）；隐藏类的修改直接去掉。"""
+    out = []
+    for o in ops:
+        if o.get("id") == oid and o.get("target"):
+            if o.get("op") != "edit" or not o.get("base"):
+                continue
+            src = {**parse_target(o["target"]), "teacher": o["base"].get("teacher", ""),
+                   "location": o["base"].get("location", ""),
                    "weeks": o.get("weeks") or o["base"].get("weeks", [])}
             c = _course({**src, **o.get("set", {})})
             o = {"id": o["id"], "op": "add", "course": {**c.__dict__, "weeks": c.weeks}}
-        ops.append(o)
-    return {**doc, "ops": ops}
-
-
-def validate_doc(doc) -> dict:
-    """导入备份时用：结构不对抛 ValueError；未知 op 丢弃。"""
-    if not isinstance(doc, dict) or not isinstance(doc.get("ops"), list):
-        raise ValueError("这不是 SuperJLU 课表修改备份文件")
-    ops = [o for o in doc["ops"] if isinstance(o, dict) and o.get("op") in OPS and o.get("id")]
-    return {"version": VERSION, "ops": ops}
+        out.append(o)
+    return out

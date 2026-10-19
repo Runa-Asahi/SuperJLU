@@ -37,6 +37,8 @@ jobs:
         run: node tests/js_grade_import_test.js
       - name: VPN and JWXT login completion (Node)
         run: node tests/js_network_test.js
+      - name: Timetable personal edits UI (Node)
+        run: node tests/js_schedule_edit_test.js
       - name: UI script syntax (node --check)
         shell: bash
         run: |

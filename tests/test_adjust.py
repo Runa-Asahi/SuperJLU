@@ -133,3 +133,11 @@ def test_sync_flag_applies_and_failure_is_harmless(tmp_path, monkeypatch):
     cl2._post_form.side_effect = RuntimeError("boom")
     s2 = _run_sync_schedule(cl2, tmp_path / "b")
     assert s2["ok"] and s2["count"] == 2 and s2["adjustments"] == {"error": "RuntimeError"}
+
+
+def test_sync_records_schedule_term_and_keeps_overlay(tmp_path, monkeypatch):
+    monkeypatch.delenv("SUPERJLU_APPLY_ADJUSTMENTS", raising=False)
+    (tmp_path / "schedule_overlay.json").write_text('{"version": 2, "terms": {"x": []}}', encoding="utf-8")
+    _run_sync_schedule(_client([]), tmp_path)
+    assert json.loads((tmp_path / "schedule_meta.json").read_text(encoding="utf-8")) == {"term": "2026-2027-1"}
+    assert (tmp_path / "schedule_overlay.json").read_text(encoding="utf-8") == '{"version": 2, "terms": {"x": []}}'

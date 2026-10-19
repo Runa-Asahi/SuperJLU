@@ -90,16 +90,25 @@ class Store:
     OVERLAY = "schedule_overlay.json"
     OVERLAY_UNDO = "schedule_overlay.undo.json"
 
+    def current_term(self) -> str:
+        """课表所属学期：刷新课表时记下的学期代码，没有就用校历的。"""
+        return str((self._json("schedule_meta.json", {}) or {}).get("term")
+                   or self.calendar().get("term") or "")
+
     def overlay_doc(self) -> dict:
         from . import overlay as ov
         try:
-            return ov.validate_doc(self._json(self.OVERLAY, None) or ov.empty())
+            return ov.normalize(self._json(self.OVERLAY, None) or ov.empty(), self.current_term())
         except ValueError:
             return ov.empty()
 
+    def overlay_ops(self) -> list:
+        from . import overlay as ov
+        return ov.term_ops(self.overlay_doc(), self.current_term())
+
     def schedule_view(self) -> tuple[list[dict], list[dict]]:
         from . import overlay as ov
-        return ov.apply_overlay(self.official_courses(), self.overlay_doc()["ops"])
+        return ov.apply_overlay(self.official_courses(), self.overlay_ops())
 
     def courses(self) -> list[core.Course]:
         """同学看到的课表 = 教务 + 调停课 + 个人修改（日历导出等都用这个）。"""
@@ -108,31 +117,42 @@ class Store:
 
     def overlay_action(self, body: dict) -> None:
         from . import overlay as ov
-        action = body.get("action")
+        action, oid = body.get("action"), str(body.get("id") or "")
         with self.lock:
+            term = self.current_term()
             doc = self.overlay_doc()
+            ops = ov.term_ops(doc, term)
+            official = self.official_courses()
+            undo = self.p(self.OVERLAY_UNDO)
             if action in ("add", "hide", "edit"):
-                doc = {**doc, "ops": doc["ops"] + [ov.make_op(action, body, self.official_courses())]}
+                ops = ops + [ov.make_op(action, body, official)]
+            elif action == "update":
+                ops = ov.update(ops, oid, body)
             elif action == "remove":
-                doc = ov.remove(doc, str(body.get("id") or ""))
+                ops = ov.remove(ops, oid)
             elif action == "ack":
-                doc = ov.rebase(doc, str(body.get("id") or ""), self.official_courses())
+                ops = ov.ack(ops, oid, official)
             elif action == "detach":
-                doc = ov.detach(doc, str(body.get("id") or ""))
-            elif action == "reset":  # 恢复教务原样；留一份可撤销
-                if doc["ops"]:
-                    self._write_json(self.OVERLAY_UNDO, doc)
-                doc = ov.empty()
+                ops = ov.detach(ops, oid)
+            elif action == "reset":  # 恢复教务原样（本学期）；留一份可撤销
+                if not ops:
+                    return
+                self._write_json(self.OVERLAY_UNDO, {"term": term, "ops": ops})
+                self._write_json(self.OVERLAY, ov.with_ops(doc, term, []))
+                return
             elif action == "undo_reset":
                 prev = self._json(self.OVERLAY_UNDO, None)
-                if not prev:
+                if not isinstance(prev, dict) or prev.get("term") != term:
                     raise ValueError("没有可以撤销的恢复操作")
-                doc = ov.validate_doc(prev)
+                ops = ov.term_ops(ov.normalize({"terms": {term: prev.get("ops")}}), term) + ops
             elif action == "import":
-                doc = ov.validate_doc(body.get("doc"))
+                doc = ov.merge_import(doc, ov.normalize(body.get("doc"), term))
+                ops = ov.term_ops(doc, term)
             else:
                 raise ValueError("未知的课表修改操作")
-            self._write_json(self.OVERLAY, doc)
+            self._write_json(self.OVERLAY, ov.with_ops(doc, term, ops))
+            if undo.exists():
+                undo.unlink()
 
     def grades(self) -> list[core.Grade]:
         f = self.p("grades.csv")
@@ -274,9 +294,14 @@ class Store:
 
     def _schedule_snapshot(self) -> dict:
         rows, issues = self.schedule_view()
-        return {"courses": rows, "schedule_issues": issues,
-                "schedule_edits": len(self.overlay_doc()["ops"]),
-                "schedule_can_undo_reset": self.p(self.OVERLAY_UNDO).exists()}
+        doc, term = self.overlay_doc(), self.current_term()
+        ops = doc["terms"].get(term, [])
+        undo = self._json(self.OVERLAY_UNDO, None)
+        return {"courses": rows, "schedule_issues": issues, "schedule_ops": ops,
+                "schedule_edits": len(ops), "schedule_term": term,
+                "schedule_other_terms": sum(len(v) for k, v in doc["terms"].items() if k != term),
+                "schedule_can_undo_reset": isinstance(undo, dict) and undo.get("term") == term
+                                           and bool(undo.get("ops"))}
 
     def snapshot(self, source: str = "jwxt") -> dict:
         gs = self.grades()

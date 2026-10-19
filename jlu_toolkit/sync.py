@@ -67,6 +67,8 @@ def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> 
             except Exception as e:  # noqa: BLE001 —— 调课失败不影响原课表
                 out["adjustments"] = {"error": type(e).__name__}
         courses_cache.extend(cs)
+        # 记下课表所属学期：个人课表修改按学期分开存（见 overlay.py）
+        _wjson(root / "schedule_meta.json", {"term": term})
         jwxt.export_courses_csv(cs, str(root / "schedule.csv"))
         return out
 
