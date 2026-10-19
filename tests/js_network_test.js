@@ -34,6 +34,20 @@ function verifyChoice(){
  assert.match(node('#network-route-last').textContent,/最近成功连接：直连/);
  assert.equal(node('#network-route-last').hidden,false);
 }
+function verifyDeviceNetHint(){
+ const nodes=new Map();
+ const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:true});return nodes.get(id)};
+ const c=vm.createContext({$:node,LOGIN_MODE:'direct',ACTIVE_LOGIN_MODE:'direct',LG:{target:'jwxt'}});
+ vm.runInContext(page.split('\n').filter(line=>line.startsWith('let DEVICE_NET_HINT=')).join('\n'),c);
+ c.renderDeviceNet();
+ assert.equal(node('#device-net-hint').hidden,true); // Desktop / unknown: nothing shown.
+ vm.runInContext('DEVICE_NET_HINT="当前手机走的是移动数据";renderDeviceNet()',c);
+ assert.equal(node('#device-net-hint').hidden,false);
+ assert.equal(node('#lg-device-net').hidden,false);
+ vm.runInContext('LOGIN_MODE="webvpn";LG={target:"vpn"};renderDeviceNet()',c);
+ assert.equal(node('#device-net-hint').hidden,true); // WebVPN selected: hint irrelevant.
+ assert.equal(node('#lg-device-net').hidden,true);
+}
 async function verifyModal(mode,expected){
  const nodes=new Map();
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',hidden:true,focus(){},showModal(){this.open=true}});return nodes.get(id)};
@@ -84,10 +98,13 @@ function verifyNetworkCheckFooter(){
  const plain=c.networkCheckFooter({services:[]});
  assert.match(plain,/校外 WebVPN/);
  assert.doesNotMatch(plain,/校外提示/);
+ assert.doesNotMatch(plain,/手机网络/);
+ assert.match(c.networkCheckFooter({services:[],device_hint:'当前手机走的是移动数据'}),/手机网络.*移动数据/);
 }
 (async()=>{
  verifyNetworkCheckFooter();
  verifyChoice();
+ verifyDeviceNetHint();
  verifyShortRoomFailures();
  await verifyManualStart();
  await verifyModal('direct','jwxt');await verifyModal('webvpn','vpn');

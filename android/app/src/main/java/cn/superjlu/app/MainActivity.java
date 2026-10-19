@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        NetworkStatus.init(getApplicationContext());
         setContentView(R.layout.activity_main);
         applyInsets(findViewById(R.id.root));
         web = findViewById(R.id.web);
