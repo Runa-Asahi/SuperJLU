@@ -53,3 +53,8 @@ def test_ui_is_non_intrusive():
     assert 'id="upd-auto"' in PAGE and 'id="upd-go"' in PAGE
     assert "不更新也能照常使用" in PAGE
     assert "127.0.0.1" not in block
+
+
+def test_card_id_is_unique():
+    assert PAGE.count('id="upd"') == 1  # 顶部「更新于」那行
+    assert PAGE.count('id="ver-card"') == 1
