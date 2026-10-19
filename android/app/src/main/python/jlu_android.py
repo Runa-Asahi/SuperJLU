@@ -11,6 +11,7 @@ import threading
 from http.server import ThreadingHTTPServer
 from typing import Optional
 
+PREFERRED_PORT = 18765
 _httpd: Optional[ThreadingHTTPServer] = None
 
 
@@ -24,7 +25,12 @@ def start(files_dir: str) -> str:
     from jlu_toolkit import ui
 
     store = ui.Store(ui.data_dir())
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), ui.make_handler(store))
+    # 优先固定端口，让 WebView 来源（localStorage）跨启动保持一致；被占用时退回随机端口，
+    # 界面偏好另外落盘在 ui_prefs.json，不依赖端口。
+    try:
+        httpd = ThreadingHTTPServer(("127.0.0.1", PREFERRED_PORT), ui.make_handler(store))
+    except OSError:
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), ui.make_handler(store))
     httpd.daemon_threads = True
     threading.Thread(target=httpd.serve_forever, name="jlu-ui", daemon=True).start()
     _httpd = httpd

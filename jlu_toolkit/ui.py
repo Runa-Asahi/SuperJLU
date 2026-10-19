@@ -788,13 +788,18 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
             if self._oa_sub("GET"):
                 return
             if path in ("/", "/index.html"):
-                return self._send(200, PAGE.encode(), "text/html; charset=utf-8",
+                from . import ui_prefs
+                page = PAGE.replace("<script>/* 首帧前应用主题", ui_prefs.inline_script(store.root) + "<script>/* 首帧前应用主题", 1)
+                return self._send(200, page.encode(), "text/html; charset=utf-8",
                                   {"Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'"})
             if path in ("/favicon.svg", "/favicon.ico"):  # SuperJLU 官方标志
                 from importlib import resources
                 data = resources.files("jlu_toolkit").joinpath("data", path[1:]).read_bytes()
                 ctype = "image/svg+xml" if path.endswith(".svg") else "image/x-icon"
                 return self._send(200, data, ctype)
+            if path == "/api/prefs":  # 界面偏好（主题等），落盘防止端口变化丢失
+                from . import ui_prefs
+                return self._json({"ok": True, "prefs": ui_prefs.load(store.root)})
             if path == "/api/sessions":  # 各校园站点会话状态（只读本地）
                 from . import sessions
                 return self._json(sessions.all_status())
@@ -865,7 +870,10 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                 return
             try:
                 body = self._body()
-                if self.path == "/api/schemes":
+                if self.path == "/api/prefs":
+                    from . import ui_prefs
+                    return self._json({"ok": True, "prefs": ui_prefs.update(store.root, body.get("set"), body.get("remove"))})
+                elif self.path == "/api/schemes":
                     store.save_scheme(body.get("name", ""), body.get("include") or [], body.get("base"),
                                       body.get("grade_source", "jwxt"))
                 elif self.path == "/api/grades/import":
