@@ -37,19 +37,18 @@ def test_login_auto_sends_wechat_code_after_password():
     assert 'class="lg-pass-ok"' in PAGE
 
 
-def test_rooms_three_modes_and_slim_result_cols():
-    """恢复按日期/周次/自习时间三档；结果表仍去掉与筛选重复的列。"""
-    assert 'id="rmode"' in PAGE
-    assert "按日期查询" in PAGE and "按周次查询" in PAGE and "按自习时间" in PAGE
-    assert 'data-m="date"' in PAGE and 'data-m="week"' in PAGE and 'data-m="study"' in PAGE
-    assert "setRoomMode" in PAGE
+def test_rooms_single_form_no_mode_tabs_and_slim_result_cols():
+    """去掉顶部「按日期/按周次/按自习时间」三个按钮；下面所有条件都保留并直接显示。"""
+    assert 'id="rmode"' not in PAGE and "setRoomMode" not in PAGE
+    assert "按日期查询" not in PAGE and "按周次查询" not in PAGE and "按自习时间" not in PAGE
     assert 'id="rd"' in PAGE and 'id="rw"' in PAGE and 'id="rwd"' in PAGE
     assert 'id="rp1"' in PAGE and 'id="rp2"' in PAGE
     assert 'id="rst"' in PAGE and 'id="ret"' in PAGE
+    assert 'class="m-week" hidden' not in PAGE and 'class="m-study" hidden' not in PAGE
+    assert 'id="rst-presets" hidden' not in PAGE
     assert "rdToWeek" in PAGE and "weekToRd" in PAGE
-    assert 'qMode=RM==="study"?"date":RM' in PAGE
+    assert "roomQueryMode" in PAGE and "const qMode=roomQueryMode()" in PAGE
     assert 'data-sp="1-4"' in PAGE and 'data-sp="5-8"' in PAGE and 'data-sp="9-11"' in PAGE
-    assert 'if(m==="week")rdToWeek()' in PAGE
     # 结果表去掉与筛选重复的校区/日期/节次/时间列
     assert '["campus","学校校区"]' not in PAGE
     assert '["free_date","空闲日期"]' not in PAGE
@@ -58,12 +57,9 @@ def test_rooms_three_modes_and_slim_result_cols():
     assert '["building","教学楼"]' in PAGE and '["name","教室名称"]' in PAGE
 
 
-def test_rooms_study_mode_and_period_sync_in_page():
-    assert 'data-m="study"' in PAGE and "按自习时间" in PAGE
+def test_rooms_study_time_and_period_sync_in_page():
     assert 'id="rst"' in PAGE and 'id="ret"' in PAGE
     assert "periodsToStudy" in PAGE and "studyToPeriods" in PAGE
-    assert "setRoomMode" in PAGE
-    assert 'qMode=RM==="study"?"date":RM' in PAGE
 
 
 def test_study_time_for_periods():
