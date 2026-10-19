@@ -804,11 +804,6 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
             if path == "/api/network/state":
                 from . import webvpn
                 return self._json(webvpn.state())
-            if path == "/api/network/device":
-                # 只读：Android 默认网络是 Wi-Fi 还是移动数据；桌面端恒为 unknown、无提示
-                from . import netstatus
-                info = netstatus.status()
-                return self._json({"ok": True, **info, "direct_hint": netstatus.direct_hint(info)})
             if path == "/api/oa/webvpn":
                 # Navigation only: never forwards app cookies or user input.
                 self.send_response(302)
