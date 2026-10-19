@@ -46,7 +46,7 @@
 按培养方案列出每一类课程（通识、学科基础、专业课……）已修了多少、还差多少，点开就能看到具体是哪几门课，再也不怕漏修。
 
 ### 🏫 空教室：找个地方自习
-选校区、教学楼、日期（或第几周星期几）、第几节课，马上列出空着的教室。还能按座位数筛选，自动屏蔽实验室这类特殊教室。
+一张表单选校区、教学楼、日期（与课表周次联动）、空闲节次，马上列出空着的教室。还能按座位数筛选，自动屏蔽实验室这类特殊教室。
 
 ### ⏰ 考试安排：倒计时提醒
 所有考试的时间地点集中在一页，并显示还剩几天，复习节奏心里有数。
@@ -69,7 +69,9 @@
 
 ## 微信小程序（实验版）
 
-仓库 [`wechat/`](wechat/README.md) 里有一份实验版微信原生小程序（手机浏览器辅助同步课表等）。**本仓库其他维护者与贡献者不负责小程序的使用支持与后续开发。** 若你有微信小程序的使用需求，请直接联系小程序负责人 [@Dramadan-wow](https://github.com/Dramadan-wow)：`dramadan070925@qq.com`。
+仓库 [`wechat/`](wechat/README.md) 提供实验版微信原生小程序（手机浏览器辅助同步课表等），运行方式与数据处理见该目录说明。
+
+如需使用或咨询微信小程序，请联系小程序负责人 [@Dramadan-wow](https://github.com/Dramadan-wow)，邮箱 `dramadan070925@qq.com`。**其他 SuperJLU 项目参与者与小程序无关，请勿向其咨询小程序事宜。**
 
 ## 常见问题
 
@@ -103,10 +105,10 @@ SuperJLU 也提供命令行工具、本地 API，以及接入 AI 助手（MCP）
 
 ## 特别鸣谢
 
-- **[@Dramadan-wow](https://github.com/Dramadan-wow)**：通过 [PR #82](https://github.com/Runa-Asahi/SuperJLU/pull/82) 独立完成微信小程序端（实验版），是目前最大的一次外部贡献。小程序相关需求请联系：`dramadan070925@qq.com`。
-- **[@Aohpup](https://github.com/Aohpup)**：持续改进成绩页与校外网络——[PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44) / [#45](https://github.com/Runa-Asahi/SuperJLU/pull/45) 成绩加权与模板导入、[PR #67](https://github.com/Runa-Asahi/SuperJLU/pull/67) 模板反馈与安卓确认框、[PR #81](https://github.com/Runa-Asahi/SuperJLU/pull/81) 成绩单解析与核对、[PR #85](https://github.com/Runa-Asahi/SuperJLU/pull/85) 应用内 WebVPN 与校外登录。
+- **[@Dramadan-wow](https://github.com/Dramadan-wow)**：微信小程序端（[PR #82](https://github.com/Runa-Asahi/SuperJLU/pull/82)）。小程序相关需求请联系 `dramadan070925@qq.com`；其他项目参与者与小程序无关。
+- **[@Aohpup](https://github.com/Aohpup)**：成绩加权分析、模板与导入等（[PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44) / [#45](https://github.com/Runa-Asahi/SuperJLU/pull/45)、[#67](https://github.com/Runa-Asahi/SuperJLU/pull/67)、[#81](https://github.com/Runa-Asahi/SuperJLU/pull/81)）。
 
-欢迎关注他们的 GitHub。其他项目参与者的贡献属于桌面端 / Android App 等主线功能，**与微信小程序无关**。
+欢迎关注他们的 GitHub ⭐
 
 ---
 
