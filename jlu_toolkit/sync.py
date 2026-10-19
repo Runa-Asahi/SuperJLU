@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from . import exams as ex, jwxt, meta
@@ -52,9 +53,22 @@ def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> 
 
     def _courses():
         cs = client.fetch_schedule(term)
+        out = {"ok": True, "count": len(cs)}
+        # 实验：调停课合并。接口/字段尚未用吉大真实账号验证，默认关闭，避免未部署接口
+        # 跳 CAS 时被误判为会话过期。SUPERJLU_APPLY_ADJUSTMENTS=1 时启用。
+        if os.environ.get("SUPERJLU_APPLY_ADJUSTMENTS") == "1":
+            from . import adjust
+            try:
+                adjs = adjust.fetch_adjustments(client, term)
+                cs, notes = adjust.apply_adjustments(cs, adjs)
+                _wjson(root / "schedule_adjustments.json", {"term": term, "changes": notes})
+                out["adjustments"] = {"rows": len(adjs),
+                                      "applied": sum(1 for n in notes if not n["skipped"])}
+            except Exception as e:  # noqa: BLE001 —— 调课失败不影响原课表
+                out["adjustments"] = {"error": type(e).__name__}
         courses_cache.extend(cs)
         jwxt.export_courses_csv(cs, str(root / "schedule.csv"))
-        return {"ok": True, "count": len(cs)}
+        return out
 
     grades_cache: list = []
 

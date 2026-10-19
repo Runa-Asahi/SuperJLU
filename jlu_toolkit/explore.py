@@ -117,6 +117,8 @@ PROBES: list[Probe] = [
     Probe("选课应用入口(xsxkapp)", "xsxkapp"),
     Probe("选课结果入口(xkjgcx)", "xkjgcx"),
     # 课表变动（只读）
+    Probe("个人调课课程 xsdkkc", "wdkb", "/jwapp/sys/wdkb/modules/xskcb/xsdkkc.do",
+          lambda t, c=None: {"XNXQDM": t, "*order": "-SQSJ"}),
     Probe("调课记录", "wdkb", "/jwapp/sys/wdkb/modules/jshkcb/cxztdkjl.do", lambda t, c=None: {"XNXQDM": t}),
     Probe("未排课程", "wdkb", "/jwapp/sys/wdkb/modules/xskcb/xswpkc.do", lambda t, c=None: {"XNXQDM": t}),
 ]
@@ -270,7 +272,7 @@ def _capture_ctx(parsed, ctx: dict) -> None:
                     ctx[k] = str(v)
 
 
-DISCOVER_APPS = ("kxjscx", "kxjas", "cjcx")
+DISCOVER_APPS = ("kxjscx", "kxjas", "cjcx", "wdkb")
 _DO_RE = re.compile(r"""["'(]([\w./*-]*?\.do)\b""")
 _SRC_RE = re.compile(r"""(?:src|href)\s*=\s*["']([^"'#?]+\.(?:js|json))""", re.I)
 
