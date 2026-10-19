@@ -4,12 +4,12 @@ const src=fs.readFileSync(__dirname+'/../jlu_toolkit/ui_page.py','utf8').split('
 const pick=n=>{const i=src.findIndex(l=>l.startsWith(n));if(i<0)throw Error('missing '+n);let j=i+1;while(j<src.length&&/^[ \t]/.test(src[j]))j++;return src.slice(i,j).join('\n')};
 const names=['const KB_WD=','const KB_FIELD=','function kbSlot(','function kbWeeks(','function kbPreset(','function kbTarget(','function kbOpText(',
  'function kbIssueTitle(','function kbIssueActions(','function kbCls(','function kbSrcText(','function kbCourse(','function kbOpSet(','function kbSkipReq(',
- 'function kbDeleteReq(','function kbEditReq(','function renderKbExtras(','const KB_DONE=','function kbActionClick(','function kbImportText(','async function kbPost('];
+ 'function kbDeleteReq(','function kbEditReq(','function adjInfoText(','function renderAdjToggle(','function renderKbExtras(','const KB_DONE=','function kbActionClick(','function kbImportText(','async function kbPost('];
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{id,hidden:false,innerHTML:'',textContent:''});return nodes.get(id)};
 const calls=[],toasts=[];
 const ctx=vm.createContext({D:null,$:node,esc:s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';'),toast:(m,bad)=>toasts.push([m,!!bad]),
  renderGrid:()=>calls.push('grid'),api:async(p,b)=>{calls.push([p,b]);if(b.action==='bad')throw new Error('找不到要修改的课程，请刷新后重试');return{ok:true,schedule_edits:9}}});
-vm.runInContext(names.map(pick).join('\n')+'\nthis.KB={kbSlot,kbWeeks,kbPreset,kbTarget,kbOpText,kbIssueActions,kbCls,kbSkipReq,kbDeleteReq,kbEditReq,renderKbExtras,kbActionClick,kbImportText,kbPost,kbSrcText};',ctx);
+vm.runInContext(names.map(pick).join('\n')+'\nthis.KB={adjInfoText,renderAdjToggle,kbSlot,kbWeeks,kbPreset,kbTarget,kbOpText,kbIssueActions,kbCls,kbSkipReq,kbDeleteReq,kbEditReq,renderKbExtras,kbActionClick,kbImportText,kbPost,kbSrcText};',ctx);
 const K=ctx.KB,J=x=>x===undefined?x:JSON.parse(JSON.stringify(x)),eq=(a,b)=>assert.deepEqual(J(a),J(b));
 (async()=>{
  assert.equal(K.kbSlot({weekday:1,start:1,end:2}),'周一 第1-2节');
@@ -63,5 +63,19 @@ const K=ctx.KB,J=x=>x===undefined?x:JSON.parse(JSON.stringify(x)),eq=(a,b)=>asse
  assert.equal(await K.kbPost({action:'bad'}),false);eq(toasts.at(-1),['找不到要修改的课程，请刷新后重试',true]);
  await K.kbImportText('不是备份');eq(toasts.at(-1),['这不是课表修改备份',true]);
  assert.equal(await K.kbImportText('{"version":2,"terms":{}}'),true);
+ // 调课：「调」角标、详情说明、设置开关文案；请求带教学班
+ assert.equal(K.kbCls({src:'official',adj:'调课：原 周五 第3-4节 第6周'}),' adjusted');
+ assert.equal(K.kbCls({src:'edited',adj:'x'}),' edited');
+ assert.match(K.kbSrcText({src:'official',adj:'调课：原 周五 第3-4节 第6周 · 逸夫楼第十阶梯'}),/^教务调课：原 周五/);
+ eq(K.kbSkipReq({...off,jxbid:'J1'},2),{action:'hide',target:off.key,jxbid:'J1',weeks:[2]});
+ eq(K.kbDeleteReq({...off,jxbid:'J1'}),{action:'hide',target:off.key,jxbid:'J1'});
+ eq(K.kbEditReq({...off,jxbid:'J1'},vals,'all',2),{action:'edit',target:off.key,jxbid:'J1',weeks:null,set:{location:'逸夫楼301'}});
+ assert.match(K.adjInfoText({enabled:false}),/已关闭/);
+ assert.match(K.adjInfoText({enabled:true,applied:2,count:2}),/2 处调课\/停课.*「调」/);
+ assert.match(K.adjInfoText({enabled:true,applied:0,count:0}),/不影响课表和登录/);
+ ctx.D={schedule_adjust:{enabled:false}};node('#adj-on').checked=true;K.renderAdjToggle();
+ assert.equal(node('#adj-on').checked,false);assert.match(node('#adj-info').textContent,/已关闭/);
+ ctx.D={};K.renderAdjToggle();assert.equal(node('#adj-on').checked,true);  // 默认开
+ for(const a of [{enabled:false},{enabled:true,applied:1},{}])assert.ok(!/SUPERJLU|环境变量|json|api/i.test(K.adjInfoText(a)));
  console.log('js_schedule_edit_test ok');
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -81,10 +81,52 @@ class Store:
             return
         self.p(name).write_text(json.dumps(obj, ensure_ascii=False, indent=1), encoding="utf-8")
 
-    def official_courses(self) -> list[core.Course]:
-        """教务原课表（已含调停课合并）；刷新会整份覆盖。"""
+    def jwxt_courses(self) -> list[core.Course]:
+        """教务原课表（schedule.csv，刷新整份覆盖；不含调课）。"""
         f = self.p("schedule.csv")
         return core.load_courses(str(f)) if f.exists() else []
+
+    def adjustments_enabled(self) -> bool:
+        v = self.settings().get("apply_adjustments")
+        return v is None or bool(v)
+
+    def _adjustments(self) -> list:
+        """本学期已取到的调停课（schedule_adjustments.json）；学期不符或文件损坏时为空。"""
+        from . import adjust
+        d = self._json("schedule_adjustments.json", None)
+        if not isinstance(d, dict) or not isinstance(d.get("items"), list):
+            return []
+        term = self.current_term()
+        if term and d.get("term") and d["term"] != term:
+            return []
+        out = []
+        for x in d["items"]:
+            try:
+                out.append(adjust.Adjustment.from_dict(x))
+            except (KeyError, TypeError, ValueError):
+                continue
+        return out
+
+    def official_courses(self) -> list[core.Course]:
+        """教务课表 + 调停课（设置开着时）；个人修改叠加在它之上。"""
+        cs = self.jwxt_courses()
+        if self.adjustments_enabled():
+            adjs = self._adjustments()
+            if adjs:
+                from . import adjust
+                cs, _ = adjust.apply_adjustments(cs, adjs)
+        return cs
+
+    def adjustments_info(self) -> dict:
+        d = self._json("schedule_adjustments.json", None)
+        d = d if isinstance(d, dict) else {}
+        adjs = self._adjustments()
+        applied = 0
+        if adjs:
+            from . import adjust
+            applied = sum(1 for n in adjust.apply_adjustments(self.jwxt_courses(), adjs)[1] if not n["skipped"])
+        return {"enabled": self.adjustments_enabled(), "count": len(adjs), "applied": applied,
+                "fetched_at": d.get("fetched_at") if adjs or d.get("term") == self.current_term() else None}
 
     # ---- 课表个人修改层：schedule_overlay.json，刷新永不覆盖 ----
     OVERLAY = "schedule_overlay.json"
@@ -288,6 +330,8 @@ class Store:
         with self.lock:
             s = self.settings()
             s.update({k: v for k, v in upd.items() if k in ("first_monday",)})
+            if "apply_adjustments" in upd:
+                s["apply_adjustments"] = bool(upd["apply_adjustments"])
             if "grade_help_seen" in upd:
                 s["grade_help_seen"] = bool(upd["grade_help_seen"])
             self._write_json("settings.json", s)
@@ -298,6 +342,7 @@ class Store:
         ops = doc["terms"].get(term, [])
         undo = self._json(self.OVERLAY_UNDO, None)
         return {"courses": rows, "schedule_issues": issues, "schedule_ops": ops,
+                "schedule_adjust": self.adjustments_info(),
                 "schedule_edits": len(ops), "schedule_term": term,
                 "schedule_other_terms": sum(len(v) for k, v in doc["terms"].items() if k != term),
                 "schedule_can_undo_reset": isinstance(undo, dict) and undo.get("term") == term

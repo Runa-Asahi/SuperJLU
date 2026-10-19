@@ -4,7 +4,8 @@
   - schedule.csv 始终只放「教务原课表（+ 调停课）」，刷新照常整份覆盖；
     个人修改单独存在 schedule_overlay.json，刷新永远不碰它。
   - 读取时按顺序合并：教务 → 调停课 → 个人修改（纯函数，可重复执行，不会叠加）。
-  - 每条修改指向一个稳定键 ``课程名|星期|起-止节``，并记下修改时看到的教务原样（base）。
+  - 每条修改指向一个稳定键 ``课程名|星期|起-止节``（有教学班 ID 时另存 jxbid，优先按
+    「教学班 + 星期 + 节次」认课），并记下修改时看到的教务原样（base）。
     刷新后若教务那门课变了（周次 / 教室 / 教师），修改照常生效，但标记「教务有变动」；
     若教务已找不到那门课，修改不丢，标记「未生效」，等同学选择保留为自定义课或删掉。
 
@@ -74,9 +75,7 @@ def apply_overlay(courses: Iterable[core.Course], ops: Iterable[dict]
     问题 kind：missing 教务已找不到目标（修改未生效）/ changed 教务在你修改后有变动。
     """
     courses = list(courses)
-    orig: dict = {}
-    for c in courses:
-        orig.setdefault(course_key(c), []).append(base_of(c))
+    orig = [_row(c, "official") for c in courses]
     rows = [_row(c, "official") for c in courses]
     issues: list[dict] = []
     for op in ops or []:
@@ -89,7 +88,7 @@ def apply_overlay(courses: Iterable[core.Course], ops: Iterable[dict]
                 continue
             target = op.get("target")
             scope = set(op["weeks"]) if op.get("weeks") else None
-            hits = [r for r in rows if r["src"] == "official" and r["key"] == target
+            hits = [r for r in rows if r["src"] == "official" and _match(r, op)
                     and (scope is None or scope & set(r["weeks"]))]
             if not hits:
                 if not op.get("quiet"):
@@ -98,7 +97,7 @@ def apply_overlay(courses: Iterable[core.Course], ops: Iterable[dict]
                                    "message": "教务课表里已找不到这门课（可能调课或取消了），这条修改暂未生效"})
                 continue
             base = op.get("base")
-            if base and not any(_same_base(base, b, scope) for b in orig.get(target, [])):
+            if base and not any(_same_base(base, _base_row(b), scope) for b in orig if _match(b, op)):
                 issues.append({"oid": oid, "kind": "changed", "target": target, "op": kind,
                                **_who(target),
                                "message": "你修改之后教务又更新了这门课，请核对一下"})
@@ -107,7 +106,8 @@ def apply_overlay(courses: Iterable[core.Course], ops: Iterable[dict]
                 r["weeks"] = [w for w in r["weeks"] if w not in take]
                 if kind == "edit" and take:
                     patch = {k: v for k, v in (op.get("set") or {}).items() if k in EDITABLE}
-                    c = _course({**r, **patch, "weeks": take})
+                    c = replace(_course({**r, **patch, "weeks": take}), jxbid=r.get("jxbid", ""),
+                                kch=r.get("kch", ""))
                     rows.append(_row(c, "edited", oid) | {"from": target})
         except (ValueError, TypeError, KeyError):
             issues.append({"oid": oid, "kind": "invalid", "op": kind, "message": "这条修改的数据已损坏，已跳过"})
@@ -132,7 +132,25 @@ def _same_base(saved: dict, now: dict, scope: Optional[set]) -> bool:
 
 def _as_course(r: dict) -> core.Course:
     return core.Course(r["name"], r["teacher"], r["location"], r["weekday"], r["start"], r["end"],
-                       list(r["weeks"]))
+                       list(r["weeks"]), r.get("jxbid", ""), r.get("kch", ""), r.get("adj", ""))
+
+
+def _base_row(r: dict) -> dict:
+    return {"weeks": sorted(r["weeks"]), "location": r["location"], "teacher": r["teacher"]}
+
+
+def _match(r: dict, op: dict) -> bool:
+    """有教学班 ID 时按「教学班 + 星期 + 节次」认课（同名课不会认错，改名也认得出）；否则按课程名。"""
+    j = op.get("jxbid")
+    if j and r.get("jxbid"):
+        t = _who(op.get("target"))
+        return r["jxbid"] == j and (r["weekday"], r["start"], r["end"]) == (
+            t.get("weekday"), t.get("start"), t.get("end"))
+    return r.get("key") == op.get("target")
+
+
+def _find(official, op: dict) -> Optional[core.Course]:
+    return next((c for c in official if _match(_row(c, "official"), op)), None)
 
 
 def to_courses(rows: Iterable[dict]) -> list[core.Course]:
@@ -204,11 +222,13 @@ def make_op(action: str, body: dict, official: list[core.Course]) -> dict:
         c = _course(body.get("course") or {})
         return {"id": new_id(), "op": "add", "course": {**c.__dict__, "weeks": c.weeks}}
     target = body.get("target")
-    match = next((c for c in official if course_key(c) == target), None)
+    match = _find(official, {"target": target, "jxbid": str(body.get("jxbid") or "")})
     if match is None:
         raise ValueError("找不到要修改的课程，请刷新后重试")
     weeks = sorted({int(w) for w in body.get("weeks") or []}) or None
-    op = {"id": new_id(), "op": action, "target": target, "weeks": weeks, "base": base_of(match)}
+    op = {"id": new_id(), "op": action, "target": course_key(match), "weeks": weeks, "base": base_of(match)}
+    if match.jxbid:
+        op["jxbid"] = match.jxbid
     if action == "edit":
         op["set"] = _patch(body.get("set"), match.__dict__)
     return op
@@ -248,7 +268,7 @@ def ack(ops: list, oid: str, official: list[core.Course]) -> list:
     out = []
     for o in ops:
         if o.get("id") == oid and o.get("target"):
-            m = next((c for c in official if course_key(c) == o["target"]), None)
+            m = _find(official, o)
             o = {**o, "base": base_of(m)} if m is not None else {**o, "quiet": True}
             if m is not None:
                 o.pop("quiet", None)

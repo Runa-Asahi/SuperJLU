@@ -87,8 +87,9 @@ nav button.on{color:var(--pri);font-weight:650;background:var(--pri2)}
 .cls i{font-style:normal;opacity:.9}
 .cls{cursor:pointer;position:relative}.cls:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
 .cls.custom{outline:2px dashed rgba(255,255,255,.95);outline-offset:-3px}
-.cls.edited::after,.cls.custom::after{position:absolute;bottom:2px;right:2px;font-size:9px;font-weight:700;font-style:normal;line-height:14px;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.92);color:#333}
-.cls.edited::after{content:"改"}.cls.custom::after{content:"自"}
+.cls.edited::after,.cls.custom::after,.cls.adjusted::after{position:absolute;bottom:2px;right:2px;font-size:9px;font-weight:700;font-style:normal;line-height:14px;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.92);color:#333}
+.cls.edited::after{content:"改"}.cls.custom::after{content:"自"}.cls.adjusted::after{content:"调";background:#ffe08a}
+.adj-toggle{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:600}.adj-toggle input{width:18px;height:18px}
 .kb-tools{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 #kb-issues{border-left:4px solid #e0a106}#kb-issues .kb-iss{border-top:1px solid var(--line);padding:10px 0 4px}#kb-issues .kb-iss:first-of-type{border-top:0}
 .kb-form label{display:block;margin:8px 0 2px;font-size:13px}.kb-form input:not([type]),.kb-form input[type=text]{width:100%;box-sizing:border-box}
@@ -285,7 +286,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  <div class="card" id="links"><h2>校园服务 <span class="sub">不常用但用得到的入口</span></h2><div id="links-b"><p class="sub" style="margin:0">读取中…</p></div></div>
  <h2 style="margin:18px 4px 10px;font-size:14px;color:var(--sub)">设置</h2>
  <div class="card"><h2>学期</h2><p class="sub" id="calinfo"></p>
-  <details><summary class="sub">手动覆盖开学日期（一般不需要）</summary><div class="row" style="margin-top:8px"><input type="date" id="fm"><button class="btn pri" id="savefm">保存覆盖</button><button class="btn ghost" id="clrfm">恢复教务校历</button></div></details></div>
+  <details><summary class="sub">手动覆盖开学日期（一般不需要）</summary><div class="row" style="margin-top:8px"><input type="date" id="fm"><button class="btn pri" id="savefm">保存覆盖</button><button class="btn ghost" id="clrfm">恢复教务校历</button></div></details><label class="adj-toggle"><input type="checkbox" id="adj-on" checked> 自动应用调课/停课</label><p class="sub" id="adj-info" style="margin:4px 0 0"></p></div>
  <div class="card"><h2>外观</h2><div class="row"><div class="thm" role="group" aria-label="外观"><button type="button" data-theme="system" aria-pressed="true" title="跟随系统">跟随系统</button><button type="button" data-theme="light" aria-pressed="false" title="浅色">浅色</button><button type="button" data-theme="dark" aria-pressed="false" title="深色">深色</button></div></div></div>
  <div class="card"><h2>登录</h2><p class="sub" id="lginfo">请选择当前网络对应的登录方式。</p><div class="seg" role="group" aria-label="连接方式"><button type="button" data-login-mode="direct" class="on" aria-pressed="true">校园网直连</button><button type="button" data-login-mode="webvpn" aria-pressed="false">校外 WebVPN</button></div><p class="sub" id="login-method-hint">已连接校园网时使用，直接登录并同步教务数据。</p><p class="sub device-net-hint" id="device-net-hint" role="status" hidden></p><button class="btn pri" id="lgbtn" type="button">登录并同步</button><div id="network-route" role="status"><span class="login-route-label">当前连接方式</span><strong id="network-route-current">校园网直连</strong><span id="network-route-last" hidden></span></div><p class="sub">选择其他方式后，登录成功才会切换。</p><p class="sub" id="login-feedback" role="status" hidden></p><p class="sub" id="login-network-help">教务仅支持校园网内直连；家庭 Wi-Fi、手机流量或热点请选「校外 WebVPN」登录。OA、校园网缴费及学在吉大等校内服务，校外也需通过学校 VPN 访问。</p></div>
  <div class="card"><h2>连接检测</h2><p class="sub" id="network-summary" role="status">检查学校入口的直连情况；不会更改登录方式或验证账号。教务/OA 直连失败而 WebVPN 门户可达时，请到上方登录选「校外 WebVPN」。</p><button class="btn" id="network-check">检测连接</button><div id="network-report" aria-live="polite"></div></div>
@@ -357,13 +358,13 @@ function kbTarget(t){const m=/^(.*)\|(\d+)\|(\d+)-(\d+)$/.exec(t||"");return m?{
 function kbOpText(o){if(o.op==="add"){const c=o.course||{};return"添加了「"+c.name+"」 "+kbSlot(c)+" "+kbWeeks(c.weeks)}const t=kbTarget(o.target),where="「"+t.name+"」"+(t.weekday?" "+kbSlot(t):""),when=o.weeks&&o.weeks.length?kbWeeks(o.weeks):"所有周";if(o.op==="hide")return where+" "+when+"不上";const s=o.set||{};return where+" "+when+"："+Object.keys(s).map(k=>(KB_FIELD[k]||k)+"改为"+(k==="weekday"?"周"+KB_WD[s[k]-1]:k==="start"||k==="end"?"第"+s[k]+"节":s[k])).join("，")}
 function kbIssueTitle(i){return i.kind==="changed"?"教务更新了这门课":i.kind==="missing"?"这条修改暂未生效":"这条修改已损坏"}
 function kbIssueActions(i){if(i.kind==="invalid")return[["remove","删掉这条修改"]];const a=[["ack","我知道了"]];if(i.kind==="missing"&&i.op==="edit")a.push(["detach","保留为自定义课"]);a.push(["remove","删掉这条修改"]);return a}
-function kbCls(c){return c.src==="custom"?" custom":c.src==="edited"?" edited":""}
-function kbSrcText(c){if(c.src==="custom")return"你自己添加的课";if(c.src==="edited"){const t=kbTarget(c.from);return"你改过的课（教务原来是 "+(t.weekday?kbSlot(t):t.name)+"）"}return"教务课表"}
+function kbCls(c){return c.src==="custom"?" custom":c.src==="edited"?" edited":c.adj?" adjusted":""}
+function kbSrcText(c){if(c.src==="custom")return"你自己添加的课";if(c.src==="official"&&c.adj)return"教务"+c.adj;if(c.src==="edited"){const t=kbTarget(c.from);return"你改过的课（教务原来是 "+(t.weekday?kbSlot(t):t.name)+"）"}return"教务课表"}
 function kbCourse(c,patch){return Object.assign({name:c.name,teacher:c.teacher,location:c.location,weekday:c.weekday,start:c.start,end:c.end,weeks:c.weeks},patch||{})}
 function kbOpSet(id){const o=((D&&D.schedule_ops)||[]).find(x=>x.id===id);return(o&&o.set)||{}}
-function kbSkipReq(c,wk){if(c.src==="official")return{action:"hide",target:c.key,weeks:[wk]};if(c.src==="custom"){const rest=c.weeks.filter(w=>w!==wk);return rest.length?{action:"update",id:c.oid,course:kbCourse(c,{weeks:rest})}:{action:"remove",id:c.oid}}return null}
-function kbDeleteReq(c){return c.src==="official"?{action:"hide",target:c.key}:{action:"remove",id:c.oid}}
-function kbEditReq(c,vals,scope,wk){if(c.src==="custom")return{action:"update",id:c.oid,course:kbCourse(c,vals)};const set={};for(const k of Object.keys(KB_FIELD))if(vals[k]!==undefined&&String(vals[k])!==String(c[k]))set[k]=vals[k];if(c.src==="edited")return{action:"update",id:c.oid,set:Object.assign({},kbOpSet(c.oid),set)};return{action:"edit",target:c.key,weeks:scope==="week"?[wk]:null,set}}
+function kbSkipReq(c,wk){if(c.src==="official")return{action:"hide",target:c.key,jxbid:c.jxbid||undefined,weeks:[wk]};if(c.src==="custom"){const rest=c.weeks.filter(w=>w!==wk);return rest.length?{action:"update",id:c.oid,course:kbCourse(c,{weeks:rest})}:{action:"remove",id:c.oid}}return null}
+function kbDeleteReq(c){return c.src==="official"?{action:"hide",target:c.key,jxbid:c.jxbid||undefined}:{action:"remove",id:c.oid}}
+function kbEditReq(c,vals,scope,wk){if(c.src==="custom")return{action:"update",id:c.oid,course:kbCourse(c,vals)};const set={};for(const k of Object.keys(KB_FIELD))if(vals[k]!==undefined&&String(vals[k])!==String(c[k]))set[k]=vals[k];if(c.src==="edited")return{action:"update",id:c.oid,set:Object.assign({},kbOpSet(c.oid),set)};return{action:"edit",target:c.key,jxbid:c.jxbid||undefined,weeks:scope==="week"?[wk]:null,set}}
 async function kbPost(body,okMsg){try{const j=await api("/api/schedule/overlay",body);for(const k of Object.keys(j))if(k!=="ok")D[k]=j[k];renderGrid();renderKbExtras();if(okMsg)toast(okMsg);return true}catch(e){toast(e.message,true);return false}}
 function kbOpen(c){if(!c)return;const b=$("#kb-dlg-body"),ed=c.src==="edited";
  b.innerHTML=`<h2 style="margin:0 0 6px">${esc(c.name)}</h2><p class="sub">${esc(kbSlot(c))} · ${esc(c.location)}${c.teacher?" · "+esc(c.teacher):""}<br>${esc(kbWeeks(c.weeks))} · ${esc(kbSrcText(c))}</p><div class="row" style="margin-top:12px"><button type="button" class="btn pri" data-k="edit">修改</button>${ed?"":'<button type="button" class="btn" data-k="skip">本周不上</button>'}<button type="button" class="btn ghost" data-k="del">${ed?"恢复教务原样":"删除这门课"}</button><span class="sp"></span><button type="button" class="btn ghost" data-k="close">关闭</button></div>`;
@@ -382,6 +383,8 @@ function kbForm(c){const add=!c,custom=add||c.src==="custom",official=!!c&&c.src
   if(custom){v.weeks=[...b.querySelectorAll(".wkpick input:checked")].map(x=>+x.value);if(!v.weeks.length)return toast("请至少选择一周",true)}
   const sc=(b.querySelector('input[name="kb-scope"]:checked')||{}).value,req=add?{action:"add",course:v}:kbEditReq(c,v,sc,week);if(await kbPost(req,"已保存，刷新课表也不会覆盖"))$("#kb-dlg").close()};
  const d=$("#kb-dlg");if(!d.open)d.showModal();try{$("#kb-f-name").focus()}catch(_){}}
+function adjInfoText(a){a=a||{};if(a.enabled===false)return"已关闭：课表按教务原始安排显示。";if(a.applied>0)return`本学期有 ${a.applied} 处调课/停课已经显示在课表上，带「调」字的就是调过来的课，点开能看到原来的安排。`;if(a.count>0)return"本学期的调课已经包含在课表里了。";return"刷新课表时会一起读取教务的调课、停课通知；读不到也不影响课表和登录。"}
+function renderAdjToggle(){const a=(D&&D.schedule_adjust)||{enabled:true},el=$("#adj-on");if(!el)return;el.checked=a.enabled!==false;$("#adj-info").textContent=adjInfoText(a)}
 function renderKbExtras(){const is=(D&&D.schedule_issues)||[],box=$("#kb-issues");if(!box)return;box.hidden=!is.length;
  box.innerHTML=is.length?`<h2>有 ${is.length} 条课表修改需要你看一下</h2>`+is.map(i=>`<div class="kb-iss"><b>${esc(kbIssueTitle(i))}</b> <span class="sub">「${esc(i.name||"")}」${i.weekday?" "+esc(kbSlot(i)):""}</span><div class="sub">${esc(i.message)}</div><div class="row" style="margin-top:6px">${kbIssueActions(i).map(([a,l])=>`<button type="button" class="btn${a==="remove"?" ghost":""}" data-a="${a}" data-id="${esc(i.oid)}">${l}</button>`).join("")}</div></div>`).join(""):"";
  const ops=(D&&D.schedule_ops)||[],n=ops.length,o=(D&&D.schedule_other_terms)||0;
@@ -520,7 +523,7 @@ function renderAll(){try{renderOffline();renderSession()}catch(_){}
  $("#fm").value=D.first_monday||"";
  const terms=[...new Set(D.grades.map(g=>g.term))].sort().reverse();const tf=$("#termf"),keep=tf.value;
  tf.innerHTML='<option value="">全部学期</option>'+terms.map(t=>`<option>${esc(t)}</option>`).join("");tf.value=keep;
- document.getElementById("noc")?.remove();renderGrid();try{renderKbExtras()}catch(_){}gradeFilterOptions();schemeOptions();if(!dirty)applyScheme($("#scheme").value);else renderGrades();renderExams();renderOfficial();renderProgress();
+ document.getElementById("noc")?.remove();renderGrid();try{renderKbExtras();renderAdjToggle()}catch(_){}gradeFilterOptions();schemeOptions();if(!dirty)applyScheme($("#scheme").value);else renderGrades();renderExams();renderOfficial();renderProgress();
  const cal=D.calendar||{};$("#calinfo").innerHTML=D.first_monday?`第 1 周周一：<b>${esc(D.first_monday)}</b>（${D.first_monday_source==="manual"?"手动覆盖":"来自教务校历"}）${cal.term?" · "+esc(cal.term):""}${cal.total_weeks?" · 共 "+cal.total_weeks+" 周":""} · 今天第 ${weekOf(new Date())} 周`:"尚未读取校历：点右上角“刷新”自动获取开学日期。";
 }
 function refreshSummary(r){const c=k=>r&&r[k]&&r[k].ok?(r[k].count??"✓"):"✗";return `课表 ${c("schedule")} · 成绩 ${c("grades")} · 考试 ${c("exams")} · 校历 ${c("calendar")} · 学业 ${c("completion")}`}
@@ -547,6 +550,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.query
 $("#prev").onclick=()=>{if(week>1){week--;renderGrid()}};$("#next").onclick=()=>{if(week<maxWeek()){week++;renderGrid()}};
 $("#grid").addEventListener("click",e=>{const el=e.target.closest(".cls");if(el)kbOpen(KB_CS[+el.dataset.i])});
 $("#grid").addEventListener("keydown",e=>{const el=e.target.closest&&e.target.closest(".cls");if(el&&(e.key==="Enter"||e.key===" ")){e.preventDefault();kbOpen(KB_CS[+el.dataset.i])}});
+$("#adj-on").onchange=async e=>{const on=e.target.checked;try{const j=await api("/api/settings",{apply_adjustments:on});D=gradeRefreshSnapshot(D,j);renderAll();toast(on?"已开启，调课会显示在课表上":"已关闭，课表按教务原始安排显示")}catch(err){e.target.checked=!on;toast(err.message,true)}};
 $("#kb-add").onclick=()=>kbForm(null);$("#kb-issues").onclick=kbActionClick;$("#kb-edits-list").onclick=kbActionClick;
 $("#kb-reset").onclick=()=>{if(confirm("把本学期课表恢复成教务原样？你的修改会先收起来，马上可以「撤销恢复」。"))kbPost({action:"reset"},"已恢复教务原样")};
 $("#kb-undo").onclick=()=>kbPost({action:"undo_reset"},"已撤销，你的修改回来了");

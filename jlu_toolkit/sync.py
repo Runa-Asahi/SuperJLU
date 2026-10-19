@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from . import exams as ex, jwxt, meta
@@ -20,6 +19,31 @@ def _wjson(path: Path, obj) -> None:
         return
     path.write_text(json.dumps(scrub(obj), ensure_ascii=False, indent=1), encoding="utf-8")
     secure_store.touch_cache_meta(path)
+
+
+def adjustments_enabled(root: Path) -> bool:
+    """设置「自动应用调课/停课」，默认开（2026-10 已用吉大真实账号验证接口）。"""
+    try:
+        v = json.loads((root / "settings.json").read_text(encoding="utf-8")).get("apply_adjustments")
+    except (OSError, ValueError, AttributeError):
+        v = None
+    return v is None or bool(v)
+
+
+def _sync_adjustments(client, root: Path, term: str, courses: list) -> dict:
+    """放在所有步骤之后单独跑：任何失败（含跳统一认证）都只记一笔，不算会话过期、不影响已同步的数据，
+    并保留上次成功取到的调课结果。"""
+    import datetime as dt
+    from . import adjust
+    try:
+        adjs = adjust.fetch_adjustments(client, term)
+        _, notes = adjust.apply_adjustments(courses, adjs)
+    except Exception as e:  # noqa: BLE001
+        return {"ok": True, "available": False, "error": type(e).__name__}
+    _wjson(root / "schedule_adjustments.json", {
+        "term": term, "fetched_at": dt.datetime.now().isoformat(timespec="seconds"),
+        "items": [a.to_dict() for a in adjs], "changes": notes})
+    return {"ok": True, "rows": len(adjs), "applied": sum(1 for n in notes if not n["skipped"])}
 
 
 def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> dict:
@@ -53,24 +77,12 @@ def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> 
 
     def _courses():
         cs = client.fetch_schedule(term)
-        out = {"ok": True, "count": len(cs)}
-        # 实验：调停课合并。接口/字段尚未用吉大真实账号验证，默认关闭，避免未部署接口
-        # 跳 CAS 时被误判为会话过期。SUPERJLU_APPLY_ADJUSTMENTS=1 时启用。
-        if os.environ.get("SUPERJLU_APPLY_ADJUSTMENTS") == "1":
-            from . import adjust
-            try:
-                adjs = adjust.fetch_adjustments(client, term)
-                cs, notes = adjust.apply_adjustments(cs, adjs)
-                _wjson(root / "schedule_adjustments.json", {"term": term, "changes": notes})
-                out["adjustments"] = {"rows": len(adjs),
-                                      "applied": sum(1 for n in notes if not n["skipped"])}
-            except Exception as e:  # noqa: BLE001 —— 调课失败不影响原课表
-                out["adjustments"] = {"error": type(e).__name__}
         courses_cache.extend(cs)
+        # schedule.csv 只放教务原课表；调停课单独存，读取时再合并（设置里可随时开关、即时生效）
+        jwxt.export_courses_csv(cs, str(root / "schedule.csv"))
         # 记下课表所属学期：个人课表修改按学期分开存（见 overlay.py）
         _wjson(root / "schedule_meta.json", {"term": term})
-        jwxt.export_courses_csv(cs, str(root / "schedule.csv"))
-        return out
+        return {"ok": True, "count": len(cs)}
 
     grades_cache: list = []
 
@@ -142,6 +154,8 @@ def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> 
                      ("calendar", _cal), ("periods", _periods),
                      ("official_gpa", _gpa), ("completion", _prog), ("plan_courses", _plan)):
         step(name, fn)
+    if login_err is None and adjustments_enabled(root):
+        s["schedule_adjustments"] = _sync_adjustments(client, root, term, courses_cache)
     try:
         client.save_session()
     except Exception:  # noqa: BLE001

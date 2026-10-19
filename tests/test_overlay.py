@@ -246,8 +246,30 @@ def test_page_has_schedule_edit_ui_without_tech_words():
     import re
     from jlu_toolkit.ui_page import PAGE
     for s in ("＋ 添加课程", "本周不上", "删除这门课", "只改本周", "所有周", "我知道了", "保留为自定义课",
-              "删掉这条修改", "我的课表修改", "导出备份", "导入备份", "恢复教务原样", "撤销恢复"):
+              "删掉这条修改", "我的课表修改", "导出备份", "导入备份", "恢复教务原样", "撤销恢复",
+              "自动应用调课/停课", 'content:"调"'):
         assert s in PAGE, s
     card = PAGE[PAGE.index('id="kb-edits-card"'):PAGE.index("数据与隐私")]
     visible = re.sub(r"<[^>]+>", "", card)
     assert not re.search(r"json|overlay|SUPERJLU_|命令行|终端", visible, re.I), visible
+    assert "SUPERJLU_APPLY_ADJUSTMENTS" not in PAGE
+
+
+def test_overlay_targets_match_by_jxbid():
+    mine = C("大学物理", 1, 1, 2, range(1, 9))
+    mine = core.Course(*[getattr(mine, k) for k in ("name", "teacher", "location", "weekday", "start", "end", "weeks")], "JXB-1")
+    other = core.Course("大学物理", "乙", "B", 1, 1, 2, list(range(1, 9)), "JXB-2")
+    op = ov.make_op("hide", {"target": "大学物理|1|1-2", "jxbid": "JXB-2", "weeks": [3]}, [mine, other])
+    assert op["jxbid"] == "JXB-2"
+    rows, issues = ov.apply_overlay([mine, other], [op])
+    assert issues == []
+    assert 3 in [r for r in rows if r["jxbid"] == "JXB-1"][0]["weeks"]
+    assert 3 not in [r for r in rows if r["jxbid"] == "JXB-2"][0]["weeks"]
+    # 教务改了课程名，教学班不变：修改照样认得出
+    renamed = core.Course("大学物理（双语）", "乙", "B", 1, 1, 2, list(range(1, 9)), "JXB-2")
+    rows, issues = ov.apply_overlay([renamed], [op])
+    assert issues == [] and 3 not in rows[0]["weeks"]
+    # 旧修改（没存 jxbid）仍按课程名认
+    legacy = {k: v for k, v in op.items() if k != "jxbid"}
+    rows, issues = ov.apply_overlay([core.Course("大学物理", "乙", "B", 1, 1, 2, list(range(1, 9)))], [legacy])
+    assert issues == [] and 3 not in rows[0]["weeks"]

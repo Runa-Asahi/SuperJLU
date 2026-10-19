@@ -1233,7 +1233,8 @@ class JwxtClient:
             pass
         self._dbg(step="emap_enter_done", app_index=app_index, **self.session_cookie_summary())
 
-    def _post_form(self, path: str, fields: dict, referer: str) -> dict:
+    def _post_form(self, path: str, fields: dict, referer: str, mark_expired: bool = True) -> dict:
+        """mark_expired=False：可选的附加查询（如调课）跳登录时只抛异常，不把整个会话记为过期。"""
         url = IEDU_BASE + path
         data = urllib.parse.urlencode(fields).encode("utf-8") if fields else b""
         code, text, final, _ = self._request(
@@ -1261,8 +1262,9 @@ class JwxtClient:
             )
         if looks_like_login_redirect(final, text if code != 200 or not text.lstrip().startswith("{") else ""):
             if self.try_cas_refresh():
-                return self._post_form(path, fields, referer)
-            mark_session_expired(path)
+                return self._post_form(path, fields, referer, mark_expired)
+            if mark_expired:
+                mark_session_expired(path)
             raise SessionExpiredError()
         if code != 200:
             raise JwxtError(f"{path} HTTP {code}")
@@ -1271,8 +1273,9 @@ class JwxtClient:
         except json.JSONDecodeError as e:
             if "loginForm" in text or "/tpass/login" in text or "二次认证" in text:
                 if self.try_cas_refresh():
-                    return self._post_form(path, fields, referer)
-                mark_session_expired(path)
+                    return self._post_form(path, fields, referer, mark_expired)
+                if mark_expired:
+                    mark_session_expired(path)
                 raise SessionExpiredError() from e
             raise JwxtError(f"{path} 返回非 JSON") from e
 
@@ -1454,6 +1457,8 @@ def row_to_course(row: dict) -> Optional[core.Course]:
         start=start,
         end=end,
         weeks=weeks,
+        jxbid=_emap_str(row.get("JXBID")),
+        kch=_emap_str(row.get("KCH")),
     )
 
 
@@ -1503,7 +1508,7 @@ def _first_float(row: dict, keys) -> Optional[float]:
 def export_courses_csv(courses: Iterable[core.Course], path: str) -> None:
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(
-            f, fieldnames=["课程", "教师", "地点", "星期", "开始节", "结束节", "周次"]
+            f, fieldnames=["课程", "教师", "地点", "星期", "开始节", "结束节", "周次", "教学班", "课程号"]
         )
         w.writeheader()
         for c in courses:
@@ -1516,6 +1521,8 @@ def export_courses_csv(courses: Iterable[core.Course], path: str) -> None:
                     "开始节": c.start,
                     "结束节": c.end,
                     "周次": _weeks_to_csv(c.weeks),
+                    "教学班": getattr(c, "jxbid", ""),
+                    "课程号": getattr(c, "kch", ""),
                 }
             )
 

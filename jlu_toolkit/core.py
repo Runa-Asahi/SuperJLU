@@ -9,6 +9,9 @@ PERIODS = {1:("08:00","08:45"),2:("08:55","09:40"),3:("10:00","10:45"),4:("10:55
 @dataclass
 class Course:
     name: str; teacher: str; location: str; weekday: int; start: int; end: int; weeks: list
+    jxbid: str = ""   # 教学班 ID（教务 JXBID）；旧 7 列 CSV 没有，为空
+    kch: str = ""     # 课程号（KCH）
+    adj: str = ""     # 由教务调课生成的这节课的说明（只在读取时合并产生，不写入 CSV）
 
 @dataclass
 class Grade:
@@ -31,7 +34,9 @@ def parse_weeks(s):
 def load_courses(path):
     with open(path, encoding="utf-8-sig") as f:
         return [Course(r["课程"], r.get("教师",""), r.get("地点",""), int(r["星期"]),
-                       int(r["开始节"]), int(r["结束节"]), parse_weeks(r["周次"])) for r in csv.DictReader(f)]
+                       int(r["开始节"]), int(r["结束节"]), parse_weeks(r["周次"]),
+                       (r.get("教学班") or "").strip(), (r.get("课程号") or "").strip())
+                for r in csv.DictReader(f)]
 
 def load_grades(path):
     with open(path, encoding="utf-8-sig") as f:
