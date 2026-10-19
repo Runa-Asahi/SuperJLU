@@ -7,7 +7,7 @@ from http.server import ThreadingHTTPServer
 
 import pytest
 
-from jlu_toolkit import jwxt, oa, ui
+from jlu_toolkit import jwxt, oa, sessions, ui, webvpn
 
 SAMPLE = {"updated": "2026-10-15T09:00:00", "channels": {"179577": "校内通知"},
           "channels_items": {"179577": [
@@ -107,11 +107,22 @@ def test_refresh_errors(srv, monkeypatch):
     def boom(*a, **k):
         raise jwxt.NetworkError("timeout")
     monkeypatch.setattr(oa, "fetch_notices", boom)
+    # Default / direct mode: app routing supports OA-via-VPN, but this session is not on it.
+    webvpn.set_mode("direct")
     code, j = _post(base + "/api/oa/refresh", {})
     assert code == 502 and j["offline"] and not j["campus_required"]
     assert j["browser_vpn_supported"] and not j["app_vpn_supported"]
-    assert "学校 WebVPN" in j["error"] and "OA 同步仍走直连" in j["error"]
+    assert "学校 WebVPN" in j["error"] and "校外 WebVPN" in j["error"]
+    assert "仍走直连" not in j["error"] and "仅支持教务" not in j["error"]
     assert "学院通知" in j["error"] and "先连 vpn" not in j["error"]
+
+    # WebVPN mode with a saved VPN session: flag true, no "仍走直连" claim.
+    webvpn.set_mode("webvpn")
+    monkeypatch.setattr(sessions, "load_cookies",
+                        lambda sid: [{"name": "VPN", "value": "x", "domain": "vpn.jlu.edu.cn"}] if sid == "vpn" else [])
+    code, j = _post(base + "/api/oa/refresh", {})
+    assert code == 502 and j["app_vpn_supported"] is True
+    assert "应用内 WebVPN" in j["error"] and "仍走直连" not in j["error"]
 
     def need(*a, **k):
         raise jwxt.LoginError("OA 需要登录")
@@ -124,7 +135,9 @@ def test_page_has_oa_tab():
     from jlu_toolkit.ui_page import PAGE
     assert 'data-t="oa"' in PAGE and 'id="t-oa"' in PAGE and "/api/oa/notices" in PAGE
     assert "学校 OA 可经校园网或学校 VPN 访问" in PAGE
-    assert 'href="/api/oa/webvpn"' in PAGE and "OA 通知同步仍走直连" in PAGE
+    assert 'href="/api/oa/webvpn"' in PAGE
+    assert "OA 通知同步也会经应用内 WebVPN" in PAGE
+    assert "OA 通知同步仍走直连" not in PAGE
     assert "需校园网直连" not in PAGE
     assert "/api/oa/subscriptions" in PAGE
     # CLI watch/notices wording may appear in empty-state copy; do not require it.

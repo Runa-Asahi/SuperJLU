@@ -627,7 +627,8 @@ class JwxtClient:
                     service = urllib.parse.parse_qs(destination.query).get("service", [""])[0]
                     vpn_login = destination.hostname == "vpn.jlu.edu.cn" or (
                         destination.hostname == "cas.jlu.edu.cn" and urllib.parse.urlsplit(service).hostname == "vpn.jlu.edu.cn")
-                    if vpn_login and urllib.parse.urlsplit(logical_url).hostname == IEDU_HOST:
+                    logical_host = urllib.parse.urlsplit(logical_url).hostname
+                    if vpn_login and logical_host in (IEDU_HOST, webvpn.OA_HOST):
                         raise NetworkError("应用内 WebVPN 会话不可用，请在「更多 → 登录」选择「校外 WebVPN」重新连接；教务登录和本地数据已保留。", "webvpn")
                     final = original
                 if urllib.parse.urlsplit(logical_url).hostname == IEDU_HOST and self.last_status < 400:

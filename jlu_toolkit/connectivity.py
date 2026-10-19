@@ -40,4 +40,4 @@ def check_all():
     return {"ok": True, "checked_at": dt.datetime.now().isoformat(timespec="seconds"),
             "python": sys.version.split()[0], "tls_library": ssl.OPENSSL_VERSION,
             "services": results,
-            "note": "仅检测直连 HTTPS，不验证账号。学校 OA 可经校园网或学校 VPN 访问；当前应用内 VPN 只用于教务，OA 同步仍直连。学院官网独立访问。"}
+            "note": "仅检测直连 HTTPS，不验证账号。学校 OA 可经校园网或学校 VPN 访问；应用内 WebVPN 模式下教务与 OA 同步均走 VPN。学院官网独立访问。"}

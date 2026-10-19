@@ -1,4 +1,4 @@
-"""Explicit direct/WebVPN JWXT routes with application-owned sessions.
+"""Explicit direct/WebVPN routes for JWXT and school OA, with application-owned sessions.
 
 Browser cookies are never scraped or imported. CAS issues a service ticket to
 the official WebVPN service, using this application's existing CAS cookie jar.
@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 
 SERVICE = "https://vpn.jlu.edu.cn/login?cas_login=true"
+OA_HOST = "oa.jlu.edu.cn"
 _last_connections = {}
 _state_lock = threading.Lock()
 
@@ -65,11 +66,12 @@ def request_url(url):
     from .campus import vpn_url
     from . import jwxt
     parsed = urllib.parse.urlsplit(url)
-    if parsed.hostname == jwxt.IEDU_HOST:
+    # Proxy JWXT and school OA when the active route is WebVPN. CAS service
+    # tickets must stay on the original service URL (never rewrite CAS /
+    # colleges / the VPN login service itself).
+    if parsed.hostname in (jwxt.IEDU_HOST, OA_HOST):
         return vpn_url(url)
-    # The ST must be issued for the original service. Replacing CAS service
-    # with the proxy URL makes EMAP reject that ticket and redirect forever.
-    return url  # OA, colleges and the VPN login service never change route.
+    return url
 
 
 class RedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -160,4 +162,4 @@ def state():
     with _state_lock:
         last = dict(_last_connections.get(str(jwxt.config_dir()), {}))
     return {"ok": True, "mode": mode(), "vpn": sessions.status("vpn"), "last_connection": last,
-            "note": "教务在校园网内选择直连，校外选择应用内 WebVPN，不自动切换通道。学校 OA 原站可经校园网或学校 VPN 访问，当前应用内 OA 同步仍直连。"}
+            "note": "教务与学校 OA 在校园网内选择直连，校外选择应用内 WebVPN，不自动切换通道。学院官网通知仍独立直连。"}

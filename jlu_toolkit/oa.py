@@ -7,7 +7,7 @@
   详情  GET /defaultroot/PortalInformation!getInformation.action?id=<id>&channelId=<ch>
         .content_t 标题 / .content_time 时间+单位 / .content_font 正文
   搜索  &searchnr=<文本>&searchlx=<类型>（旧客户端用 searchlx=3 按日期 yyyyMMdd）
-  访问  OA 原站可经校园网或学校 VPN 访问；本客户端当前仍直连，浏览器 WebVPN 不改变同步路由。
+  访问  OA 原站可经校园网或学校 VPN 访问；应用内选「校外 WebVPN」时同步走 WebVPN 路由，浏览器会话不会传入程序。
 
 本模块绝不提交任何表单（审批/办理等），只发 GET。--probe 只输出计数与字段名。
 """

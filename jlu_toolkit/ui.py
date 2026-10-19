@@ -934,10 +934,18 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                     try:
                         return self._json(oa_refresh_api(store, body))
                     except jwxt.NetworkError as e:
-                        return self._json({"ok": False, "error": f"学校 OA 直连暂不可用，校外可通过学校 WebVPN 访问原站；当前应用内 VPN 仅支持教务，OA 同步仍走直连。学院通知可独立更新。{e}",
+                        from . import sessions, webvpn
+                        app_vpn = webvpn.mode() == "webvpn" and bool(sessions.load_cookies("vpn"))
+                        if app_vpn:
+                            err = (f"学校 OA 经应用内 WebVPN 暂不可用；也可在浏览器打开学校 WebVPN 查看原站。"
+                                   f"学院通知可独立更新。{e}")
+                        else:
+                            err = (f"学校 OA 直连暂不可用；校外可在「更多 → 登录」选择「校外 WebVPN」后重试，"
+                                   f"或在浏览器打开学校 WebVPN 查看原站。学院通知可独立更新。{e}")
+                        return self._json({"ok": False, "error": err,
                                            "offline": True, "error_kind": e.kind,
                                            "campus_required": False, "browser_vpn_supported": True,
-                                           "app_vpn_supported": False}, 502)
+                                           "app_vpn_supported": app_vpn}, 502)
                     except jwxt.SessionExpiredError:
                         raise
                     except jwxt.LoginError as e:

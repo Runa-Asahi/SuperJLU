@@ -261,7 +261,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
   <div class="seg" id="oa-ch" style="margin:12px 0 0;overflow-x:auto" hidden></div>
   <div id="oa-manage" hidden></div>
   <div class="oaf" style="margin-top:12px"><input id="oa-kw" type="search" placeholder="搜索标题或发文单位（本地筛选）"><select id="oa-dept"><option value="">全部单位</option></select></div>
-  <p class="sub" style="margin:10px 0 0" id="oa-src">学校 OA 可经校园网或学校 VPN 访问；校外可登录<a href="/api/oa/webvpn" target="_blank" rel="noopener noreferrer">学校 WebVPN ↗</a>查看原站。当前应用内 VPN 仅用于教务，OA 通知同步仍走直连。学院官网通知可直接访问，独立更新；数据只读并保存在本机。</p></div>
+  <p class="sub" style="margin:10px 0 0" id="oa-src">学校 OA 可经校园网或学校 VPN 访问；校外可登录<a href="/api/oa/webvpn" target="_blank" rel="noopener noreferrer">学校 WebVPN ↗</a>查看原站。登录时选择「校外 WebVPN」后，OA 通知同步也会经应用内 WebVPN；校园网直连模式下走直连。学院官网通知可直接访问，独立更新；数据只读并保存在本机。</p></div>
  <div class="card" id="oa-box" style="padding:8px 14px"><div class="state"><div class="spin"></div><b>正在读取通知…</b></div></div>
  <div class="card" id="oa-sub"><h2>关键词订阅</h2><div id="oa-sub-b"><p class="sub" style="margin:0">读取中…</p></div></div>
  </div>
@@ -587,7 +587,7 @@ $("#rq").onclick=async()=>{const b=$("#rq");b.disabled=true;b.textContent="查�
 let OA=null,OAQ={kw:"",dept:""},OAERR="",OACH="179577",OACHS=null,OAPREFS=null,OACAT=null,OAMANAGE=false,OAPICK=null;
 function oaFilter(items,q){const k=(q.kw||"").trim().toLowerCase();return items.filter(i=>(!q.dept||i.dept===q.dept)&&(!k||(i.title+" "+i.dept).toLowerCase().includes(k)))}
 function oaLink(u,label){try{const p=new URL(u||"");if(!/^https?:$/.test(p.protocol))return"";const h=p.hostname;if(!(h==="jlu.edu.cn"||h.endsWith(".jlu.edu.cn")||/\.(jdyy\.cn|jdey\.com\.cn|zrlyyy\.com)$/.test(h)))return""}catch(_){return""}return`<a class="btn ghost" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${label}</a>`}
-function renderOA(){const box=$("#oa-box");queueMicrotask(()=>{if(OA&&OA.offline===true&&!box.querySelector(".offl"))box.insertAdjacentHTML("afterbegin",offlineBadge(OA))});if(OAERR&&!OA){box.innerHTML=`<div class="state"><b>读取通知失败</b>${esc(OAERR)}<div class="sub" style="margin-top:6px">学校 OA 可经校园网或学校 VPN 访问，当前应用内 OA 同步仍走直连；学院通知可独立更新。</div><div style="margin-top:14px"><button class="btn pri" id="oa-retry">重试</button></div></div>`;$("#oa-retry").onclick=loadOA;return}
+function renderOA(){const box=$("#oa-box");queueMicrotask(()=>{if(OA&&OA.offline===true&&!box.querySelector(".offl"))box.insertAdjacentHTML("afterbegin",offlineBadge(OA))});if(OAERR&&!OA){box.innerHTML=`<div class="state"><b>读取通知失败</b>${esc(OAERR)}<div class="sub" style="margin-top:6px">学校 OA 可经校园网或学校 VPN 访问；当前通道为校外 WebVPN 时同步也会走应用内 WebVPN。学院通知可独立更新。</div><div style="margin-top:14px"><button class="btn pri" id="oa-retry">重试</button></div></div>`;$("#oa-retry").onclick=loadOA;return}
  if(!OA)return;const all=OA.items||[];const ds=[...new Set(all.map(i=>i.dept).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh"));const sel=$("#oa-dept");sel.innerHTML='<option value="">全部单位</option>'+ds.map(d=>`<option${d===OAQ.dept?" selected":""}>${esc(d)}</option>`).join("");
  const needNet=OA.source==="college"&&["network_error","need_campus"].includes(OA.status);
  const linkOnly=OA.source==="college"&&OA.status==="link_only";

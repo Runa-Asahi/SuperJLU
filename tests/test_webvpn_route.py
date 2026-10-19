@@ -4,6 +4,7 @@ import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+import urllib.response
 from http.server import ThreadingHTTPServer
 
 import pytest
@@ -20,13 +21,15 @@ def test_current_public_cas_redirect_vector_and_original_ports():
         assert webvpn.canonical_url(campus.vpn_url(url)) == url
 
 
-def test_route_proxies_transport_but_preserves_cas_service_and_oa_colleges():
+def test_route_proxies_iedu_and_oa_but_preserves_cas_service_and_colleges():
     assert webvpn.request_url(jwxt.IEDU_PORTAL) == campus.vpn_url(jwxt.IEDU_PORTAL)
+    oa = "https://oa.jlu.edu.cn/defaultroot/"
+    assert webvpn.request_url(oa) == campus.vpn_url(oa)
     url = jwxt.CAS_LOGIN + "?service=" + urllib.parse.quote(jwxt.IEDU_PORTAL, safe="")
     proxied = urllib.parse.urlsplit(webvpn.request_url(url))
     assert proxied.hostname == "cas.jlu.edu.cn"
     assert urllib.parse.parse_qs(proxied.query)["service"] == [jwxt.IEDU_PORTAL]
-    for url in ("https://oa.jlu.edu.cn/defaultroot/", "https://csw.jlu.edu.cn/", "https://ccst.jlu.edu.cn/",
+    for url in ("https://csw.jlu.edu.cn/", "https://ccst.jlu.edu.cn/",
                 "https://iedu.jlu.edu.cn.evil.invalid/", webvpn.SERVICE):
         assert webvpn.request_url(url) == url
 
@@ -159,7 +162,7 @@ def test_failed_direct_login_save_does_not_switch_route(monkeypatch):
     assert webvpn.mode() == "webvpn"
 
 
-def test_proxied_request_keeps_body_normalizes_result_and_does_not_proxy_oa(monkeypatch):
+def test_proxied_request_keeps_body_normalizes_result_and_proxies_oa(monkeypatch):
     monkeypatch.setattr(sessions, "load_cookies", lambda *_: [])
     c = jwxt.JwxtClient(route="webvpn")
     seen = []
@@ -171,8 +174,11 @@ def test_proxied_request_keeps_body_normalizes_result_and_does_not_proxy_oa(monk
     assert seen[0].full_url == campus.vpn_url(jwxt.IEDU_PORTAL)
     assert seen[0].data == b"readonly=query" and seen[0].get_header("Origin") == campus.VPN_BASE
     assert result[2] == jwxt.IEDU_PORTAL
-    c._request("https://oa.jlu.edu.cn/defaultroot/")
-    assert seen[1].full_url == "https://oa.jlu.edu.cn/defaultroot/"
+    oa = "https://oa.jlu.edu.cn/defaultroot/"
+    result = c._request(oa, headers={"Referer": oa})
+    assert seen[1].full_url == campus.vpn_url(oa)
+    assert seen[1].get_header("Referer") == campus.vpn_url(oa)
+    assert result[2] == oa
 
 
 def test_diagnostics_are_anonymous_and_do_not_load_sessions(monkeypatch):
@@ -206,3 +212,30 @@ def test_network_failure_api_is_502_with_cache_not_401_and_never_changes_login(t
         assert not result.get("session_expired")
     finally:
         server.shutdown(); server.server_close()
+
+def test_oa_vpn_login_redirect_raises_session_dead(monkeypatch):
+    import io
+    from email.parser import Parser
+    monkeypatch.setattr(sessions, "load_cookies", lambda *_: [])
+    c = jwxt.JwxtClient(route="webvpn")
+    def response(req, timeout):
+        # Final URL is the VPN login portal (not a proxied OA path).
+        headers = Parser().parsestr("Content-Type: text/html\r\n")
+        resp = urllib.response.addinfourl(io.BytesIO(b"login"), headers, "https://vpn.jlu.edu.cn/login", 200)
+        resp.msg = "OK"
+        return resp
+    monkeypatch.setattr(c.opener, "open", response)
+    with pytest.raises(jwxt.NetworkError, match="WebVPN 会话不可用") as err:
+        c._request("https://oa.jlu.edu.cn/defaultroot/")
+    assert err.value.kind == "webvpn"
+
+
+def test_oa_callback_redirect_is_proxied():
+    from email.message import Message
+    class Client: route = "webvpn"
+    handler = webvpn.RedirectHandler(Client())
+    source = urllib.request.Request("https://oa.jlu.edu.cn/defaultroot/")
+    callback = "https://oa.jlu.edu.cn/defaultroot/PortalInformation!jldxList.action?channelId=179577"
+    redirected = handler.redirect_request(source, None, 302, "Found", Message(), callback)
+    assert redirected.full_url == campus.vpn_url(callback)
+
