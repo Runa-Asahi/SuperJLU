@@ -101,6 +101,33 @@
 
 SuperJLU 也提供命令行工具、本地 API，以及接入 AI 助手（MCP）的能力，可以让 Claude、Cursor 等直接回答「我明天有什么课」「这学期绩点多少」。安装方式和全部命令见 [命令行与开发者文档](docs/cli.md)。
 
+### 命令行与 MCP 快速上手
+
+1. 安装 [uv](https://docs.astral.sh/uv/)，然后安装（要用 MCP 需 Python 3.10+）：
+   ```bash
+   uv tool install "jlu-toolkit[captcha,mcp] @ git+https://github.com/Runa-Asahi/SuperJLU"
+   ```
+2. 登录并同步（账号是**邮箱前缀**，不是学号；按提示输入密码和微信验证码）：
+   ```bash
+   jlu-toolkit fetch --user 你的邮箱前缀   # 登录并保存会话
+   jlu-toolkit sync                        # 用已保存会话把课表/成绩/考试/学业进度同步到数据目录
+   ```
+3. 常用命令：
+   ```bash
+   jlu-toolkit today --week 8 --weekday 3   # 某天的课（含调课和自己的修改）
+   jlu-toolkit exams                        # 考试倒计时
+   jlu-toolkit adjustments                  # 本学期调课/停课
+   jlu-toolkit college 计算机               # 学院官网通知
+   jlu-toolkit route webvpn                 # 切换网络方式：direct 校园网直连 / webvpn 校外 WebVPN
+   ```
+4. 在 Claude Desktop、Cursor 等的 MCP 配置里加上（不需要填任何文件路径）：
+   ```json
+   {"mcpServers": {"superjlu": {"command": "jlu-toolkit-mcp"}}}
+   ```
+   然后直接问 AI：「我明天有什么课？」「离下一场考试还有几天？」「按保研加权我的绩点是多少？」「我还差哪些课组的学分？」「这周有没有调课？」「计算机学院最近有什么通知？」
+
+说明：登录需要微信验证码，所以 **MCP 从不自己登录**，只读取 App 或命令行保存的会话和数据。数据在本机 `~/.config/jlu-toolkit/data`（Windows 为 `%USERPROFILE%\.config\jlu-toolkit\data`）。同一台电脑上，Windows 版 `SuperJLU.exe`、`jlu-toolkit` 和 MCP 用的是同一份数据和登录状态，在 App 里登录同步过就能直接用；安卓 App 的数据存在手机上，电脑上的 MCP 读不到，需要在电脑上再登录一次。会话过期时，工具会提示「请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步」。
+
 本地修改源码后，Windows 可运行仓库内的 `启动SuperJLU.cmd`（需先安装 uv），或在项目目录执行 `uv run --extra captcha python start_local.py`。启动器会运行当前源码、自动打开浏览器，并打印实际地址；8765 已占用时使用其他端口，测试时以本次输出的网址为准。使用期间请保留启动窗口，按 Ctrl+C 停止。
 
 ## 特别鸣谢

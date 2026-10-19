@@ -141,8 +141,8 @@ def _main(argv=None):
         help="禁用图形验证码自动识别，始终手动输入",
     )
 
-    e = sub.add_parser("exams", help="查看考试倒计时（读取 exams.csv）")
-    e.add_argument("csv", nargs="?", default="exams.csv")
+    e = sub.add_parser("exams", help="查看考试倒计时（默认读 App 数据目录；也可给 exams.csv 路径）")
+    e.add_argument("csv", nargs="?", default="")
     e.add_argument("--all", action="store_true", help="包含已结束的考试")
 
     ex_p = sub.add_parser(
@@ -213,6 +213,16 @@ def _main(argv=None):
     oa.add_argument("--json", action="store_true", help="ASCII JSON 输出")
     oa.add_argument("--debug", action="store_true")
 
+    adj = sub.add_parser("adjustments", help="本学期调课/停课记录（只读 App 数据目录）")
+    adj.add_argument("--json", action="store_true")
+    co = sub.add_parser("college", help="学院官网通知（只读）；不带参数列出栏目")
+    co.add_argument("college", nargs="?", default="", help="栏目 id 或学院名，如 计算机")
+    co.add_argument("-k", "--keyword", default="")
+    co.add_argument("-n", "--limit", type=int, default=20)
+    co.add_argument("--refresh", action="store_true", help="联网抓取学院官网公开页面（无需登录）")
+    co.add_argument("--json", action="store_true")
+    rt = sub.add_parser("route", help="查看或切换教务网络方式：direct 校园网直连 / webvpn 校外 WebVPN")
+    rt.add_argument("mode", nargs="?", choices=("direct", "webvpn"))
     u = sub.add_parser("ui", help="启动本地网页界面（127.0.0.1，手机浏览器打开）")
     u.add_argument("--port", type=int, default=8765)
     u.add_argument("--demo", action="store_true", help="使用示例数据（不读写真实数据目录）")
@@ -261,6 +271,12 @@ def _main(argv=None):
         _cmd_fetch(x)
     elif x.cmd == "exams":
         _cmd_exams(x)
+    elif x.cmd == "adjustments":
+        _cmd_adjustments(x)
+    elif x.cmd == "college":
+        _cmd_college(x)
+    elif x.cmd == "route":
+        _cmd_route(x)
     elif x.cmd == "explore":
         _cmd_explore(x)
     elif x.cmd == "ui":
@@ -574,12 +590,62 @@ def _print_countdown(exs, show_all: bool = False) -> None:
 
 
 def _cmd_exams(x):
+    if not x.csv:
+        from . import ui
+        exs = ui.Store(ui.data_dir()).exams()
+        if not exs:
+            print("本地还没有考试安排；请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步", file=sys.stderr)
+            sys.exit(1)
+        _print_countdown(exs, show_all=x.all)
+        return
     try:
         exs = exmod.load_exams(x.csv)
     except FileNotFoundError:
         print(f"找不到 {x.csv}；先运行 jlu-toolkit fetch --what exams", file=sys.stderr)
         sys.exit(1)
     _print_countdown(exs, show_all=x.all)
+
+
+def _cmd_adjustments(x):
+    from . import mcp_tools
+    d = mcp_tools.adjustments()
+    if x.json:
+        print(json.dumps(d, ensure_ascii=False, indent=1)); return
+    if "error" in d:
+        print(d["error"], file=sys.stderr); sys.exit(1)
+    print(f"学期 {d['term'] or '未知'}：{d['count']} 条调整，自动应用{'已开' if d['auto_apply'] else '已关'}")
+    f = lambda s: f"{s['weekday_text']} 第{s['periods']}节 第{','.join(map(str, s['weeks']))}周" if s else "—"
+    for i in d["items"]:
+        loc = f" @ {i['new_location']}" if i["new_location"] else ""
+        print(f"  [{i['kind']}] {i['course']}：{f(i['before'])} → {f(i['after'])}{loc}")
+
+
+def _cmd_college(x):
+    from . import mcp_tools
+    d = mcp_tools.college_notices(x.college, x.keyword, x.limit, x.refresh)
+    if x.json:
+        print(json.dumps(d, ensure_ascii=False, indent=1)); return
+    if "error" in d:
+        print(d["error"], file=sys.stderr); sys.exit(1)
+    if not x.college:
+        for c in d["channels"]:
+            print(f"  {c['id']}  {c['name']}（本地 {c['cached']} 条）")
+        print(d["hint"]); return
+    print(f"{d.get('channel_name') or d['channel']}（更新于 {d.get('fetched_at') or '—'}）")
+    for i in d["items"]:
+        print(f"  {i['time'][:10]}  {i['title']}  {i.get('url', '')}")
+    if d.get("hint"):
+        print(d["hint"])
+
+
+def _cmd_route(x):
+    from . import webvpn
+    names = {"direct": "校园网直连", "webvpn": "校外 WebVPN"}
+    if x.mode:
+        webvpn.set_mode(x.mode)
+        print(f"已切换为：{names[x.mode]}（与桌面 App 共用这一设置）")
+    else:
+        print(f"当前网络方式：{names[webvpn.mode()]}")
 
 
 def _cmd_explore(x):

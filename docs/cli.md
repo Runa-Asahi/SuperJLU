@@ -110,14 +110,14 @@ jlu-toolkit fetch --user 你的邮箱前缀 --force-login
 # 只拉课表 / 成绩 / 考试 / 指定学期
 jlu-toolkit fetch --user 你的邮箱前缀 --what schedule --term 2025-2026-2
 jlu-toolkit fetch --what exams          # 考试安排 → exams.csv，并打印倒计时
-jlu-toolkit exams exams.csv             # 离线查看考试倒计时
+jlu-toolkit exams                       # 离线查看考试倒计时（读数据目录；也可给 exams.csv 路径）
 ```
 
 图形验证码图片：
 - **Termux**：优先保存到 `~/storage/downloads/jlu_cas_captcha.jpg`（请先 `termux-setup-storage`）
 - 其他环境：当前目录下的 `jlu_cas_captcha.jpg`
 
-> MCP **不会**代你登录教务；请先用上面的命令导出 CSV，再把路径配给 MCP。
+> MCP **不会**代你登录教务（需要微信验证码）。用 `fetch` 登录保存会话后运行 `jlu-toolkit sync`（或在桌面 App 里登录同步），数据写进数据目录，MCP 直接读这一份，不需要配置 CSV 路径。
 
 ### Termux（Android）示例
 ```bash
@@ -215,24 +215,55 @@ v2 会额外用内存中的学号/方案代码探测官方绩点与课组明细�
 
 MCP 依赖需要 Python 3.10 或更高版本；普通 CLI / Web UI 仍支持 Python 3.9。Python 3.9 安装时会跳过不兼容的可选 MCP 依赖，以免影响基础功能和 `uv` 的跨版本依赖解析。
 ```bash
-pip install "jlu-toolkit[mcp] @ git+https://github.com/Runa-Asahi/SuperJLU"
+uv tool install "jlu-toolkit[captcha,mcp] @ git+https://github.com/Runa-Asahi/SuperJLU"
 ```
 ```json
-{"mcpServers": {"jlu": {"command": "jlu-toolkit-mcp",
-  "env": {"JLU_SCHEDULE_CSV": "/path/课表.csv", "JLU_GRADES_CSV": "/path/成绩.csv"}}}}
+{"mcpServers": {"superjlu": {"command": "jlu-toolkit-mcp"}}}
+```
+
+MCP 默认读数据目录 `~/.config/jlu-toolkit/data`（Windows：`%USERPROFILE%\.config\jlu-toolkit\data`），和桌面 App（`SuperJLU.exe` / `jlu-toolkit ui`）、`jlu-toolkit sync` 是同一份；同一台电脑、同一个系统用户下登录状态也共用。安卓 App 的数据在手机私有目录里，电脑上的 MCP 读不到。
+`JLU_SCHEDULE_CSV` / `JLU_GRADES_CSV` / `JLU_EXAMS_CSV` 仍可选，用来改读别的 CSV（旧配置不用改）。
+
+| 工具 | 用途 |
+|---|---|
+| `courses_on_day(week, weekday)` | 某周某天的课（教务 + 调停课 + 个人修改） |
+| `timetable_adjustments()` | 本学期调课/停课/补课/换教室记录，是否已自动应用 |
+| `exams(include_past)` | 考试安排与倒计时 |
+| `list_grades(term)` / `compute_gpa(term)` | 成绩、简单学分加权绩点 |
+| `gpa_schemes()` / `compute_gpa_with_scheme(scheme, term)` | 绩点方案（保研加权 / 奖学金加权 / 所有课程 + App 里保存的方案）及按方案计算 |
+| `academic_progress()` | 学业进度：总学分与各课组要求/已获/还差 |
+| `plan_courses(status, term, nature)` | 培养方案课程明细 |
+| `free_rooms` / `list_campuses` / `list_buildings` / `list_room_types` | 空教室（需已保存会话） |
+| `oa_notices` / `oa_new_matches` | OA 校内通知、订阅命中 |
+| `college_notices(college, keyword, limit, refresh)` | 学院官网通知（refresh 才联网，公开页面无需登录） |
+| `session_status` / `sessions_status` | 登录会话状态（不联网） |
+
+本地没有数据或会话过期时，工具返回「请先在 SuperJLU App 或 jlu-toolkit fetch 登录同步」。
+
+## 其它只读命令
+
+```bash
+jlu-toolkit adjustments [--json]                 # 本学期调课/停课
+jlu-toolkit college                              # 列出学院栏目
+jlu-toolkit college 计算机 -k 考试 [--refresh]   # 学院官网通知
+jlu-toolkit route                                # 当前网络方式
+jlu-toolkit route direct|webvpn                  # 切换：校园网直连 / 校外 WebVPN（与桌面 App 共用）
 ```
 
 ## 路线图
 - [x] 课表/成绩文件导入、绩点计算、iCal 导出、MCP 接口
 - [x] 教务 HTTP 自动导出（CAS 3DES + 二次认证 + 验证码自动识别；会话本地复用）
 - [x] 本地网页界面：课表周视图、成绩勾选、命名绩点方案、考试倒计时、iCal 导出
-- [x] 考试安排拉取与倒计时（接口按金智通用 `studentWdksapApp` 实现，待吉大实测确认）
+- [x] 考试安排拉取与倒计时（`studentWdksapApp`，吉大已可用）
 - [x] `explore` 只读探测 + 脱敏报告
 - [x] 教务校历自动识别开学日期/当前周、真实节次时间、官方学分绩点、学业完成（课组）进度
-- [~] 空教室：已实现 `jlu-toolkit rooms`、网页「教室」页和 MCP `free_rooms`；吉大的接口名/参数正通过 `rooms --probe` 实测确认
+- [x] 空教室：`jlu-toolkit rooms`、App「教室」页和 MCP `free_rooms`（吉大 `kxjas` 已可用）
 - [~] 官方绩点：用与空教室相同的 EMAP 页面发现扫描 `cjcx` 应用，找含 jd/xfjd 等的动作；`jlu-toolkit gpa --probe` 输出动作/字段名。找到后 source=`official`，否则仍回退到教务单科绩点加权
-- [ ] 官方绩点口径（保研/综测）预设方案、不同学院规则可配置
-- [ ] MCP 接入考试与绩点方案；桌面托盘挂件
+- [x] 绩点方案：保研加权 / 奖学金加权 / 所有课程预设 + 自定义方案（App 与 MCP）
+- [ ] 不同学院的绩点规则可配置
+- [x] 调课/停课自动合并进课表、课表手动增删改（App；命令行/MCP 读同一份）
+- [x] MCP 默认读 App 数据目录；接入考试、绩点方案、学业进度、调课记录、学院通知
+- [ ] 命令行手动增删改课；桌面托盘挂件
 
 欢迎 PR 和 ⭐！
 
