@@ -1,11 +1,12 @@
 # TODO：Android 指定外部浏览器
 
-状态：**待实现，界面按钮已禁用**。后续 PR 说明必须把此项列为 TODO / 已知限制，并链接本文，邀请熟悉 Android 与厂商系统的贡献者接手。不要把保留的 UI 和接口描述成浏览器选择功能已经完成。
+状态：**待实现，「更多」里的入口已暂时下线**（卡片不再显示，原生接口不响应）。后续 PR 说明必须把此项列为 TODO / 已知限制，并链接本文，邀请熟悉 Android 与厂商系统的贡献者接手。不要把保留的 UI 和接口描述成浏览器选择功能已经完成。
 
 ## 当前保留的边界
 
-- Android「更多 → 外部浏览器」卡片和禁用的「更换浏览器」按钮。
-- `superjlu://browser-settings` 原生接口及 `BrowserPicker.showSettings()` 占位；即使直接调用，也只提示暂不可用。
+- Android「更多 → 外部浏览器」卡片和禁用的「更换浏览器」按钮：代码保留在 `jlu_toolkit/ui_page.py` 的 `BROWSER_PREFERENCES_CARD`，由 `SHOW_BROWSER_PREFERENCES = False` 暂时隐藏，界面上看不到。
+- `superjlu://browser-settings` 原生接口及 `BrowserPicker.showSettings()` 占位保留，但 `MainActivity.BROWSER_SETTINGS_ENABLED = false`，直接调用也不响应。
+- 恢复：实现并通过下方验收后，把上述两个开关改回 `true`，并同步调整 `tests/test_more_hidden_entries.py` 与 `BrowserPickerTest`。
 - 外链继续按普通 `ACTION_VIEW` 交给系统默认浏览器。忽略旧实验版的全部选择偏好，不扫描应用、不读写选择偏好、不打开应用列表或全局默认设置。
 - 已删除选择、记忆、包名兼容表、MIME 入口尝试、广播回调和 Activity 选择结果处理。没有为占位申请应用列表权限。
 

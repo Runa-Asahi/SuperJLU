@@ -56,6 +56,11 @@ public class BrowserPickerTest {
         assertTrue(ShadowToast.getTextOfLatestToast().contains("暂不可用"));
     }
 
+    @Test public void browserSettingsEntryIsTemporarilyOffline() {
+        // 「更多 → 外部浏览器」暂时下线；恢复前需满足 docs/TODO-browser-selection.md 的验收要求。
+        assertFalse(MainActivity.BROWSER_SETTINGS_ENABLED);
+    }
+
     @Test public void unsupportedLinksAreNotSentToOtherApplications() {
         browsers.open(Uri.parse("file:///data/private/account"));
         assertNull(activity.opened);
