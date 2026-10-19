@@ -28,6 +28,13 @@ def test_login_auto_sends_wechat_code_after_password():
     assert "lgSendCode" in pw
     assert "点「发送微信验证码」" not in PAGE
     assert "账号密码已通过" in PAGE
+    # 密码通过后保留密文圆点，不把真实密码再提交出去
+    assert '$("#lgp").value=PW_MASK' in pw
+    assert '$("#lgp").value=""' not in pw
+    assert '===PW_MASK?"":' in PAGE
+    # 「账号密码已通过」醒目展示，不埋在灰色 .sub 里
+    assert "lg-pass-ok" in PAGE
+    assert 'class="lg-pass-ok"' in PAGE
 
 
 def test_rooms_unified_form_no_mode_switch():

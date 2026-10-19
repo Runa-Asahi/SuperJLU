@@ -165,6 +165,7 @@ dialog#login label{display:block;margin:10px 0 4px;font-size:13px;opacity:.8}
 dialog#login input[type=text],dialog#login input[type=password]{width:100%;box-sizing:border-box}
 dialog#login .cap{display:flex;gap:8px;align-items:center}dialog#login .cap img{height:40px;image-rendering:pixelated;border-radius:6px;cursor:pointer;background:#fff}
 dialog#login .err{color:#d4573b;font-size:13px;min-height:18px;margin:8px 0 0}
+dialog#login .lg-pass-ok{display:block;color:var(--ok);font-size:15px;font-weight:700;letter-spacing:.2px}
 dialog#login .vpn-hint{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--pri2);color:var(--txt);font-size:13px;line-height:1.5}
 dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
 #oa-ch{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
@@ -277,7 +278,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  <div id="lg1"><label for="lgu">账号</label><div id="lga" class="lga" hidden></div><input type="text" id="lgu" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="邮箱前缀">
   <label for="lgp">密码</label><input type="password" id="lgp" autocomplete="current-password" placeholder="密码">
   <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="lgr" checked>记住我（会话失效时免输密码）</label></div>
- <div id="lg2" hidden><p class="sub" id="lgh" style="margin:8px 0 0">账号密码已通过。微信验证码会发到「智慧吉大」的「统一身份认证」消息；若未收到可点「重新发送」。</p>
+ <div id="lg2" hidden><p id="lgh" style="margin:8px 0 0"><b class="lg-pass-ok">✓ 账号密码已通过</b><span class="sub" style="display:block;margin-top:4px">微信验证码会发到「智慧吉大」的「统一身份认证」消息；若未收到可点「重新发送」。</span></p>
   <div id="lg3" hidden><label for="lgw">微信验证码（到「智慧吉大」查看「统一身份认证」消息）</label><input type="text" id="lgw" inputmode="numeric" autocomplete="one-time-code"></div></div>
  <p class="err" id="lge" role="alert"></p>
  <div class="vpn-hint" id="lgvpn" hidden></div>
@@ -642,7 +643,7 @@ async function lgPost(path,body){let r;try{r=await fetch(path,{method:"POST",hea
 async function lgDone(){$("#login").close();lgInfo(true);D=Object.assign(D||{},{session_expired:false,session:null,needs_bootstrap:true});try{renderSession()}catch(_){}try{await fullRefresh({toastOnStart:"登录成功，正在刷新各页面…",okToast:null,failPrefix:"登录成功，刷新失败："})}catch(_){}}
 async function lgSendCode(){const j=await lgPost("/api/login/send_code",{});if(j.step==="code_sent"){LG.step="code";LG.retry=false;toast("微信验证码已发送");return true}LG.step="cap";LG.retry=true;lgErr(j.error||"发送失败，请重试");return false}
 async function lgSubmit(ev){ev.preventDefault();lgErr("");const b=$("#lgo");b.disabled=true;try{
- if(LG.step==="pw"){const j=await lgPost("/api/login/start",{username:$("#lgu").value.trim(),password:$("#lgp").value===PW_MASK?"":$("#lgp").value,remember:$("#lgr").checked});$("#lgp").value="";if(j.step==="success"){await lgDone();return}LG.step="cap";LG.retry=false;lgView();b.textContent="发送中…";await lgSendCode()}
+ if(LG.step==="pw"){const j=await lgPost("/api/login/start",{username:$("#lgu").value.trim(),password:$("#lgp").value===PW_MASK?"":$("#lgp").value,remember:$("#lgr").checked});$("#lgp").value=PW_MASK;if(j.step==="success"){await lgDone();return}LG.step="cap";LG.retry=false;lgView();b.textContent="发送中…";await lgSendCode()}
  else if(LG.step==="cap"){await lgSendCode()}
  else{const j=await lgPost("/api/login/verify",{wechat_code:$("#lgw").value.trim()});if(j.step==="success"){await lgDone();return}lgErr(j.error||"验证码不正确")}
 }catch(e){lgErr(e.message);const p=e.payload||{};if(p.vpn_hint||p.network||/无法连接|连接超时|网络连接|NetworkError|校外|VPN/i.test(e.message||""))lgVpnHint(p);if(/重新输入账号密码|已失效/.test(e.message))LG.step="pw"}finally{b.disabled=false;lgView()}}
