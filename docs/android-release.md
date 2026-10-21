@@ -37,15 +37,24 @@ CI：`.github/workflows/release-android.yml`。推 `v*` 标签 → 签名 releas
 ## 网络与外部浏览器回归
 
 同一 `testDebugUnitTest` 还运行 `BrowserPickerTest` 和 `SchoolHttpTest`（API 28 / 35）。
-指定浏览器暂未实现、按钮禁用。前者只验证占位边界：外链使用系统默认、忽略旧实验偏好、
-接口不弹选择器或全局设置、不支持的链接被拒绝，以及启动失败提示；后者以虚构连接验证
-系统 HTTPS 单跳的请求体、多个 Cookie、重定向/错误状态与连接释放，不调用真实认证。
+当前分支提供应用内默认设置：跟随系统或指定应用（已去掉「每次询问」）。
+`BrowserPickerTest` 验证默认跟随系统外链、忽略旧实验偏好、旧 ask 偏好迁移、
+设置对话框不打开网址或全局设置、不支持的链接被拒绝，以及启动失败提示；
+`SchoolHttpTest` 以虚构连接验证系统 HTTPS 单跳的请求体、多个 Cookie、重定向/错误状态与连接释放，不调用真实认证。
+第 23 版还验证普通网页／HTML／XHTML 查询的 flags、显式组件及原地址／MIME 保留、
+包级去重、超过三个候选不截断，以及本地文件查看器、域名专用入口和不可用组件排除。
+`tests/test_android_browser_visibility.py` 验证查询范围仅限网络网页，没有完整应用列表或文件权限。
+第 24／25 版验证固定应用与跟随系统模式、保存后重新创建 Picker、组件更新、修改／清除、
+取消不保存、Activity 销毁关闭对话框，以及失效默认后回退跟随系统。普通打开不再显示诊断 Toast。
 需要在真机上验证 Python → Java 的 Chaquopy 桥、家庭 Wi-Fi/流量下的真实登录同步，
-以及正常外链默认打开、浏览器选择按钮不可用。参见 [校外连接说明](offcampus-network.md)。
+以及指定应用是否真正打开网址。参见 [校外连接说明](offcampus-network.md)。
 
 local.19 在 OPPO Find X8 Ultra / ColorOS 16 / Android 16 上未弹窗，local.20 又列出全部应用。
-按用户要求，local.21 删除选择算法，仅保留 UI 与接口占位。后续 PR 必须列出
-[浏览器选择 TODO](TODO-browser-selection.md)，由后续贡献者研究和真机验证后再启用。
+按用户要求，local.21 删除选择算法，仅保留 UI 与接口占位。后续见
+[浏览器选择 TODO](TODO-browser-selection.md)。
+第 22 版用户确认面板能弹出但仅有官方浏览器；第 23 版有限 MIME 查询及显式候选已获
+原 OPPO 用户确认，截图显示 16 个候选。第 24 版移除诊断提示并启用默认设置入口；
+第 25 版去掉「每次询问」。默认功能仍待真机验证。
 
 教务采用手动「校园网直连／校外 WebVPN」，不再自动探测并切换路由。真机需分别验证校园网
 直连、流量及家庭 Wi-Fi 下 WebVPN 登录同步，以及取消切换时保留原通道和账号会话。

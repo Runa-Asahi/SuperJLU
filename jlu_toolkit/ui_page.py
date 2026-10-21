@@ -785,8 +785,7 @@ $("#lgbtn").onclick=startLogin;
 </script></body></html>
 """
 
-# 「更多 → 外部浏览器」卡片暂时下线（指定浏览器尚未实现，禁用的按钮只会让同学困惑）。
-# 代码与原生接口保留，后续按 docs/TODO-browser-selection.md 实现后把开关改回 True 即可恢复。
-SHOW_BROWSER_PREFERENCES = False
-BROWSER_PREFERENCES_CARD = '<div class="card" id="browser-preferences" hidden><h2>外部浏览器</h2><p class="sub" id="browser-preferences-hint">指定浏览器功能暂不可用，外链使用系统默认浏览器。</p><button class="btn ghost" id="browser-settings-button" type="button" disabled aria-describedby="browser-preferences-hint">更换浏览器（暂不可用）</button></div>'
+# Android 原生设置保存应用内默认；桌面端保持 hidden，由 loadNetworkState 按 UA 显示。
+SHOW_BROWSER_PREFERENCES = True
+BROWSER_PREFERENCES_CARD = '<div class="card" id="browser-preferences" hidden><h2>外部浏览器</h2><p class="sub" id="browser-preferences-hint">跟随系统默认浏览器，或指定一个应用。仅影响本应用。</p><a class="btn ghost" id="browser-settings-button" href="superjlu://browser-settings" aria-describedby="browser-preferences-hint">设置默认浏览器</a></div>'
 PAGE = PAGE.replace("<!--BROWSER_PREFERENCES_CARD-->", BROWSER_PREFERENCES_CARD if SHOW_BROWSER_PREFERENCES else "", 1)

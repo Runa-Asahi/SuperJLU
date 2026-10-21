@@ -29,8 +29,8 @@ public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     /** 前台时每 15 分钟调一次 POST /api/session/keepalive；退到后台停止。 */
     static final long KEEPALIVE_MS = 15 * 60 * 1000L;
-    /** 指定外部浏览器尚未实现，入口暂时下线；实现后改为 true 恢复 superjlu://browser-settings。 */
-    static final boolean BROWSER_SETTINGS_ENABLED = false;
+    /** 应用内网页打开偏好，不修改系统全局默认浏览器。 */
+    static final boolean BROWSER_SETTINGS_ENABLED = true;
     private volatile String baseUrl;
     private boolean resumed;
     private final Runnable keepalive = new Runnable() {
@@ -197,13 +197,13 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         if (chrome != null) chrome.cancel();
+        if (browsers != null) browsers.close();
         super.onDestroy();
     }
 
     /** 本机地址留在 WebView 内，其余链接交给系统浏览器。 */
     private boolean handle(Uri u) {
         if ("superjlu".equals(u.getScheme()) && "browser-settings".equals(u.getHost())) {
-            // 「更多 → 外部浏览器」已暂时下线：接口保留但不响应，见 docs/TODO-browser-selection.md。
             if (BROWSER_SETTINGS_ENABLED) browsers.showSettings();
             return true;
         }
