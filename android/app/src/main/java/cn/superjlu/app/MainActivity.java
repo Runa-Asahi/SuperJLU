@@ -340,6 +340,39 @@ public class MainActivity extends Activity {
             main.post(() -> paintBars(b, n, dark));
         }
 
+        /** 网页每次渲染课表时把精简快照发过来，桌面小组件读取。 */
+        @JavascriptInterface public void saveWidgetData(String json) {
+            try { WidgetUpdater.save(MainActivity.this, json); } catch (RuntimeException ignored) {}
+        }
+
+        @JavascriptInterface public boolean lockNotifyEnabled() {
+            return WidgetUpdater.prefs(MainActivity.this).getBoolean(WidgetUpdater.KEY_NOTIFY, false);
+        }
+
+        @JavascriptInterface public void setLockNotify(boolean on) {
+            WidgetUpdater.prefs(MainActivity.this).edit().putBoolean(WidgetUpdater.KEY_NOTIFY, on).apply();
+            main.post(() -> {
+                if (on && Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 42);
+                }
+                WidgetUpdater.updateAll(MainActivity.this);
+            });
+        }
+
+        @JavascriptInterface public void requestBatteryExemption() {
+            main.post(() -> BackgroundHelper.requestBatteryExemption(MainActivity.this));
+        }
+
+        @JavascriptInterface public void openAutostartSettings() {
+            main.post(() -> BackgroundHelper.openAutostart(MainActivity.this));
+        }
+
+        @JavascriptInterface public String backgroundHint() {
+            return BackgroundHelper.hint(BackgroundHelper.brand())
+                    + (BackgroundHelper.ignoringBattery(MainActivity.this) ? "（已忽略电池优化）" : "");
+        }
+
         @JavascriptInterface public void shareIcs(String body) {
             if (body == null || body.length() > 2_000_000) {
                 main.post(() -> Toast.makeText(MainActivity.this, "导出失败", Toast.LENGTH_LONG).show());
@@ -411,6 +444,12 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (chrome != null && chrome.onActivityResult(requestCode, resultCode, data)) return;
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        if (requestCode == 42) WidgetUpdater.updateAll(this);
+        super.onRequestPermissionsResult(requestCode, permissions, results);
     }
 
     @Override

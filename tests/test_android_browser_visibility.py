@@ -25,4 +25,7 @@ def test_browser_visibility_only_covers_network_web_requests():
 
 def test_browser_discovery_does_not_request_installed_app_inventory_or_file_access():
     permissions = {node.get(ANDROID + "name") for node in ET.parse(MANIFEST).getroot().findall("uses-permission")}
-    assert permissions == {"android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"}
+    # 小组件/锁屏通知/后台保活新增三项；仍不得申请应用清单或文件访问权限。
+    assert permissions == {"android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
+                           "android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.POST_NOTIFICATIONS",
+                           "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"}

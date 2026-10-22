@@ -342,6 +342,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  <div class="card"><h2>登录</h2><p class="sub" id="lginfo">请选择当前网络对应的登录方式。</p><div class="seg" role="group" aria-label="连接方式"><button type="button" data-login-mode="direct" class="on" aria-pressed="true">校园网直连</button><button type="button" data-login-mode="webvpn" aria-pressed="false">校外 WebVPN</button></div><p class="sub" id="login-method-hint">已连接校园网时使用，直接登录并同步教务数据。</p><p class="sub device-net-hint" id="device-net-hint" role="status" hidden></p><button class="btn pri" id="lgbtn" type="button">登录并同步</button><div id="network-route" role="status"><span class="login-route-label">当前连接方式</span><strong id="network-route-current">校园网直连</strong><span id="network-route-last" hidden></span></div><p class="sub">选择其他方式后，登录成功才会切换。</p><p class="sub" id="login-feedback" role="status" hidden></p><p class="sub" id="login-network-help">教务仅支持校园网内直连；家庭 Wi-Fi、手机流量或热点请选「校外 WebVPN」登录。OA、校园网缴费及学在吉大等校内服务，校外也需通过学校 VPN 访问。</p></div>
  <div class="card"><h2>连接检测</h2><p class="sub" id="network-summary" role="status">检查学校入口的直连情况；不会更改登录方式或验证账号。教务/OA 直连失败而 WebVPN 门户可达时，请到上方登录选「校外 WebVPN」。</p><button class="btn" id="network-check">检测连接</button><div id="network-report" aria-live="polite"></div></div>
  <!--BROWSER_PREFERENCES_CARD-->
+ <!--ANDROID_EXTRAS_CARD-->
  <div class="card"><h2>导出</h2><p class="sub">导出 iCal 后可导入手机日历，课前 15 分钟提醒。</p><a class="btn pri" id="ics" href="/api/ics" download>导出 iCal (.ics)</a></div>
  <div class="card" id="kb-edits-card"><h2>我的课表修改</h2><p class="sub" id="kb-edits-sum"></p><div id="kb-edits-list"></div>
   <div class="row" style="margin-top:10px"><a class="btn" id="kb-export" href="/api/schedule/overlay" download="superjlu-schedule-edits.json">导出备份</a><button type="button" class="btn" id="kb-import-btn">导入备份</button><input type="file" id="kb-import" accept=".json,application/json,text/plain" hidden><button type="button" class="btn ghost" id="kb-reset" hidden>恢复教务原样</button><button type="button" class="btn ghost" id="kb-undo" hidden>撤销恢复</button></div>
@@ -616,7 +617,15 @@ document.addEventListener("change",e=>{const id=e.target.id;if(id==="pf-st"||id=
 function fmtCached(t){if(!t)return"未知时间";const d=new Date(typeof t==="number"?t*1000:t);if(isNaN(d))return esc(String(t));const p=n=>String(n).padStart(2,"0");return `${d.getMonth()+1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`}
 function offlineBadge(j){return j&&j.offline===true?`<span class="offl" title="登录失效或网络不通，显示的是本机缓存">⏏ 离线数据 · 更新于 ${fmtCached(j.cached_at)}</span>`:""}
 function renderOffline(){const b=$("#offl");if(!b)return;const h=offlineBadge(D);b.hidden=!h;b.innerHTML=h}
-function renderAll(){try{renderOffline();renderSession()}catch(_){}
+function widgetExport(d){
+ // 给安卓桌面小组件的精简课表快照（只含课表必要字段，不含成绩/账号）。
+ if(!d||!Array.isArray(d.courses))return null;
+ const per={};for(const [k,v] of Object.entries(d.periods||{}))if(Array.isArray(v)&&v.length>=2)per[String(k)]=[String(v[0]),String(v[1])];
+ const cs=d.courses.filter(c=>c&&c.src!=="cancelled").map(c=>({name:String(c.name||""),location:String(c.location||""),teacher:String(c.teacher||""),weekday:+c.weekday||0,start:+c.start||0,end:+c.end||+c.start||0,weeks:(c.weeks||[]).map(Number).filter(w=>w>0)})).filter(c=>c.weekday>=1&&c.weekday<=7&&c.start>=1);
+ return {v:1,first_monday:String(d.first_monday||"").slice(0,10),periods:per,courses:cs,updated:String(d.updated||"")};
+ }
+function widgetPush(){try{if(window.SuperJLU&&SuperJLU.saveWidgetData){const w=widgetExport(D);if(w)SuperJLU.saveWidgetData(JSON.stringify(w))}}catch(_){}}
+function renderAll(){try{renderOffline();renderSession()}catch(_){}widgetPush();
  $("#upd").textContent=D.updated?"更新于 "+D.updated.replace("T"," "):"";
  $("#fm").value=D.first_monday||"";
  const terms=[...new Set(D.grades.map(g=>g.term))].sort().reverse();const tf=$("#termf"),keep=tf.value;
@@ -677,8 +686,18 @@ $("#kb-paste-ok").onclick=()=>{const t=$("#kb-paste").value.trim();if(!t)return 
 $("#kb-export").onclick=async e=>{if(!/SuperJLU-Android/.test(navigator.userAgent))return;e.preventDefault();let t;try{t=await fetch("/api/schedule/overlay").then(r=>r.text())}catch(_){return toast("读取备份失败",true)}$("#kb-backup-text").value=t;$("#kb-backup-box").hidden=false;try{const f=new File([t],"superjlu-schedule-edits.json",{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:"SuperJLU 课表修改备份"})}catch(_){}};
 $("#kb-copy").onclick=async()=>{const t=$("#kb-backup-text");t.select();let ok=false;try{await navigator.clipboard.writeText(t.value);ok=true}catch(_){try{ok=document.execCommand("copy")}catch(_){}}toast(ok?"已复制，可以粘贴到聊天或备忘录里保存":"复制失败，请长按文字手动复制",!ok)};
 $("#today").onclick=()=>{week=Math.min(Math.max(1,weekOf(new Date())),maxWeek());renderGrid()};
-let tx=null,kbTap=null;$("#grid").addEventListener("touchstart",e=>tx=e.touches[0].clientX,{passive:true});
-$("#grid").addEventListener("touchend",e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;tx=null;if(Math.abs(dx)>60){kbTap=null;(dx<0?$("#next"):$("#prev")).click();return}const el=e.target.closest&&e.target.closest(".cell");if(!el||(e.target.closest&&e.target.closest(".cls"))){kbTap=null;return}const now=Date.now(),key=el.dataset.d+"|"+el.dataset.p;if(kbTap&&kbTap.key===key&&now-kbTap.at<450){kbTap=null;kbHint(null);kbAddAt(el)}else{kbTap={key,at:now};kbHint(el)}});
+function kbSwipe(dx,dy,dt,width){
+ // 只认「明确、完整的左右滑」：水平位移 ≥ 视图宽度 35%（至少 120px），水平分量 > 2.5 倍竖直分量，且速度够快（≥0.3px/ms，≤900ms）。返回 1=下一周，-1=上一周，0=不切换。
+ const w=+width>0?+width:360,ax=Math.abs(dx),ay=Math.abs(dy);
+ if(!(dt>0)||dt>900)return 0;
+ if(ax<Math.max(120,w*.35))return 0;
+ if(ax<=2.5*ay)return 0;
+ if(ax/dt<.3)return 0;
+ return dx<0?1:-1;
+ }
+let tx=null,kbTap=null;$("#grid").addEventListener("touchstart",e=>{if(e.touches.length!==1){tx=null;return}const t=e.touches[0];tx={x:t.clientX,y:t.clientY,at:Date.now(),multi:false}},{passive:true});
+$("#grid").addEventListener("touchmove",e=>{if(tx&&e.touches.length>1)tx.multi=true},{passive:true});
+$("#grid").addEventListener("touchend",e=>{if(tx===null)return;const t=e.changedTouches[0],s=tx;tx=null;if(s.multi)return;const dx=t.clientX-s.x,dy=t.clientY-s.y,g=$("#grid"),sw=kbSwipe(dx,dy,Date.now()-s.at,(g&&g.clientWidth)||window.innerWidth);if(sw){kbTap=null;kbHint(null);(sw>0?$("#next"):$("#prev")).click();return}if(Math.abs(dx)>10||Math.abs(dy)>10){kbTap=null;return}const el=e.target.closest&&e.target.closest(".cell");if(!el||(e.target.closest&&e.target.closest(".cls"))){kbTap=null;return}const now=Date.now(),key=el.dataset.d+"|"+el.dataset.p;if(kbTap&&kbTap.key===key&&now-kbTap.at<450){kbTap=null;kbHint(null);kbAddAt(el)}else{kbTap={key,at:now};kbHint(el)}});
 let kbHintT=0;function kbHint(el){document.querySelectorAll("#grid .cell.hint").forEach(c=>{if(c!==el)c.classList.remove("hint")});clearTimeout(kbHintT);if(!el)return;el.classList.add("hint");kbHintT=setTimeout(()=>el.classList.remove("hint"),1800)}
 $("#grade-restore").onclick=restoreGradeSelection;
 $("#grade-issues").onclick=e=>{const button=e.target.closest("[data-grade-issue]");if(!button||!gradeReady())return;const kind=button.dataset.gradeIssue,active=$("#grade-status").value===kind;resetGradeFilters(false);$("#grade-status").value=active?"":kind;$("#grade-filter").open=true;renderGrades()};
@@ -853,6 +872,8 @@ function renderNetworkState(state){ACTIVE_LOGIN_MODE=state.mode==="webvpn"?"webv
 let DEVICE_NET_HINT="";function renderDeviceNet(){const sel=LOGIN_MODE||ACTIVE_LOGIN_MODE,c=$("#device-net-hint");if(c){c.hidden=!(DEVICE_NET_HINT&&sel!=="webvpn");c.textContent=DEVICE_NET_HINT}let lgTarget="";try{lgTarget=LG&&LG.target}catch(_){}const d=$("#lg-device-net");if(d){d.hidden=!(DEVICE_NET_HINT&&lgTarget==="jwxt");d.textContent=DEVICE_NET_HINT}}
 async function loadDeviceNet(){try{const j=await (await fetch("/api/network/device")).json();DEVICE_NET_HINT=(j&&j.direct_hint)||""}catch(_){DEVICE_NET_HINT=""}renderDeviceNet()}
 async function loadNetworkState(){loadDeviceNet();try{renderNetworkState(await api("/api/network/state"))}catch(_){}const bp=$("#browser-preferences");if(bp)bp.hidden=!/SuperJLU-Android/.test(navigator.userAgent)}
+function axInit(){const c=$("#android-extras");if(!c)return;const ok=!!(window.SuperJLU&&SuperJLU.setLockNotify);c.hidden=!ok;if(!ok)return;const n=$("#ax-notify");try{n.checked=!!SuperJLU.lockNotifyEnabled()}catch(_){}n.onchange=()=>{try{SuperJLU.setLockNotify(n.checked)}catch(_){}};$("#ax-battery").onclick=()=>{try{SuperJLU.requestBatteryExemption()}catch(_){}};$("#ax-autostart").onclick=()=>{try{SuperJLU.openAutostartSettings()}catch(_){}};try{const h=SuperJLU.backgroundHint();if(h)$("#ax-hint").textContent=h}catch(_){}}
+try{axInit()}catch(_){}
 function networkCheckFooter(data){const dev=data&&data.device_hint?`<p class="sub" id="network-device-hint" role="status"><b>手机网络</b> ${esc(data.device_hint)}</p>`:"";const hint=data&&data.hint;if(hint)return dev+`<p class="sub" id="network-check-hint" role="status"><b>校外提示</b> ${esc(hint)}</p><p class="sub">检测不验证登录状态，也不会切换「校园网直连／校外 WebVPN」。学校 OA 直连未通不影响学院通知。</p>`;return dev+`<p class="sub">检测不验证登录状态。学校 OA 未连通不会影响学院通知。若教务直连失败而 WebVPN 门户可达，可到「更多 → 登录」改选「校外 WebVPN」。</p>`}
 $("#network-check").onclick=async()=>{const b=$("#network-check");b.disabled=true;$("#network-summary").textContent="正在检测实际 HTTPS 入口，不读取账号或改变登录状态…";try{const data=await api("/api/network/check",{});$("#network-summary").textContent="检测于 "+data.checked_at.replace("T"," ");$("#network-report").innerHTML='<div style="overflow-x:auto"><table><thead><tr><th>服务</th><th>连接</th><th>说明</th></tr></thead><tbody>'+data.services.map(s=>`<tr><td>${esc(s.name)}<br><span class="sub">${esc(s.host)}:${s.port}</span></td><td>${s.reachable?"可达":"未连通"}</td><td class="sub">${esc(s.error||("HTTP "+s.http_status+" · "+(s.transport==="system"?"系统 HTTPS":"Python HTTPS")+" · "+s.milliseconds+"ms"))}</td></tr>`).join("")+'</tbody></table></div>'+networkCheckFooter(data)+`<details class="sub" id="network-tech"><summary>技术信息（反馈问题时可附上）</summary>Python ${esc(data.python)} · ${esc(data.tls_library)}</details>`}catch(e){$("#network-summary").textContent=e.message}finally{b.disabled=false}};
 const LKOK=u=>{try{const p=new URL(u);return p.protocol==="https:"&&/(^|\.)jlu\.edu\.cn$/.test(p.hostname)}catch(_){return false}};
@@ -912,5 +933,7 @@ $("#lgbtn").onclick=startLogin;
 
 # Android 原生设置保存应用内默认；桌面端保持 hidden，由 loadNetworkState 按 UA 显示。
 SHOW_BROWSER_PREFERENCES = True
+ANDROID_EXTRAS_CARD = '<div class="card" id="android-extras" hidden><h2>小组件与后台</h2><p class="sub">长按桌面空白处 → 小组件 → SuperJLU，可添加「今日课程」「本周剩余课程」。课表刷新后小组件自动更新。</p><label class="row"><input type="checkbox" id="ax-notify"> 锁屏显示下一节课（常驻低优先级通知，默认关闭）</label><div class="row" style="flex-wrap:wrap;gap:8px;margin-top:8px"><button class="btn ghost" id="ax-battery">允许后台运行（忽略电池优化）</button><button class="btn ghost" id="ax-autostart">自启动 / 后台管理设置</button></div><p class="sub" id="ax-hint">最近任务里「锁定」本应用（下拉或长按卡片上的锁图标）需在系统界面手动操作，应用无法代为设置。</p></div>'
 BROWSER_PREFERENCES_CARD = '<div class="card" id="browser-preferences" hidden><h2>外部浏览器</h2><p class="sub" id="browser-preferences-hint">跟随系统默认浏览器，或指定一个应用。仅影响本应用。</p><a class="btn ghost" id="browser-settings-button" href="superjlu://browser-settings" aria-describedby="browser-preferences-hint">设置默认浏览器</a></div>'
+PAGE = PAGE.replace("<!--ANDROID_EXTRAS_CARD-->", ANDROID_EXTRAS_CARD, 1)
 PAGE = PAGE.replace("<!--BROWSER_PREFERENCES_CARD-->", BROWSER_PREFERENCES_CARD if SHOW_BROWSER_PREFERENCES else "", 1)

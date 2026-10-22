@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_bg">
+    <TextView android:id="@+id/w_title" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="SuperJLU 课表" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/widget_accent" android:maxLines="1" />
+    <TextView android:id="@+id/w_row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" android:textColor="@color/widget_fg" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" android:textColor="@color/widget_fg" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" android:textColor="@color/widget_fg" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_row4" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" android:textColor="@color/widget_fg" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_row5" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" android:textColor="@color/widget_fg" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />
+    <TextView android:id="@+id/w_row6" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" android:textColor="@color/widget_fg" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />
+</LinearLayout>

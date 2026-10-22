@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_bg">#F2FFFFFF</color>
+    <color name="widget_fg">#1B1C1F</color>
+    <color name="widget_sub">#5F6368</color>
+    <color name="widget_accent">#2F6FED</color>
+    <string name="widget_today_desc">当前/下一节课、时间和教室</string>
+    <string name="widget_week_desc">今天和本周剩余课程列表</string>
+</resources>
