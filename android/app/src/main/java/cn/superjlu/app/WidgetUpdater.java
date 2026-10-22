@@ -129,8 +129,13 @@ final class WidgetUpdater {
         WidgetSchedule.Item i = left.get(0);
         int m = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
         Notification.Builder b;
+        // VISIBILITY_PUBLIC：在用户允许锁屏显示敏感内容时，通知会出现在锁屏上（不是桌面式锁屏小组件）。
         if (Build.VERSION.SDK_INT >= 26) {
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "锁屏下一节课", NotificationManager.IMPORTANCE_LOW));
+            NotificationChannel ch = new NotificationChannel(CHANNEL, "下一节课（通知栏/锁屏）", NotificationManager.IMPORTANCE_LOW);
+            ch.setDescription("在通知栏显示下一节课；若系统允许锁屏显示通知内容，也会出现在锁屏上。不是桌面式锁屏小组件。");
+            ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            ch.setShowBadge(false);
+            nm.createNotificationChannel(ch);
             b = new Notification.Builder(c, CHANNEL);
         } else {
             b = new Notification.Builder(c).setPriority(Notification.PRIORITY_LOW);

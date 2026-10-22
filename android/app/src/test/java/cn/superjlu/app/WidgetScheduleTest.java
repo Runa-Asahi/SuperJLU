@@ -51,9 +51,19 @@ public class WidgetScheduleTest {
     }
 
     @Test public void oemHints() {
-        assertFalse(BackgroundHelper.autostartIntents("xiaomi redmi").isEmpty());
-        assertTrue(BackgroundHelper.autostartIntents("google pixel").isEmpty());
-        assertTrue(BackgroundHelper.hint("vivo vivo").contains("vivo"));
-        assertTrue(BackgroundHelper.hint("google").contains("加锁"));
+        String[] brands = {"xiaomi redmi","huawei","honor","oppo","realme","oneplus","vivo","iqoo","samsung",
+                "meizu flyme","lenovo","motorola","asus","tecno infinix","google pixel","unknownphone xyz"};
+        for (String b : brands) {
+            assertFalse("no intents for "+b, BackgroundHelper.autostartIntents(b).isEmpty());
+            assertFalse(BackgroundHelper.hint(b).isEmpty());
+            assertFalse(BackgroundHelper.brandLabel(b).isEmpty());
+        }
+        assertTrue(BackgroundHelper.hint("vivo vivo").toLowerCase().contains("vivo"));
+        assertTrue(BackgroundHelper.hint("google pixel").contains("无法代为设置"));
+        assertEquals("小米/红米/POCO", BackgroundHelper.brandLabel("xiaomi redmi poco"));
+        assertEquals("原生 Android", BackgroundHelper.brandLabel("google pixel"));
+        assertTrue(BackgroundHelper.autostartIntents("xiaomi").size() >= 3);
+        assertTrue(BackgroundHelper.autostartIntents("huawei honor").size() >= 4);
+        assertTrue(BackgroundHelper.autostartIntents("oppo coloros").size() >= 4);
     }
 }

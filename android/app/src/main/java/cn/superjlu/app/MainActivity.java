@@ -373,6 +373,10 @@ public class MainActivity extends Activity {
                     + (BackgroundHelper.ignoringBattery(MainActivity.this) ? "（已忽略电池优化）" : "");
         }
 
+        @JavascriptInterface public String brandLabel() {
+            return BackgroundHelper.brandLabel(BackgroundHelper.brand());
+        }
+
         @JavascriptInterface public void shareIcs(String body) {
             if (body == null || body.length() > 2_000_000) {
                 main.post(() -> Toast.makeText(MainActivity.this, "导出失败", Toast.LENGTH_LONG).show());
