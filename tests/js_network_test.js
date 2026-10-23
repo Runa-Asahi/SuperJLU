@@ -4,7 +4,7 @@ const page=fs.readFileSync('jlu_toolkit/ui_page.py','utf8');
 const done=page.split('\n').find(line=>line.startsWith('async function lgDone('));
 async function verify(target,result,expectedRefreshes){
  const calls={refresh:0,login:0,network:0,links:0,messages:[]};
- const c=vm.createContext({LG:{target},D:{grades:[]},
+ const c=vm.createContext({LG:{target},D:{grades:[]},clearRoomCache:()=>{},
   $:()=>({close:()=>{}}),loadNetworkState:async()=>calls.network++,loadLinks:async()=>calls.links++,
   lgInfo:()=>calls.login++,loginFeedback:(message)=>{calls.feedback=message},renderSession:()=>{},toast:(message)=>calls.messages.push(message),
   fullRefresh:async()=>calls.refresh++});
@@ -18,7 +18,7 @@ function verifyChoice(){
  const nodes=new Map();
  const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:true});return nodes.get(id)};
  const buttons=['direct','webvpn'].map(mode=>({dataset:{loginMode:mode},classList:{toggle:(name,on)=>{}},setAttribute(name,value){this[name]=value}}));
- const c=vm.createContext({$:node,LOGGED:true,document:{querySelectorAll:()=>buttons}});
+ const c=vm.createContext({$:node,LOGGED:true,clearRoomCache:()=>{},document:{querySelectorAll:()=>buttons}});
  const functions=['let LOGIN_MODE=','function syncLoginChoice(','function loginFeedback(','function renderNetworkState('];
  vm.runInContext(page.split('\n').filter(line=>functions.some(prefix=>line.startsWith(prefix))).join('\n'),c);
  c.renderNetworkState({mode:'webvpn'});

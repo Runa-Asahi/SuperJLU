@@ -29,6 +29,8 @@ ALLOWED_HOSTS = ("127.0.0.1", "localhost")
 
 TEACHING_ACTIONS = {
     "/api/rooms": "空教室查询", "/api/rooms/campuses": "校区加载",
+    "/api/rooms/day-period": "全天空闲加载",
+    "/api/rooms/day": "全天空闲加载",
     "/api/rooms/buildings": "教学楼加载", "/api/rooms/types": "教室类型加载",
     "/api/rooms/fields": "查询条件加载", "/api/grades/refresh": "成绩同步",
     "/api/refresh": "教务同步", "/api/session/keepalive": "会话检查",
@@ -61,6 +63,10 @@ class Store:
     def __init__(self, root: Path):
         self.root = root
         self.lock = threading.Lock()
+        # Public room availability only; bounded, short-lived, memory-only cache.
+        self.room_day_lock = threading.Lock()
+        self.room_day_cache: dict = {}
+        self.room_day_warm = None
 
     def p(self, name: str) -> Path:
         return self.root / name
@@ -517,6 +523,12 @@ def rooms_api(store: Store, body: dict) -> dict:
     c = _client()
     found, prof = rooms.query_rooms_any(c, q, store.p("rooms_profile.json"), store.first_monday())
     c.save_session()
+    if store.room_day_lock.acquire(blocking=False):
+        try:
+            import time
+            store.room_day_warm = (_room_session_scope(c), time.monotonic())
+        finally:
+            store.room_day_lock.release()
     hidden = 0
     if body.get("hide_special"):
         kept = [r for r in found if not rooms.is_special_room(r)]
@@ -525,6 +537,156 @@ def rooms_api(store: Store, body: dict) -> dict:
     return {"mode": q.mode, "date": q.date, "week": week, "weeks": q.weeks, "weekday": q.weekday,
             "periods": [q.start, q.end], "total": prof.get("total"), "hidden_special": hidden,
             "rooms": [r.to_dict() for r in found]}
+
+
+def room_day_period_api(store: Store, body: dict) -> dict:
+    """Compatibility endpoint for a single complete period observation."""
+    q = build_room_query(store, body)
+    if q.mode != "date" or q.start != q.end or not 1 <= q.start <= 12:
+        raise ValueError("全天概览需要单个日期和第 1–12 节中的单节查询")
+    return _room_day_batch(store, body, [q.start], partial=False)["records"][0]
+
+
+def room_day_api(store: Store, body: dict) -> dict:
+    """At most four concurrent queries, using isolated copies of a warmed session."""
+    if "day_ranges" in body:
+        ranges = body["day_ranges"]
+        if ("day_periods" in body or not isinstance(ranges, list) or not 1 <= len(ranges) <= 4
+                or any(not isinstance(r, list) or len(r) != 2
+                       or any(type(p) is not int for p in r)
+                       or r[0] not in (1, 3, 5, 7, 9, 11) or r[1] != r[0] + 1
+                       for r in ranges)
+                or len({tuple(r) for r in ranges}) != len(ranges)):
+            raise ValueError("每批需指定 1–4 个不重复的两节时段（1–2 至 11–12）")
+        return _room_day_batch(store, body, [tuple(r) for r in ranges], partial=True)
+    periods = body.get("day_periods")
+    if (not isinstance(periods, list) or not 1 <= len(periods) <= 4
+            or any(type(p) is not int or not 1 <= p <= 12 for p in periods)
+            or len(set(periods)) != len(periods)):
+        raise ValueError("每批需指定 1–4 个不重复的节次（第 1–12 节）")
+    return _room_day_batch(store, body, periods, partial=True)
+
+
+def _room_query_client(parent):
+    """Independent opener and cookie jar; workers never refresh or save sessions."""
+    import copy
+    child = jwxt.JwxtClient(timeout=parent.timeout, debug=parent.debug, route=parent.route)
+    for cookie in parent.jar:
+        child.jar.set_cookie(copy.copy(cookie))
+    child._native_hosts = set(parent._native_hosts)
+    child._logged_in = parent._logged_in
+    child._restore_saved_cas = False
+    child._vpn_cookies_loaded = True
+    child._cas_tried = True
+    child._rebuild_opener()
+    return child
+
+
+def _room_session_scope(client):
+    import hashlib
+    return hashlib.sha256(json.dumps(
+        [client.route, jwxt.jar_to_list(client.jar)], sort_keys=True, ensure_ascii=True,
+    ).encode()).hexdigest()
+
+
+def _room_day_batch(store: Store, body: dict, periods: list, partial: bool) -> dict:
+    """Bounded parallel reads; complete pagination, isolated clients, partial retry.
+
+    The batch lock caps each Store at four school queries, including concurrent
+    HTTP callers. Only the coordinator prepares/saves authentication. Workers
+    use immutable profile/metadata snapshots and never write profile files.
+    """
+    import copy
+    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from . import rooms
+
+    first = periods[0][0] if isinstance(periods[0], tuple) else periods[0]
+    base = build_room_query(store, {**body, "periods": str(first)})
+    if base.mode != "date":
+        raise ValueError("全天概览需要单个日期")
+    profile = store.p("rooms_profile.json")
+    if not profile.exists():
+        raise ValueError("请先查询空教室，再加载全天空闲")
+    c = _client()  # Cache still requires a saved session, including after logout.
+    if not store.room_day_lock.acquire(blocking=False):
+        raise ValueError("全天空闲正在加载，请稍后重试")
+    try:
+        now, scope = time.monotonic(), _room_session_scope(c)
+        store.room_day_cache = {k: v for k, v in store.room_day_cache.items() if now - v[0] < 300}
+        queries = {}
+        for period in periods:
+            q = copy.deepcopy(base)
+            q.start, q.end = period if isinstance(period, tuple) else (period, period)
+            queries[period] = q
+
+        def key_for(period):
+            return (scope, json.dumps(queries[period].__dict__, sort_keys=True, ensure_ascii=True))
+
+        records = {p: {**store.room_day_cache[key_for(p)][1], "cached": True}
+                   for p in periods if key_for(p) in store.room_day_cache}
+        missing = [p for p in periods if p not in records]
+        errors = {}
+        if missing:
+            try:
+                # Warm once per route/session, not once per period or batch.
+                warm = store.room_day_warm
+                if not warm or warm[0] != scope or now - warm[1] >= 60:
+                    c.enter_emap_app(rooms.APP)
+                    c.save_session()
+                    scope = _room_session_scope(c)
+                    store.room_day_warm = (scope, time.monotonic())
+                meta = rooms.cached_meta(c)
+                profile_data = json.loads(profile.read_text(encoding="utf-8"))
+                if not isinstance(profile_data, dict):
+                    raise ValueError("请重新查询空教室以更新查询配置")
+                # Construct independent clients before starting any workers.
+                clients = {p: _room_query_client(c) for p in missing}
+                def query(period):
+                    found, _ = rooms.query_rooms(
+                        clients[period], queries[period], profile, meta=copy.deepcopy(meta),
+                        max_tries=1, require_complete=True, enter_app=False,
+                        profile_data=copy.deepcopy(profile_data))
+                    result = {"date": base.date, "complete": True,
+                              "fetched_at": dt.datetime.now().isoformat(timespec="seconds"),
+                              # Full metadata lets time changes filter the complete
+                              # inventories locally, including special-room rules.
+                              "rooms": [{**r.to_dict(), "special": rooms.is_special_room(r)} for r in found]}
+                    result["range" if isinstance(period, tuple) else "period"] = (
+                        list(period) if isinstance(period, tuple) else period)
+                    return result
+                with ThreadPoolExecutor(max_workers=min(4, len(missing)), thread_name_prefix="room-day") as pool:
+                    futures = {pool.submit(query, p): p for p in missing}
+                    for future in as_completed(futures):
+                        period = futures[future]
+                        try:
+                            result = future.result()
+                        except jwxt.JwxtError as error:
+                            errors[period] = error
+                            continue
+                        key = key_for(period)
+                        if len(store.room_day_cache) >= 36 and key not in store.room_day_cache:
+                            del store.room_day_cache[min(store.room_day_cache, key=lambda k: store.room_day_cache[k][0])]
+                        store.room_day_cache[key] = (time.monotonic(), result)
+                        records[period] = {**result, "cached": False}
+            except jwxt.JwxtError as error:
+                errors.update({p: error for p in missing if p not in records})
+        ordered = [records[p] for p in periods if p in records]
+        if errors:
+            # Never save an older successful worker's cookies over expiry.
+            store.room_day_warm = None
+            error = next((e for e in errors.values() if isinstance(e, jwxt.LoginError)), next(iter(errors.values())))
+            if not partial:
+                raise error
+            message, action = teaching_error("/api/rooms/day", error)
+            return {"date": base.date, "records": ordered, "partial": True,
+                    "failed_period": next(p for p in periods if p in errors),
+                    "failed_periods": [p for p in periods if p in errors],
+                    "error": message, "connection_action": action,
+                    "session_expired": isinstance(error, jwxt.SessionExpiredError)}
+        return {"date": base.date, "records": ordered, "partial": False}
+    finally:
+        store.room_day_lock.release()
 
 
 def _cached(store: Store, name: str, fn):
@@ -1029,6 +1191,10 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                     store.save_settings(body)
                 elif self.path == "/api/rooms":
                     return self._json({"ok": True, **rooms_api(store, body)})
+                elif self.path == "/api/rooms/day":
+                    return self._json({"ok": True, **room_day_api(store, body)})
+                elif self.path == "/api/rooms/day-period":
+                    return self._json({"ok": True, **room_day_period_api(store, body)})
                 elif self.path == "/api/network/check":
                     from . import connectivity
                     return self._json(connectivity.check_all())

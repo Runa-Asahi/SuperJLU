@@ -122,6 +122,8 @@ nav button.on{color:var(--pri);font-weight:650;background:var(--pri2)}
 .grade-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grade-toolbar select{flex:1;min-width:160px}.grade-toolbar input[type=search]{flex:2;min-width:180px}
 .grade-secondary{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.grade-secondary>summary{font-size:12px;color:var(--sub)}.grade-secondary p{margin:8px 0}.grade-secondary .btn{font-size:12px}.grade-sync-status{min-height:20px;margin:6px 0 0}
 .grade-caption{display:flex;align-items:center;gap:8px;margin:12px 0 0;flex-wrap:wrap}.grade-caption p{flex:1;margin:0;min-width:180px}.grade-policy{padding:10px 12px;margin-top:12px;background:var(--card2);border-radius:var(--r-sm);font-size:13px;color:var(--sub)}
+.grade-rules{margin-top:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card2);padding:10px 12px}.grade-rules>summary{font-size:13px;color:var(--pri);font-weight:600}.grade-rules>summary .sub{font-size:12px;font-weight:450;margin-left:8px}.grade-rules .grade-policy{margin:8px 0 0;padding:0;line-height:1.8}.grade-rules .grade-template-summary{margin-top:8px;background:var(--card)}.grade-visible{margin:12px 0 7px}.grade-bulk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:440px}.grade-bulk .btn{min-width:0;padding:8px 10px;font-size:13px;min-height:40px}
+@media(max-width:520px){.grade-rules>summary .sub{display:block;margin:2px 0 0 14px}.grade-bulk{gap:6px;max-width:none}.grade-bulk .btn{font-size:12px;padding:8px 5px}}
 #grade-overview{position:relative;z-index:4;box-shadow:var(--sh),0 8px 20px rgba(16,24,40,.06)}
 .grade-overview-slot{display:flow-root}
 #grade-overview.grade-unpinned{position:static;box-shadow:var(--sh)}
@@ -131,6 +133,7 @@ nav button.on{color:var(--pri);font-weight:650;background:var(--pri2)}
 @media(min-width:521px){#grade-compact-live{visibility:hidden;pointer-events:none;position:fixed;top:calc(var(--app-header-height,76px) + 8px);z-index:4;display:flex;align-items:center;gap:14px;padding:10px 14px;margin:0;box-shadow:var(--sh),0 8px 20px rgba(16,24,40,.06)}#grade-compact-live.grade-compact-visible{visibility:visible;pointer-events:auto}#grade-compact-live>.gpa{flex:1;min-width:0;gap:8px}#grade-compact-live>.gpa>div{padding:2px 4px;border:0;background:none}#grade-compact-live>.gpa b{font-size:21px;line-height:1.25}#grade-compact-live>.gpa>div>span{font-size:11px}}
 .grade-pin{font-size:12px;padding:5px 10px}.grade-pin svg{width:15px;height:15px;flex:none;transform:rotate(-35deg);transition:transform .15s}.grade-pin[aria-pressed=true]{background:var(--pri2);border-color:transparent;color:var(--pri)}.grade-pin[aria-pressed=true] svg{transform:none}
 #dirty{color:var(--bad)}
+.grade-unsaved{margin-left:6px}.grade-unsaved[hidden]{display:none}
 .grade-mobile-live{display:none}
 .grade-count .grade-count-selected{font:inherit;color:inherit}.grade-count .grade-count-total{font-size:.56em;color:var(--sub);font-weight:450;margin-left:3px;letter-spacing:0}.grade-count .grade-count-total span{font:inherit;color:inherit}
 .grade-template-summary{margin-top:12px;padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card2);font-size:13px;line-height:1.8}.grade-template-summary[hidden]{display:none}.grade-template-summary p{margin:3px 0}.grade-template-base{color:var(--sub)}.grade-template-base strong{color:var(--txt);font-weight:600}.grade-change-label{font-weight:600;margin-right:5px}.grade-change-label.added{color:var(--ok)}.grade-change-label.removed{color:var(--warn)}.grade-change-course{overflow-wrap:anywhere}.grade-change-more{display:inline}.grade-change-more>summary{display:inline;list-style:none;color:var(--pri);cursor:pointer;font-size:12px;font-weight:600;margin-left:4px;white-space:nowrap}.grade-change-more>summary::before{content:none}.grade-change-more[open]>span{display:block;margin:4px 0 6px;padding:7px 10px;border-radius:8px;background:var(--card);color:var(--sub)}
@@ -191,6 +194,33 @@ select:focus,input:focus{outline:0;border-color:var(--pri);box-shadow:0 0 0 3px 
 .rq-btn{width:100%;margin-top:10px;padding:9px 14px;font-size:15px}
 details#rmore{margin-top:12px}
 table.rt{border-collapse:collapse;width:100%;font-size:13px}.rt th,.rt td{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}.rt th{cursor:pointer;user-select:none;position:static;top:auto;background:transparent}
+.room-results,#room-error{scroll-margin-top:calc(var(--app-header-height,76px) + 14px)}.room-results:focus{outline:none}.room-results-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.room-results-head h2{margin:0;flex:1;min-width:180px}.room-results-head h2 .sub{display:block;margin:4px 0 0;font-size:12px}.room-view{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--card2);border:1px solid var(--line);padding:3px;border-radius:999px;isolation:isolate;flex:none}.room-view::before{content:"";position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 8px)/2);border-radius:999px;background:var(--pri);transition:transform .2s ease;z-index:-1}.room-view[data-view=cards]::before{transform:translateX(calc(100% + 2px))}.room-view button{border:0;background:transparent;color:var(--sub);font:inherit;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}.room-view button[aria-pressed=true]{color:#fff}.room-sort{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:12px}.room-sort label{font-size:12px;color:var(--sub)}.room-sort select{font-size:12px;min-height:32px;padding:4px 8px;max-width:180px}.room-sort .btn{padding:4px 10px;font-size:12px;min-height:32px}
+.room-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.room-tile{--room-color:#3b6ee8;display:flex;flex-direction:column;gap:14px;min-width:0;min-height:132px;padding:14px;text-align:left;border:2px solid var(--room-color);border-radius:var(--r-sm);background:color-mix(in srgb,var(--room-color) 10%,var(--card));color:var(--txt);font:inherit;cursor:pointer;transition:background .15s,box-shadow .15s}.room-tile:hover{background:color-mix(in srgb,var(--room-color) 16%,var(--card));box-shadow:0 3px 10px color-mix(in srgb,var(--room-color) 14%,transparent)}.room-tile[data-wide=true]{grid-column:span 2}.room-tile[data-tone="1"]{--room-color:#099a83}.room-tile[data-tone="2"]{--room-color:#9260dc}.room-tile[data-tone="3"]{--room-color:#df527e}.room-tile[data-tone="4"]{--room-color:#d58120}.room-tile[data-tone="5"]{--room-color:#189ebc}.room-tile[data-tone="6"]{--room-color:#b552bc}.room-tile[data-tone="7"]{--room-color:#629b30}.room-tile[data-tone="8"]{--room-color:#d46439}.room-tile[data-tone="9"]{--room-color:#6264d6}.room-tile-top{display:flex;align-items:flex-start;gap:8px}.room-tile-top b{font-size:15px;line-height:1.45;overflow-wrap:anywhere;flex:1;min-width:0}.room-type-icon{width:23px;height:23px;color:color-mix(in srgb,var(--room-color) 78%,var(--txt));flex:none}.room-tile-location{display:block;color:var(--sub);font-size:11px;line-height:1.5;margin-top:4px;overflow-wrap:anywhere}.room-tile-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;margin-top:auto}.room-tile-seats{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}.room-free-label{font-size:11px;line-height:1.5;padding:3px 7px;border-radius:6px;background:color-mix(in srgb,var(--room-color) 15%,var(--card));color:color-mix(in srgb,var(--room-color) 65%,var(--txt));font-weight:650}.room-table-wrap{overflow-x:auto}.room-name-button{border:0;background:none;font:inherit;color:var(--pri);padding:4px 0;text-align:left;cursor:pointer}.rt th button{font:inherit;color:inherit;border:0;padding:0;background:none;cursor:pointer}.room-detail-heading{flex-wrap:nowrap;align-items:flex-start}.room-detail-heading h2{flex:1;min-width:0;margin:0;overflow-wrap:anywhere}.room-detail-fields{display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px 16px;font-size:13px;margin:18px 0 0}.room-detail-fields dt{color:var(--sub)}.room-detail-fields dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:800px){.room-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:520px){.room-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.room-tile{padding:11px;min-height:128px;gap:12px}.room-tile-top{gap:6px}.room-tile-top b{font-size:14px}.room-type-icon{width:20px;height:20px}.room-results-head{gap:10px}.room-results-head h2{min-width:140px;font-size:14px}.room-view button{padding:6px 10px}.room-dialog{margin:auto 0 0!important;width:100%!important;max-width:none;max-height:80dvh!important;border-radius:20px 20px 0 0!important;padding-bottom:calc(22px + env(safe-area-inset-bottom))!important}.room-detail-fields{grid-template-columns:76px minmax(0,1fr);gap:12px}.room-sort{justify-content:flex-start}}
+@media(prefers-reduced-motion:reduce){.room-view::before,.room-tile{transition:none}}
+
+/* Compact result cards; daily instruments are created only inside the dialog. */
+.room-list-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}.room-list-tools .room-sort{margin:0}.room-day-fav-only{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--sub)}.room-day-fav-only input{width:15px;height:15px;accent-color:var(--pri)}
+.room-day-group h3{display:flex;align-items:center;gap:6px;font-size:13px;margin:14px 0 8px}.room-day-group h3 .sub{font-size:11px;font-weight:400}.room-day-group h3 svg{width:17px;height:17px;color:var(--sub)}
+.room-grid.room-day-grid{grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-flow:row;gap:8px}
+.room-tile.room-day-card{cursor:pointer;min-height:86px;padding:10px;display:flex;flex-direction:column;gap:8px;grid-column:auto;background:color-mix(in srgb,var(--room-color) 6%,var(--card));border:1px solid color-mix(in srgb,var(--room-color) 40%,var(--line));border-left:3px solid var(--room-color);box-shadow:none}
+.room-tile.room-day-card[data-wide=true]{grid-column:span 2}.room-day-card .room-tile-top{align-items:flex-start;gap:5px}.room-day-identity{flex:1;min-width:0}.room-day-name{font:inherit;font-size:14px;font-weight:700;line-height:1.4;overflow-wrap:anywhere;background:none;border:0;padding:0;color:var(--txt);text-align:left;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.room-day-name:hover{color:var(--pri)}
+.room-day-card .room-type-icon{width:16px;height:16px;flex:none;margin-top:2px;color:color-mix(in srgb,var(--room-color) 72%,var(--txt))}.room-day-card[data-wide=true] .room-type-icon{width:19px;height:19px;margin-top:0}.room-day-star.btn{font-size:18px;min-width:22px;width:22px;height:24px;padding:0;border:0;background:transparent;color:var(--sub);flex:none}.room-day-star[aria-pressed=true]{color:var(--warn)}
+.room-compact-meta{display:flex;align-items:center;justify-content:space-between;gap:4px;flex-wrap:wrap;font-size:10px;color:var(--sub);margin-top:auto}.room-compact-meta>span:first-child{white-space:nowrap}.room-next{font-size:10px;white-space:nowrap;color:var(--sub);line-height:1.6}.room-next[data-state=free]{color:var(--ok)}.room-next[data-state=unavailable]{color:var(--warn)}.room-compact-location{font-size:10px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-4px}.room-list-note{font-size:11px;color:var(--sub);margin:12px 0 0}
+.room-detail-overview{display:flex;align-items:center;justify-content:center;padding:8px 0}.room-day-gauge{width:230px;max-width:100%;flex:none}.room-day-gauge svg{display:block;width:100%;overflow:visible}.room-day-gauge text{fill:var(--sub);font-size:11px}.room-day-gauge .room-day-total{fill:var(--txt);font-size:26px;font-weight:750}.room-day-gauge .room-day-total-note{font-size:10px}.room-day-free{stroke:var(--ok)}.room-day-unavailable{stroke:color-mix(in srgb,var(--sub) 22%,var(--card))}.room-day-unknown{stroke:var(--sub);stroke-dasharray:2 3;opacity:.65}
+.room-day-blocks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}.room-day-blocks button{font:inherit;font-size:11px;color:var(--sub);padding:7px 1px;border:0;background:transparent;border-radius:6px;cursor:pointer}.room-day-blocks strong{color:var(--txt);font-size:12px;margin-left:4px}.room-day-blocks button:hover{color:var(--pri);background:var(--pri2)}
+.room-day-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--sub);margin:0 0 12px}.room-day-status .btn{font-size:11px;padding:4px 8px}.room-day-detail-block{padding:11px 0;border-top:1px solid var(--line);scroll-margin-top:12px}.room-day-detail-block.active{background:var(--pri2);border-radius:8px;padding:11px 8px}.room-day-detail-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px}.room-day-detail-head span{color:var(--sub);font-size:11px}.room-day-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.room-day-period{padding:8px 3px;border-radius:8px;background:var(--card2);text-align:center;font-size:11px;color:var(--sub);border:1px solid transparent}.room-day-period b{display:block;color:var(--txt);font-size:13px}.room-day-period small{display:block;font-size:10px;margin:4px 0}.room-day-period.free{background:var(--ok2);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 25%,transparent)}.room-day-period.unknown{background:transparent;border:1px dashed var(--line)}.room-metadata{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}.room-metadata>summary{font-size:12px;color:var(--sub)}
+@media(max-width:1099px){.room-grid.room-day-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:899px){.room-grid.room-day-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:699px){.room-grid.room-day-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:479px){.room-grid.room-day-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.room-list-tools{gap:8px}.room-list-tools .room-sort{gap:5px}.room-list-tools .room-sort select{max-width:115px}.room-tile.room-day-card{padding:9px;gap:7px}.room-day-card .room-type-icon{width:15px;height:15px}.room-day-name{font-size:14px}}
+@media(max-width:299px){.room-grid.room-day-grid{grid-template-columns:1fr}.room-tile.room-day-card[data-wide=true]{grid-column:span 1}}
+@media(pointer:coarse){.room-day-card{min-height:90px!important}.room-day-blocks button{min-height:44px}.room-day-name{min-height:26px}.room-day-star.btn{min-width:28px;height:30px}}
+
+.room-query-period{display:inline-block;white-space:nowrap;margin-left:8px;font-size:13px;font-weight:500}
+.room-grid{grid-auto-flow:row dense}
+@media(max-width:520px){.room-query-period{display:block;margin:3px 0 0;font-size:12px;color:var(--sub)}}
 details>summary{cursor:pointer;list-style:none}details>summary::-webkit-details-marker{display:none}
 details>summary::before{content:"›";display:inline-block;width:14px;color:var(--sub);transition:transform .15s;font-weight:700}details[open]>summary::before{transform:rotate(90deg)}
 details.gc{margin-top:8px}details.gc summary{font-size:12.5px;color:var(--sub)}
@@ -257,13 +287,13 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
 <section class="tab" id="t-cj">
  <div class="grade-overview-slot" id="grade-overview-slot"><div class="card" id="grade-overview"><div class="row grade-overview-heading" style="margin-bottom:14px"><h2 style="margin:0">成绩与绩点</h2><span class="sp"></span><span class="chip" id="grade-source">教务成绩</span><button type="button" class="btn ghost grade-pin" id="grade-pin" data-grade-pin aria-label="成绩统计吸顶" aria-pressed="true" title="取消吸顶"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4-1-7ZM12 16v6"/></svg><span>已吸顶</span></button><button class="btn ghost" id="grade-help" aria-label="成绩帮助" title="成绩帮助">?</button></div>
   <div class="gpa"><div><b id="g-score" data-grade-value="score">—</b><span>加权成绩</span><small class="grade-delta" data-grade-delta="score" hidden></small></div><div><b id="g-gpa" data-grade-value="point">—</b><span>加权绩点</span><small class="grade-delta" data-grade-delta="point" hidden></small></div><div><b id="g-cr" data-grade-value="credit">—</b><span>计入学分</span></div><div><b id="g-n" class="grade-count" aria-label="已选 0 门，共 0 门课程" title="已选 / 全部课程；通过类和零学分课程不参与加权"><span class="grade-count-selected" data-grade-selected>0</span><span class="grade-count-total">/<span data-grade-total>0</span></span></b><span>计入课程</span></div></div>
-  <div class="grade-caption"><p class="sub" id="grade-calc-note"></p></div><div class="grade-policy" id="grade-policy"></div></div></div>
+  <div class="grade-caption"><p class="sub" id="grade-calc-note"></p></div></div></div>
  <div class="card" id="grade-compact-live" aria-label="桌面实时成绩统计"><div class="gpa"><div><b data-grade-value="score">—</b><span>加权成绩</span><small class="grade-delta" data-grade-delta="score" hidden></small></div><div><b data-grade-value="point">—</b><span>加权绩点</span><small class="grade-delta" data-grade-delta="point" hidden></small></div><div><b data-grade-value="credit">—</b><span>计入学分</span></div><div><b class="grade-count" aria-label="已选 0 门，共 0 门课程"><span class="grade-count-selected" data-grade-selected>0</span><span class="grade-count-total">/<span data-grade-total>0</span></span></b><span>计入课程</span></div></div><button type="button" class="btn ghost grade-pin" data-grade-pin aria-label="成绩统计吸顶" aria-pressed="true" title="取消吸顶"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6l-1 7 4 4v2H6v-2l4-4-1-7ZM12 16v6"/></svg><span>已吸顶</span></button></div>
  <div class="card grade-mobile-live" aria-label="实时成绩统计"><div class="gpa"><div><b data-grade-value="score">—</b><span>加权成绩</span><small class="grade-delta" data-grade-delta="score" hidden></small></div><div><b data-grade-value="point">—</b><span>加权绩点</span><small class="grade-delta" data-grade-delta="point" hidden></small></div></div><div class="grade-live-meta"><span>计入学分 <b data-grade-value="credit">—</b></span><span>计入课程 <b class="grade-count" aria-label="已选 0 门，共 0 门课程"><span class="grade-count-selected" data-grade-selected>0</span><span class="grade-count-total">/<span data-grade-total>0</span></span></b></span></div></div>
  <div class="card off-card" id="ogpa" hidden></div>
  <div class="card">
   <div class="grade-toolbar grade-template-toolbar"><select id="scheme" aria-label="计算模板"></select><button class="btn pri" id="saveas">另存为自定义模板</button><button class="btn ghost" id="grade-restore" disabled>恢复模板选择</button><button class="btn ghost" id="del">删除</button></div>
-  <div class="grade-template-summary" id="grade-template-summary" hidden></div>
+  <details class="grade-rules" id="grade-rules"><summary><span id="grade-rules-title"></span><span class="miss grade-unsaved" id="grade-template-dirty" hidden>未保存</span><span class="sub">查看规则与课程调整</span></summary><div class="grade-policy" id="grade-policy"></div><div class="grade-template-summary" id="grade-template-summary" hidden></div></details>
   <div class="grade-toolbar" style="margin-top:12px"><input id="grade-search" type="search" placeholder="搜索课程名称、性质或学期" aria-label="搜索课程"><select id="termf" aria-label="学期筛选"><option value="">全部学期</option></select><button class="btn" id="grade-sync">⟳ 同步教务成绩</button><button class="btn" id="grade-use-jwxt" hidden>返回教务成绩</button></div>
   <p class="sub grade-sync-status" id="grade-sync-status" role="status">默认显示当前登录账号的教务成绩。</p>
   <div class="grade-issues" id="grade-issues" role="region" aria-label="成绩数据核对" hidden></div>
@@ -276,7 +306,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
     <label>计入状态<select id="grade-inclusion"><option value="">全部</option><option value="in">已计入</option><option value="out">已排除</option></select></label>
     <label>成绩状态<select id="grade-status"><option value="">全部</option><option value="pass">及格</option><option value="fail">不及格</option><option value="unknown">成绩无法换算</option><option value="missing-point">缺失绩点</option><option value="missing-nature">未标注性质</option></select></label></div>
    <div class="row" style="margin-top:10px"><span class="sp"></span><button class="btn ghost" id="grade-reset">重置筛选</button></div></details>
-  <div class="row" style="margin-top:12px"><span class="sub" id="grade-visible"></span><span class="sp"></span><button class="btn ghost" id="all">计入筛选结果</button><button class="btn ghost" id="none">排除筛选结果</button><button class="btn ghost" id="grade-required">计入所有必修</button></div>
+  <p class="sub grade-visible" id="grade-visible"></p><div class="grade-bulk" role="group" aria-label="批量调整全部课程，不受列表筛选影响"><button class="btn ghost" id="all" title="计入全部课程，不受列表筛选影响">全部计入</button><button class="btn ghost" id="none" title="排除全部课程，不受列表筛选影响">全部排除</button><button class="btn ghost" id="grade-required" title="追加计入所有有学分的必修课程">计入必修</button></div>
   <div class="sub" id="dirty" role="status" style="margin-top:6px"></div><div id="grade-notes" class="grade-import-notes"></div>
   <details class="grade-secondary"><summary>其他方式 · 文件导入（可选）</summary><p class="sub">无需登录即可导入 Excel / CSV 成绩单并在本地计算；重新打开页面会回到当前账号的教务成绩。</p><div class="row"><button class="btn ghost" id="grade-import">导入成绩单</button><button class="btn ghost" id="grade-view-import" hidden>查看已导入成绩</button><input type="file" id="grade-file" accept=".xlsx,.xls,.csv" hidden></div></details>
  </div>
@@ -294,7 +324,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
    <label>节次<span class="rng"><input type="number" id="rp1" min="1" max="14" value="1" aria-label="起始节次">–<input type="number" id="rp2" min="1" max="14" value="2" aria-label="结束节次"></span></label>
    <label class="m-study r-full">自习时间<span class="rng"><input type="time" id="rst" value="08:00" aria-label="开始时间">–<input type="time" id="ret" value="09:40" aria-label="结束时间"></span></label>
   </div>
-  <div class="m-study rchips-row" id="rst-presets"><span class="sub">快捷</span><button type="button" class="chip" data-sp="1-4">上午</button><button type="button" class="chip" data-sp="5-8">下午</button><button type="button" class="chip" data-sp="9-11">晚上</button></div>
+  <div class="m-study rchips-row" id="rst-presets"><span class="sub">快捷</span><button type="button" class="chip" data-sp="1-4">上午</button><button type="button" class="chip" data-sp="5-8">下午</button><button type="button" class="chip" data-sp="9-12">晚上</button></div>
  </div>
  <div class="rgrp"><div class="rgrp-h">地点</div>
   <div class="rgrid r2">
@@ -313,7 +343,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  <p class="sub" id="rauto" role="status" style="margin:8px 0 0"></p>
  <p class="sub" id="rinfo" style="margin:8px 0 0">需要已保存会话；结果实时来自教务，自动翻页取全。</p></div>
  <div class="banner err room-error" id="room-error" role="alert" hidden><div><b>查询未成功</b><p class="sub" id="room-error-message"></p></div><button class="btn" id="room-switch-login" type="button">检查登录方式</button></div>
- <div class="card" id="rres" hidden></div></section>
+ <div class="card room-results" id="rres" tabindex="-1" aria-label="空教室查询结果" hidden></div></section>
 <section class="tab" id="t-ks"><div class="card"><h2>考试倒计时</h2><div id="exams"></div></div></section>
 <section class="tab" id="t-oa">
  <div id="oa-list-v">
@@ -334,7 +364,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  <div id="oa-detail-v" hidden></div>
 </section>
 <section class="tab" id="t-sz">
- <div class="card" id="links"><h2>校园服务 <span class="sub">不常用但用得到的入口</span></h2><div id="links-b"><p class="sub" style="margin:0">读取中…</p></div></div>
+ <div class="card" id="links"><h2>校园服务 <span class="sub">常用校园网站与服务入口</span></h2><div id="links-b"><p class="sub" style="margin:0">读取中…</p></div></div>
  <h2 style="margin:18px 4px 10px;font-size:14px;color:var(--sub)">设置</h2>
  <div class="card"><h2>学期</h2><p class="sub" id="calinfo"></p>
   <details><summary class="sub">手动覆盖开学日期（一般不需要）</summary><div class="row" style="margin-top:8px"><input type="date" id="fm"><button class="btn pri" id="savefm">保存覆盖</button><button class="btn ghost" id="clrfm">恢复教务校历</button></div></details><label class="adj-toggle"><input type="checkbox" id="adj-on" checked> 自动应用调课/停课</label><p class="sub" id="adj-info" style="margin:4px 0 0"></p></div>
@@ -366,13 +396,14 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  <div class="row" style="margin-top:8px"><button type="button" class="btn ghost" id="lgx">取消</button><span style="flex:1"></span><button type="submit" class="btn pri" id="lgo">登录</button></div>
 </form></dialog>
 <dialog id="kb-dlg" class="grade-dialog" aria-label="课程"><div id="kb-dlg-body"></div></dialog>
+<dialog id="room-detail" class="grade-dialog room-dialog" aria-labelledby="room-detail-title"><div class="row room-detail-heading"><h2 id="room-detail-title"></h2><button type="button" class="btn ghost" id="room-detail-close" aria-label="关闭教室详情">✕</button></div><p class="sub" id="room-detail-hint">所选时段空闲 · 以本次教务查询结果为准</p><div id="room-detail-day"></div><details class="room-metadata"><summary>教室资料</summary><dl id="room-detail-fields" class="room-detail-fields"></dl></details></dialog>
 <dialog id="grade-help-dialog" class="grade-dialog" aria-labelledby="grade-help-title"><div class="row"><h2 id="grade-help-title" style="margin:0">成绩帮助（适用于吉林大学）</h2><span class="sp"></span><button class="btn ghost" data-grade-close aria-label="关闭成绩帮助">✕</button></div>
  <p>不同学院保研政策和奖学金政策不同。请先核对本学院当年规则，调整计入课程，再点击「另存为自定义模板」。内置模板仅供起步参考，不代表官方统计。</p>
  <h3>内置模板</h3><p><strong class="grade-template-name">保研加权：</strong>排除选修、<span style="color:var(--bad)">限选</span>、通用学术英语、体育、军事理论、军事训练。<strong class="grade-template-name">奖学金加权：</strong>只计必修，排除英语、体育、军事训练；军事理论计入。<strong class="grade-template-name">所有课程：</strong>计入全部有学分课程。</p>
  <h3>计算与导入</h3><p>成绩、绩点分别按学分加权。等级成绩：优秀 95、良好 85、中等 75、及格 65、不及格 55。教务课程优先用单科绩点，缺失时按原程序规则估算并标注；导入成绩单缺少绩点时显示「—」。无法识别的成绩会标注，计入时按 0 分处理，请核对后再使用结果。</p>
  <p>支持 Excel / CSV（最多 5 MB），中英文表头、标题行和多工作表。导入数据只保存在本机，独立于教务数据，可随时返回教务成绩。自定义模板保留基础规则及手动选择，新增课程按基础规则计入。</p>
  <h3>核对与恢复模板</h3><p>「需要核对的数据」可筛选无法换算的成绩、缺失绩点或未标注性质的课程，点击已选条件可取消筛选，不改变计入状态。手动调整后，成绩和绩点下方显示相对当前模板已保存选择的差值；任一结果缺失时显示「—」。点击「恢复模板选择」撤销当前模板下的临时调整，自定义模板原有的增减课程会保留。</p>
- <h3>筛选与批量操作</h3><p>搜索、高级筛选和排序只控制显示。批量计入 / 排除作用于当前筛选结果，「计入所有必修」作用于整份成绩单。点击列标题切换降序、升序和默认顺序。</p>
+ <h3>筛选与批量操作</h3><p>搜索、高级筛选和排序只控制显示。「全部计入」「全部排除」作用于整份成绩单，不受当前筛选影响；「计入必修」追加计入所有有学分的必修课程。点击列标题切换降序、升序和默认顺序。</p>
  <h3>学院官网与政策查询</h3><div class="college-links" id="grade-college-links"><span class="sub">正在读取学院官网…</span></div><p>到学院官网搜索以下关键词寻找方案，点击可复制：</p><div class="grade-keywords"><button class="btn ghost" data-grade-copy>免试</button><button class="btn ghost" data-grade-copy>推荐优秀应届本科毕业生免试攻读研究生</button><button class="btn ghost" data-grade-copy>推免</button></div><div class="row" style="margin-top:18px"><span class="sp"></span><button class="btn pri" data-grade-close>我知道了</button></div></dialog>
 <dialog id="grade-save-dialog" class="grade-dialog" aria-labelledby="grade-save-title"><form id="grade-save-form"><h2 id="grade-save-title">另存为自定义模板</h2><p>保存基础规则与当前的手动计入 / 排除。新增课程按基础规则选择。</p><label for="grade-template-name" class="sub">模板名称</label><input id="grade-template-name" maxlength="40" required style="width:100%;margin:8px 0 16px" placeholder="例如：软件学院保研"><div class="row"><button type="button" class="btn ghost" id="grade-save-cancel">取消</button><span class="sp"></span><button class="btn pri" type="submit">保存模板</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -384,7 +415,7 @@ const COLORS=["#3b6fd4","#d4573b","#2e9e6a","#9b51e0","#d48a1e","#1f8fa8","#c241
 let D=null, week=1, include=new Set(), current="__postgraduate__", dirty=false, gradeSessionState="unknown";
 function toast(m,error=false){const t=$("#toast"),el=document.createElement("div");el.className="toast-item"+(error?" bad":"");el.setAttribute("role",error?"alert":"status");el.textContent=m;t.append(el);while(t.children.length>3)t.firstElementChild.remove();setTimeout(()=>el.classList.add("leaving"),3650);setTimeout(()=>el.remove(),4000)}
 function point(s){s=String(s).trim();let v=/^\d+(\.\d+)?$/.test(s)?parseFloat(s):(s in LEVEL?LEVEL[s]:null);if(v===null)return null;return v<60?0:Math.min(4,Math.round((1+(v-60)*.1)*100)/100)}
-async function api(path,body){const r=await fetch(path,body?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{});const j=await r.json();if(j&&j.network_error===true&&$("#network-summary"))$("#network-summary").textContent="最近请求失败："+j.error;if(j&&j.session_expired===true){if(!j.site||j.site==="jwxt"){gradeSessionState="expired";lgInfo(false)}if(Array.isArray(j.courses)||Array.isArray(j.grades)||Array.isArray(j.exams)||j.completion||j.calendar){const next=gradeRefreshSnapshot(D,j);D=Object.assign({},next,{session_expired:true,offline:true,cached_at:j.cached_at||next.cached_at||next.updated},j.site?{session_site:String(j.site)}:{});try{renderAll()}catch(_){}}else{D=Object.assign(D||{},{session_expired:true},j.site?{session_site:String(j.site)}:{});if(D&&((D.courses||[]).length||(D.grades||[]).length)&&!D.offline){D.offline=true;D.cached_at=D.cached_at||D.updated}try{renderSession();renderOffline()}catch(_){}}}if(j&&j.offline===true&&j.ok!==false&&(r.ok||r.status===401))return j;if(!r.ok||j.ok===false){const err=new Error(j.error||(r.status===401?"登录会话已过期，请在「更多 → 登录」中重新登录":r.status));err.payload=j;err.connectionAction=!!(j.connection_action||j.session_expired);throw err}return j}
+async function api(path,body){const r=await fetch(path,body?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{});const j=await r.json();if(j&&j.network_error===true&&$("#network-summary"))$("#network-summary").textContent="最近请求失败："+j.error;if(j&&j.session_expired===true){clearRoomCache();if(!j.site||j.site==="jwxt"){gradeSessionState="expired";lgInfo(false)}if(Array.isArray(j.courses)||Array.isArray(j.grades)||Array.isArray(j.exams)||j.completion||j.calendar){const next=gradeRefreshSnapshot(D,j);D=Object.assign({},next,{session_expired:true,offline:true,cached_at:j.cached_at||next.cached_at||next.updated},j.site?{session_site:String(j.site)}:{});try{renderAll()}catch(_){}}else{D=Object.assign(D||{},{session_expired:true},j.site?{session_site:String(j.site)}:{});if(D&&((D.courses||[]).length||(D.grades||[]).length)&&!D.offline){D.offline=true;D.cached_at=D.cached_at||D.updated}try{renderSession();renderOffline()}catch(_){}}}if(j&&j.offline===true&&j.ok!==false&&(r.ok||r.status===401))return j;if(!r.ok||j.ok===false){const err=new Error(j.error||(r.status===401?"登录会话已过期，请在「更多 → 登录」中重新登录":r.status));err.payload=j;err.connectionAction=!!(j.connection_action||j.session_expired);throw err}return j}
 function weekOf(date){const fm=D.first_monday;if(!fm)return 1;const d0=new Date(fm+"T00:00:00");return Math.floor((date-d0)/864e5/7)+1}
 function nextClass(courses,periods,firstMonday,now,maxW){
  const toM=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(String(t||""));return m?+m[1]*60+ +m[2]:NaN};
@@ -539,6 +570,12 @@ function renderGradeDelta(result,saved){
  document.querySelectorAll('[data-grade-delta]').forEach(el=>{const value=delta[el.dataset.gradeDelta];el.hidden=!dirty;el.textContent="较模板 "+gradeSignedDifference(value);el.title=`与当前模板「${name}」的已保存选择对比`+(value==null?"；当前或模板结果缺失，无法比较":"");el.dataset.direction=value==null||Math.abs(value)<.0005?"same":value>0?"up":"down"});
 }
 function restoreGradeSelection(){include=schemeSelection(current);dirty=false;renderGrades();toast("已恢复「"+(GRADE_BUILTINS[current]?.name||current)+"」的课程选择")}
+function renderGradeRules(){
+ const box=$("#grade-rules"),custom=!GRADE_BUILTINS[current];if(box.dataset.scheme!==current)box.open=false;box.dataset.scheme=current;
+ $("#grade-rules-title").textContent=custom?`基于${gradeBaseName(gradeBase)}的自定义模板`:GRADE_BUILTINS[current].name;
+ $("#grade-template-dirty").hidden=!dirty;
+ $("#grade-policy").innerHTML=(custom?`基于${esc(gradeBaseName(gradeBase))}的自定义模板。 `:"")+gradePolicy(gradeBase,false)+(D.grades.some(g=>g.nature==="未标注")?' <strong>部分课程未标注性质，请手动核对计入范围。</strong>':"");
+}
 function renderTemplateSummary(){
  const box=$("#grade-template-summary"),custom=!GRADE_BUILTINS[current],rule=(D.scheme_rules||{})[current];box.hidden=!custom&&!dirty;if(box.hidden)return;
  const open=box.dataset.scheme===current?new Set([...box.querySelectorAll('details[open]')].map(d=>d.dataset.change)):new Set();
@@ -562,7 +599,7 @@ function renderGrades(){
  for(const [key,value] of Object.entries(values))document.querySelectorAll(`[data-grade-value="${key}"]`).forEach(el=>el.textContent=value);
  document.querySelectorAll('[data-grade-selected]').forEach(el=>el.textContent=selection.selected);document.querySelectorAll('[data-grade-total]').forEach(el=>el.textContent=selection.total);document.querySelectorAll('.grade-count').forEach(el=>el.setAttribute("aria-label",`已选 ${selection.selected} 门，共 ${selection.total} 门课程`));renderTemplateSummary();
  $("#grade-calc-note").textContent=`成绩与绩点按学分加权 · ${D.grade_source==="import"?"使用成绩单提供的绩点；缺失时显示 —":"优先使用教务单科绩点；标有「估算」的课程按原程序规则换算；通过类不参与加权"}${result.invalid?` · ${result.invalid} 门成绩无法换算，已按 0 分计入，请核对`:""}${result.estimated?` · ${result.estimated} 门使用估算绩点`:""}`;
- $("#grade-policy").innerHTML=gradePolicy(gradeBase,!GRADE_BUILTINS[current])+(D.grades.some(g=>g.nature==="未标注")?' <strong>部分课程未标注性质，请手动核对计入范围。</strong>':"");
+ renderGradeRules();
  $("#grade-source").textContent=D.grade_source==="import"?"文件预览":"当前账号 · 教务成绩";$("#grade-source").title=D.grade_filename||"";$("#grade-use-jwxt").hidden=D.grade_source!=="import";$("#grade-sync").hidden=D.grade_source==="import";$("#grade-view-import").hidden=!D.has_imported_grades||D.grade_source==="import";$("#del").disabled=!!GRADE_BUILTINS[current];
  if(!gradeSyncing)$("#grade-sync-status").textContent=gradeStatusText(D,gradeSessionState);
  $("#dirty").textContent=dirty?"● 有未保存的修改，另存模板后可重复使用":"";$("#grade-visible").textContent=`显示 ${rows.length} / ${D.grades.length} 门`;
@@ -703,8 +740,8 @@ $("#grade-restore").onclick=restoreGradeSelection;
 $("#grade-issues").onclick=e=>{const button=e.target.closest("[data-grade-issue]");if(!button||!gradeReady())return;const kind=button.dataset.gradeIssue,active=$("#grade-status").value===kind;resetGradeFilters(false);$("#grade-status").value=active?"":kind;$("#grade-filter").open=true;renderGrades()};
 $("#gt").onchange=e=>{const k=e.target.dataset.k;if(!k)return;e.target.checked?include.add(k):include.delete(k);renderGrades()};
 $("#scheme").onchange=e=>{if(dirty&&!confirm("当前选择尚未保存，切换模板会放弃这些修改。继续？")){e.target.value=current;return}applyScheme(e.target.value)};$("#termf").onchange=renderGrades;
-$("#all").onclick=()=>{if(!gradeReady())return;visibleGrades().forEach(g=>include.add(g.key));renderGrades()};
-$("#none").onclick=()=>{if(!gradeReady())return;visibleGrades().forEach(g=>include.delete(g.key));renderGrades()};
+$("#all").onclick=()=>{if(!gradeReady())return;D.grades.forEach(g=>include.add(g.key));renderGrades()};
+$("#none").onclick=()=>{if(!gradeReady())return;include.clear();renderGrades()};
 $("#grade-required").onclick=()=>{if(!gradeReady())return;D.grades.filter(g=>g.required&&g.credit>0).forEach(g=>include.add(g.key));renderGrades()};
 $("#saveas").onclick=()=>{if(!gradeReady())return;$("#grade-template-name").value=GRADE_BUILTINS[current]?"":current;$("#grade-save-dialog").showModal();$("#grade-template-name").focus()};
 $("#grade-save-cancel").onclick=()=>$("#grade-save-dialog").close();
@@ -761,7 +798,7 @@ $("#rd").addEventListener("change",rdToWeek);$("#rw").addEventListener("change",
    DEF_PERIODS 必须在顶部 IIFE 调用 periodsToStudy() 之前初始化，否则 const TDZ 会让整页脚本中断，#boot 永远不消失。 */
 const DEF_PERIODS={1:["08:00","08:45"],2:["08:55","09:40"],3:["10:00","10:45"],4:["10:55","11:40"],5:["13:30","14:15"],6:["14:25","15:10"],7:["15:30","16:15"],8:["16:25","17:10"],9:["18:30","19:15"],10:["19:25","20:10"],11:["20:20","21:05"]};
 function periodMap(){const p=D&&D.periods;return(p&&Object.keys(p).length)?p:DEF_PERIODS}
-function periodsToStudy(){const a=+$("#rp1").value,b=+$("#rp2").value,m=periodMap(),x=m[a]||m[String(a)],y=m[b]||m[String(b)];if(x&&x[0])$("#rst").value=x[0];if(y&&y[1])$("#ret").value=y[1]}
+function periodsToStudy(){const a=+$("#rp1").value,b=+$("#rp2").value,m=periodMap(),x=m[a]||m[String(a)],y=m[b]||m[String(b)];$("#rst").value=x&&x[0]?x[0]:"";$("#ret").value=y&&y[1]?y[1]:""}
 function studyToPeriods(){const s=$("#rst").value,e=$("#ret").value,m=periodMap();if(!s||!e||s>=e)return;let lo=null,hi=null;Object.keys(m).forEach(k=>{const n=+k,t=m[k];if(!(n>=1)||!t||t.length<2)return;if(t[0]<e&&t[1]>s){if(lo===null||n<lo)lo=n;if(hi===null||n>hi)hi=n}});if(lo!==null){$("#rp1").value=lo;$("#rp2").value=hi}}
 let _rSync=false;
 /* 按当前时间自动选好「接下来两节」：正在上的或下一节开始，连续两节；当天课都结束了就选次日第 1-2 节。
@@ -782,27 +819,240 @@ let RM="date",RR=[],RS={k:"name",d:1};
 $("#rd").addEventListener("change",()=>{RM="date"});$("#rw").addEventListener("change",()=>{RM="week"});$("#rwd").addEventListener("change",()=>{RM="week"});
 function roomQueryMode(){const w=($("#rw").value||"").trim();if(RM==="week"&&w&&!/^\d+$/.test(w))return"week";if(!$("#rd").value&&w)return"week";return RM==="week"&&!(D&&D.first_monday)&&w?"week":"date"}
 const opts=(l,all)=>(all?`<option value="">${all}</option>`:"")+l.map(c=>`<option value="${esc(c.code)}">${esc(c.name)}</option>`).join("");
-async function loadBuildings(){const c=$("#rc").value;if(!c){$("#rb").innerHTML=opts([],"全部");return}try{const j=await api("/api/rooms/buildings",{campus:c});$("#rb").innerHTML=opts(j.buildings,"全部")}catch(e){toast(e.message)}}
+let ROOM_BUILDINGS_REQUEST=0,ROOM_BUILDINGS_READY=Promise.resolve();
+async function loadBuildings(){const c=$("#rc").value,generation=++ROOM_BUILDINGS_REQUEST;if(!c){$("#rb").innerHTML=opts([],"全部");return}try{const j=await api("/api/rooms/buildings",{campus:c});if(generation===ROOM_BUILDINGS_REQUEST&&$("#rc").value===c)$("#rb").innerHTML=opts(j.buildings,"全部")}catch(e){toast(e.message)}}
 // 六个校区固定（教务代码表 01–06，已与真实 campuses.json 核对），不再需要「加载」
 const CAMPUSES=[{code:"01",name:"前卫校区"},{code:"02",name:"南岭校区"},{code:"03",name:"新民校区"},{code:"04",name:"朝阳校区"},{code:"05",name:"南湖校区"},{code:"06",name:"和平校区"}];
 const RCKEY="superjlu.room.campus";
 function lsGet(k){try{return localStorage.getItem(k)}catch(_){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v)}catch(_){}}
-function pickCampus(code){$("#rc").value=code;lsSet(RCKEY,code);document.querySelectorAll("#rcs button").forEach(b=>{const on=b.dataset.c===code;b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false")});loadBuildings()}
+function pickCampus(code){$("#rc").value=code;lsSet(RCKEY,code);document.querySelectorAll("#rcs button").forEach(b=>{const on=b.dataset.c===code;b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false")});ROOM_BUILDINGS_READY=loadBuildings();if(window.__rm)roomFormChanged()}
 $("#rcs").innerHTML=CAMPUSES.map(c=>`<button type="button" role="radio" data-c="${esc(c.code)}">${esc(c.name.replace(/校区$/,""))}</button>`).join("");
 document.querySelectorAll("#rcs button").forEach(b=>b.onclick=()=>pickCampus(b.dataset.c));
 let RMETA=false;
 async function roomsInit(){const last=lsGet(RCKEY);pickCampus(CAMPUSES.some(c=>c.code===last)?last:CAMPUSES[0].code);if(RMETA)return;RMETA=true;try{const t=await api("/api/rooms/types",{});$("#rt").innerHTML=opts(t.types,"全部");const f=await api("/api/rooms/fields",{});$("#rextra").innerHTML=f.fields.map(x=>`<label>${esc(x.caption||x.name)}<input data-f="${esc(x.name)}" placeholder="${esc(x.name)}"></label>`).join("")||'<p class="sub">元数据中没有其它检索字段</p>'}catch(e){RMETA=false;showRoomFailure(e)}}
 document.querySelector('nav button[data-t="js"]').addEventListener("click",()=>{roomAutoSlot();if(!window.__rm){window.__rm=1;roomsInit()}});
 const RCOLS=[["building","教学楼"],["kind","教室类型"],["name","教室名称"],["seats","上课座位数"],["exam_seats","考试座位数"]];
-function renderRooms(j){const box=$("#rres");box.hidden=false;const n=k=>["seats","exam_seats"].includes(k);const rs=[...RR].sort((a,b)=>{const x=a[RS.k],y=b[RS.k];return RS.d*(n(RS.k)?(+x||0)-(+y||0):String(x).localeCompare(String(y),"zh"))});
- const head=j.mode==="week"?`第${esc(j.weeks)}周 周${"一二三四五六日"[j.weekday-1]}`:`${esc(j.date)} <span class="sub">${j.week>0?"第"+j.week+"周 ":""}周${"一二三四五六日"[j.weekday-1]}</span>`;
- box.innerHTML=`<h2>${head} 第${j.periods[0]}-${j.periods[1]}节 <span class="sub">· ${rs.length} 间${j.hidden_special?" · 已屏蔽特殊教室 "+j.hidden_special+" 间":""}</span></h2>`+(rs.length?`<div style="overflow-x:auto"><table class="rt"><thead><tr>${RCOLS.map(([k,l])=>`<th data-k="${k}">${l}${RS.k===k?(RS.d>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>${rs.map(r=>`<tr>${RCOLS.map(([k])=>`<td>${esc(r[k]||"")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`:'<p class="empty">没有符合条件的空教室</p>');
- box.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;RS=RS.k===k?{k,d:-RS.d}:{k,d:1};renderRooms(j)})}
+// Room presentation helpers: shared by desktop and the Android WebView.
+function roomCardName(room){
+ const full=String(room.name||"").trim();if(!full)return"未命名教室";let name=full;
+ const clean=s=>s.replace(/^[\s\-—–_·]+/u,"").trim(),campus=String(room.campus||"").trim(),shortCampus=campus.replace(/(?:校区|校园)$/u,""),building=String(room.building||"").trim();
+ const strip=prefix=>{if(prefix&&name.startsWith(prefix)){const rest=clean(name.slice(prefix.length));if(rest){name=rest;return true}}return false};
+ // Match supplied location names first; never delete an entire special-room name.
+ strip(building);strip(campus)||strip(shortCampus);strip(building);
+ let shortBuilding=building;for(const prefix of [campus,shortCampus])if(prefix&&shortBuilding.startsWith(prefix)){const rest=shortBuilding.slice(prefix.length);if(!rest||/^[\s\-—–_·]/u.test(rest))shortBuilding=clean(rest)}strip(shortBuilding);
+ // Some JWXT rows only identify the building as "前卫-". A building ending in
+ // 楼 followed by a room code / separator is still an unambiguous name prefix.
+ const inferred=/^.+?(?:教学楼|综合楼|实验楼|楼)(?=[\s\-—–_·]*[A-Za-z0-9]|[\s\-—–_·]+[^\s\-—–_·])/u.exec(name);if(inferred)strip(inferred[0]);
+ return name||full;
+}
+function roomIsTiered(room){const kind=String(room.kind||"");if(/阶梯|阶教/.test(kind))return true;if(/普通|平面/.test(kind))return false;return /阶梯|阶教/.test(String(room.name||""))}
+function roomColorLayout(rooms,columns,palette=10){
+ columns=Math.max(1,Math.floor(columns)||1);palette=Math.max(8,Math.floor(palette)||10);
+ const cells=[],used=Array(palette).fill(0),layout=[];
+ for(const room of rooms){const span=roomIsTiered(room)?Math.min(2,columns):1;let row=0,col=0;
+  // Match grid-auto-flow:row dense, including normal tiles filling earlier gaps.
+  for(;;row++){if(!cells[row])cells[row]=[];let found=false;for(col=0;col<=columns-span;col++){let free=true;for(let c=col;c<col+span;c++)if(cells[row][c]!=null)free=false;if(free){found=true;break}}if(found)break}
+  const avoid=new Set(),take=(r,c)=>{if(cells[r]&&cells[r][c]!=null)avoid.add(cells[r][c])};take(row,col-1);take(row,col+span);for(let c=col;c<col+span;c++){take(row-1,c);take(row+1,c)}
+  let tone=-1;for(let n=0;n<palette;n++){const candidate=(layout.length+n)%palette;if(!avoid.has(candidate)&&(tone<0||used[candidate]<used[tone]))tone=candidate}
+  used[tone]++;for(let c=col;c<col+span;c++)cells[row][c]=tone;layout.push({tone,row,col,span});
+ }return layout;
+}
+function roomQueryLabel(j){const day="一二三四五六日"[j.weekday-1]||"";return j.mode==="week"?`第${j.weeks}周 周${day}`:`${j.date}${j.week>0?" · 第"+j.week+"周":""} 周${day}`}
+function roomViewPreference(){try{return localStorage.getItem("jlu-room-view")==="table"?"table":"cards"}catch(_){return"cards"}}
+
+// Every block has four periods. Never invent clock times absent from school data.
+const ROOM_DAY_BLOCKS=[{name:"上午",periods:[1,2,3,4]},{name:"下午",periods:[5,6,7,8]},{name:"晚上",periods:[9,10,11,12]}];
+function roomKey(room){return JSON.stringify([String(room.building||""),String(room.name||"")])}
+function roomFavoriteKey(room,j){return JSON.stringify([String(j.query&&j.query.campus||room.campus||""),roomKey(room)])}
+function roomDayState(room,p,j){
+ const record=j.day&&j.day.records[p];
+ if(record)return(record.freeSet?record.freeSet.has(roomKey(room)):record.free.includes(roomKey(room)))?"free":"unavailable";
+ return p>=j.periods[0]&&p<=j.periods[1]?"free":"unknown";
+}
+function roomDayStats(room,j){
+ let total=0,unknown=0,start=0,best={start:0,end:0,length:0};
+ for(let p=1;p<=12;p++){
+  const state=roomDayState(room,p,j);if(state==="unknown")unknown++;
+  if(state==="free"){total++;if(!start)start=p;if(p-start+1>best.length)best={start,end:p,length:p-start+1}}else start=0;
+ }return{total,unknown,best};
+}
+function roomDayTime(p,map){const t=map[p];return Array.isArray(t)&&t[0]&&t[1]?t.join("–"):"时间未提供"}
+function roomDayArc(a,b){const pt=d=>{const r=d*Math.PI/180;return[108-78*Math.cos(r),108-78*Math.sin(r)]},x=pt(a),y=pt(b);return`M${x[0].toFixed(2)} ${x[1].toFixed(2)} A78 78 0 0 1 ${y[0].toFixed(2)} ${y[1].toFixed(2)}`}
+function roomDayMatches(room,j,filter,min,onlyFav,favorites){
+ if(onlyFav&&!favorites.has(roomFavoriteKey(room,j)))return false;
+ if(!j.day)return !filter&&!min;
+ return roomDayStats(room,j).best.length>=min&&(!filter||ROOM_DAY_BLOCKS[+filter-1].periods.some(p=>roomDayState(room,p,j)==="free"));
+}
+
+
+function roomDayRecord(rooms,source){const free=rooms.map(roomKey),parsed=Date.parse(source);return{rooms,free,freeSet:new Set(free),source,expires:(Number.isFinite(parsed)?Math.min(parsed,Date.now()):Date.now())+300000}}
+function roomFollowup(room,j){
+ if(!j.day)return{state:"unknown",label:"所选时段空闲",title:"跨周结果不推断单日后续状态"};
+ const p=j.periods[1]+1;if(p>12)return{state:"end",label:"今日无后续",title:"所选时段后，今日已无第 1–12 节以内的后续节次"};
+ const state=roomDayState(room,p,j);
+ return state==="free"?{state,label:"下节空闲",title:`第 ${p} 节空闲；全天信息可点开查看`}:state==="unavailable"?{state,label:"下节无空闲",title:`第 ${p} 节未查到空闲记录，不等同于确认正在上课`}:{state,label:"后续待查",title:`第 ${p} 节尚未获取，点开卡片可查看并重试`};
+}
+function roomGroupColors(count,columns,tiered){const span=tiered?Math.min(2,columns):1,perRow=Math.max(1,Math.floor(columns/span));return Array.from({length:count},(_,i)=>(Math.floor(i/perRow)*3+i%perRow+(tiered?4:0))%10)}
+
+// Room presentation rendering.
+let ROOM_VIEW=roomViewPreference(),ROOM_OBSERVER=null;
+const ROOM_ICON={normal:'<path d="M4 7h6v4H4zm10 0h6v4h-6zM4 16h6v4H4zm10 0h6v4h-6zM5 4h14"/>',tiered:'<path d="M3 20h5v-5h5v-5h5V5h3M3 12V9h3m3-2V4h3M3 23h18"/>',unknown:'<path d="M4 21V4h16v17M8 8h2m4 0h2M8 12h2m4 0h2M9 21v-5h6v5"/>'};
+function roomIcon(r){const tiered=roomIsTiered(r),known=/普通|平面/.test(String(r.kind||""));return`<svg class="room-type-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ROOM_ICON[tiered?"tiered":known?"normal":"unknown"]}</svg>`}
+
+let ROOM_RESULT=null,ROOM_REQUEST=0,ROOM_DAY_ONLY_FAV=false,ROOM_DETAIL=null;
+const ROOM_FAV_KEY="jlu-room-favorites";
+function roomFavorites(){try{const a=JSON.parse(localStorage.getItem(ROOM_FAV_KEY)||"[]");return new Set(Array.isArray(a)?a.filter(k=>typeof k==="string").slice(0,500):[])}catch(_){return new Set()}}
+function paintRoomColors(){
+ document.querySelectorAll("#rres .room-grid").forEach(grid=>{
+  if(!grid.clientWidth)return;const columns=getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length,tiles=[...grid.querySelectorAll("[data-room-card]")];
+  const colors=roomGroupColors(tiles.length,columns,grid.classList.contains("tiered"));tiles.forEach((tile,i)=>tile.dataset.tone=String(colors[i]));
+ });
+}
+function roomScrollTo(selector){requestAnimationFrame(()=>{const el=$(selector);if(!el)return;const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;el.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});if(selector==="#rres")el.focus({preventScroll:true})})}
+function showRoomDetail(room,j,block=-1){
+ ROOM_DETAIL={room,j,block};$("#room-detail-title").textContent=roomCardName(room);
+ $("#room-detail-hint").textContent=j.day?"全天 12 节分别显示：绿色为空闲，灰色为无空闲记录，虚线为尚未确认。":"所选时段空闲 · 以本次教务查询结果为准";
+ const fields=[["教室全名",room.name],["校区",room.campus],["教学楼",room.building],["教室类型",room.kind],["上课座位数",room.seats],["考试座位数",room.exam_seats],["查询日期",roomQueryLabel(j)],["查询节次",`第 ${j.periods[0]}–${j.periods[1]} 节`],["空闲日期",room.free_date],["空闲节次",room.free_periods],["空闲时间",room.free_time]];
+ $("#room-detail-fields").innerHTML=fields.map(([label,value])=>`<dt>${esc(label)}</dt><dd>${esc(value==null||value===""?"未提供":String(value))}</dd>`).join("");
+ $("#room-detail .room-metadata").open=!j.day;renderRoomDayDetail();if(!$("#room-detail").open)$("#room-detail").showModal();
+ if(j.day)loadRoomDay(j,ROOM_REQUEST);
+}
+function renderRoomDayDetail(){
+ const info=ROOM_DETAIL;if(!info)return;const{room,j,block}=info;if(!j.day){$("#room-detail-day").innerHTML="";return}
+ const stats=roomDayStats(room,j),count=12-stats.unknown;
+ $("#room-detail-day").innerHTML=`<div class="room-detail-overview">${roomDayGauge(room,j,-1)}</div><div class="room-day-status" role="status">${j.day.loading?`正在确认各节状态 · ${count}/12 节已确认`:j.day.error?esc(j.day.error):count===12?"全天 12 节状态已确认":`${count}/12 节已确认，剩余节次尚未获取`}${!j.day.loading&&count<12?'<button type="button" class="btn ghost" id="room-day-retry">重试未获取节次</button>':""}</div>`+ROOM_DAY_BLOCKS.map((b,i)=>{const states=b.periods.map(p=>roomDayState(room,p,j)),unknown=states.filter(s=>s==="unknown").length;return`<section class="room-day-detail-block ${i===block?"active":""}" data-detail-block="${i}"><div class="room-day-detail-head">${b.name}<span>${states.filter(s=>s==="free").length} / 4 节空闲${unknown?` · ${unknown} 节未确认`:""}</span></div><div class="room-day-periods">${b.periods.map((p,k)=>{const state=states[k];return`<div class="room-day-period ${state}" data-room-period="${p}"><b>第 ${p} 节</b><small>${esc(roomDayTime(p,periodMap()))}</small>${state==="free"?"空闲":state==="unavailable"?"无空闲记录":j.day.loading?"确认中…":"未获取"}</div>`}).join("")}</div></section>`}).join("");
+ if($("#room-day-retry"))$("#room-day-retry").onclick=()=>loadRoomDay(j,ROOM_REQUEST);
+ document.querySelectorAll("#room-detail-day [data-room-day-block]").forEach(b=>b.onclick=()=>{ROOM_DETAIL.block=+b.dataset.roomDayBlock;renderRoomDayDetail();$(`#room-detail-day [data-detail-block="${ROOM_DETAIL.block}"]`).scrollIntoView({block:"nearest",behavior:"auto"})});
+}
+$("#room-detail-close").onclick=()=>$("#room-detail").close();
+let roomBackdropStart=null;
+function roomDetailOutside(e){const dialog=$("#room-detail"),r=dialog.getBoundingClientRect();return e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)}
+$("#room-detail").addEventListener("pointerdown",e=>{roomBackdropStart=roomDetailOutside(e)?{x:e.clientX,y:e.clientY}:null});
+$("#room-detail").addEventListener("pointercancel",()=>{roomBackdropStart=null});
+$("#room-detail").addEventListener("click",e=>{const start=roomBackdropStart;roomBackdropStart=null;if(start&&roomDetailOutside(e)&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<12)$("#room-detail").close()});
+$("#room-detail").addEventListener("close",()=>{ROOM_DETAIL=null;roomBackdropStart=null});
+window.addEventListener("resize",paintRoomColors);
+function roomDayGauge(r,j,index){
+ const stats=roomDayStats(r,j);
+ return`<div class="room-day-gauge"><svg viewBox="0 0 216 132" aria-hidden="true">${ROOM_DAY_BLOCKS.map((b,i)=>b.periods.map((p,k)=>`<path d="${roomDayArc(i*60+4+k*13.5,i*60+15.5+k*13.5)}" fill="none" stroke-width="14" class="room-day-${roomDayState(r,p,j)}"/>`).join("")).join("")}<text x="19" y="55" text-anchor="middle">上午</text><text x="108" y="10" text-anchor="middle">下午</text><text x="197" y="55" text-anchor="middle">晚上</text><text x="108" y="88" text-anchor="middle" class="room-day-total">${stats.total}<tspan font-size="12" font-weight="500"> 节</tspan></text><text x="108" y="107" text-anchor="middle" class="room-day-total-note">当日已确认空闲</text></svg><div class="room-day-blocks">${ROOM_DAY_BLOCKS.map((b,i)=>`<button type="button" data-room-day-block="${i}" aria-label="${esc(roomCardName(r))} ${b.name}，查看具体节次">${b.name}<strong>${b.periods.filter(p=>roomDayState(r,p,j)==="free").length}/4</strong></button>`).join("")}</div></div>`;
+}
+function roomDayCard(r,j,index,favorites){
+ const tiered=roomIsTiered(r),fav=favorites.has(roomFavoriteKey(r,j)),next=roomFollowup(r,j),location=[r.campus,r.building].filter(Boolean).join(" · ");
+ return`<article class="room-tile room-day-card" data-room-card data-room-index="${index}" data-tone="${index%10}" data-wide="${tiered}" data-kind="${esc(r.kind||"")}" data-name="${esc(r.name||"")}" aria-label="${esc(roomCardName(r))}"><div class="room-tile-top">${roomIcon(r)}<div class="room-day-identity"><button type="button" class="room-day-name" data-room="${index}" title="${esc(r.name||"")}">${esc(roomCardName(r))}</button></div><button type="button" class="btn room-day-star" data-room-fav="${index}" aria-label="${esc((fav?"取消收藏 ":"收藏 ")+roomCardName(r))}" aria-pressed="${fav}">${fav?"★":"☆"}</button></div>${j.showBuilding?`<div class="room-compact-location" title="${esc(location)}">${esc(r.building||location)}</div>`:""}<div class="room-compact-meta"><span>${r.seats!==""&&r.seats!=null?esc(String(r.seats))+" 座":"座位未提供"}</span><span class="room-next" data-room-followup="${esc(roomKey(r))}" data-state="${next.state}" title="${esc(next.title)}">${next.label}</span></div></article>`;
+}
+function renderRooms(j){
+ const box=$("#rres");if(ROOM_OBSERVER)ROOM_OBSERVER.disconnect();box.hidden=false;ROOM_RESULT=j;
+ const favorites=roomFavorites(),numeric=k=>["seats","exam_seats"].includes(k);
+ const rs=[...RR].sort((a,b)=>RS.d*(numeric(RS.k)?(+a[RS.k]||0)-(+b[RS.k]||0):String(a[RS.k]||"").localeCompare(String(b[RS.k]||""),"zh",{numeric:true}))||String(a.name).localeCompare(String(b.name),"zh",{numeric:true}));
+ const indices=new Map(rs.map((r,i)=>[r,i])),visible=ROOM_VIEW==="cards"&&ROOM_DAY_ONLY_FAV?rs.filter(r=>favorites.has(roomFavoriteKey(r,j))):rs;
+ const toggle=`<div class="room-view" data-view="${ROOM_VIEW}" role="group" aria-label="查询结果展示方式"><button type="button" data-room-view="table" aria-pressed="${ROOM_VIEW==="table"}">表格</button><button type="button" data-room-view="cards" aria-pressed="${ROOM_VIEW==="cards"}">卡片</button></div>`;
+ const sort=`<div class="room-sort"><label for="room-sort">排序</label><select id="room-sort">${RCOLS.map(([k,l])=>`<option value="${k}" ${RS.k===k?"selected":""}>${l}</option>`).join("")}</select><button type="button" class="btn ghost" id="room-sort-dir" aria-label="${RS.d>0?"改为降序":"改为升序"}">${RS.d>0?"升序 ↑":"降序 ↓"}</button></div>`;
+ const toolbar=`<div class="room-list-tools"><label class="room-day-fav-only"><input type="checkbox" id="room-day-fav-only" ${ROOM_DAY_ONLY_FAV?"checked":""}>只看收藏</label>${sort}</div>`;
+ const cards=ROOM_VIEW!=="cards"?" ":[true,false].map(tiered=>{const group=visible.filter(r=>roomIsTiered(r)===tiered);return group.length?`<section class="room-day-group"><h3>${roomIcon({kind:tiered?"阶梯教室":"普通教室"})}${tiered?"阶梯教室":group.every(r=>/普通|平面/.test(r.kind||""))?"普通教室":"普通及其他教室"}<span class="sub">${group.length} 间</span></h3><div class="room-grid room-day-grid ${tiered?"tiered":""}">${group.map(r=>roomDayCard(r,j,indices.get(r),favorites)).join("")}</div></section>`:""}).join("");
+ const table=ROOM_VIEW!=="table"?"":`<div class="room-table-wrap"><table class="rt" aria-label="空教室查询结果"><thead><tr>${RCOLS.map(([k,l])=>`<th aria-sort="${RS.k===k?(RS.d>0?"ascending":"descending"):"none"}"><button type="button" data-room-sort="${k}">${l}${RS.k===k?(RS.d>0?" ▲":" ▼"):""}</button></th>`).join("")}</tr></thead><tbody>${rs.map((r,i)=>`<tr>${RCOLS.map(([k])=>`<td>${k==="name"?`<button type="button" class="room-name-button" data-room="${i}">${esc(r[k]||"未命名教室")}</button>`:esc(r[k]==null||r[k]===""?"—":String(r[k]))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+ const heading=`${esc(roomQueryLabel(j))} <span class="room-query-period">第 ${j.periods[0]}–${j.periods[1]} 节</span><span class="sub">${visible.length!==rs.length?`显示 ${visible.length} / `:""}${rs.length} 间空教室${j.hidden_special?" · 已屏蔽特殊教室 "+j.hidden_special+" 间":""}</span>`;
+ const content=!rs.length?'<p class="empty" role="status">没有符合条件的空教室</p>':ROOM_VIEW==="table"?table:toolbar+(visible.length?cards:'<p class="empty">没有收藏的教室</p>')+`<p class="room-list-note">${j.day?"所选时段空闲 · 外部状态仅指下一节；全天仪表盘点开查看。":"所选多周均空闲 · 点开查看教室资料。"}</p>`;
+ const focused=document.activeElement,focusToken=focused&&box.contains(focused)?{id:focused.id,key:focused.dataset.roomKey,fav:focused.dataset.roomFav!=null}:null;
+ if(box.querySelector(".room-results-head")){box.querySelector("h2").innerHTML=heading;box.querySelector(".room-view").dataset.view=ROOM_VIEW;box.querySelectorAll("[data-room-view]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.roomView===ROOM_VIEW)));box.querySelector(".room-results-body").innerHTML=content}
+ else box.innerHTML=`<div class="room-results-head"><h2>${heading}</h2>${toggle}</div><div class="room-results-body">${content}</div>`;
+ box.querySelectorAll("[data-room-view]").forEach(b=>b.onclick=()=>{ROOM_VIEW=b.dataset.roomView;try{localStorage.setItem("jlu-room-view",ROOM_VIEW)}catch(_){}renderRooms(j);box.querySelector(`[data-room-view="${ROOM_VIEW}"]`).focus({preventScroll:true})});
+ const changeSort=k=>{RS=RS.k===k?{k,d:-RS.d}:{k,d:1};renderRooms(j)};
+ box.querySelectorAll("[data-room-sort]").forEach(b=>b.onclick=()=>changeSort(b.dataset.roomSort));
+ if($("#room-sort"))$("#room-sort").onchange=e=>{RS={k:e.target.value,d:1};renderRooms(j)};
+ if($("#room-sort-dir"))$("#room-sort-dir").onclick=()=>changeSort(RS.k);
+ box.querySelectorAll("[data-room]").forEach(b=>{b.dataset.roomKey=roomKey(rs[+b.dataset.room]);b.onclick=()=>showRoomDetail(rs[+b.dataset.room],j)});
+ box.querySelectorAll("article[data-room-card]").forEach(card=>card.onclick=e=>{if(!e.target.closest("button,a,input,select,[data-room]"))showRoomDetail(rs[+card.dataset.roomIndex],j)});
+ box.querySelectorAll("[data-room-fav]").forEach(b=>{b.dataset.roomKey=roomKey(rs[+b.dataset.roomFav]);b.onclick=()=>{const fav=roomFavorites(),key=roomFavoriteKey(rs[+b.dataset.roomFav],j);fav.has(key)?fav.delete(key):fav.add(key);try{localStorage.setItem(ROOM_FAV_KEY,JSON.stringify([...fav].slice(-500)))}catch(_){}renderRooms(j);if(!box.contains(document.activeElement))$("#room-day-fav-only").focus({preventScroll:true})}});
+ if($("#room-day-fav-only"))$("#room-day-fav-only").onchange=e=>{ROOM_DAY_ONLY_FAV=e.target.checked;renderRooms(j)};
+ paintRoomColors();if(typeof ResizeObserver!=="undefined"){ROOM_OBSERVER=new ResizeObserver(paintRoomColors);box.querySelectorAll(".room-grid").forEach(g=>ROOM_OBSERVER.observe(g))}
+ if(focusToken){const target=focusToken.id?document.getElementById(focusToken.id):[...box.querySelectorAll(focusToken.fav?"[data-room-fav]":"[data-room]")].find(b=>b.dataset.roomKey===focusToken.key);if(target)target.focus({preventScroll:true})}
+}
+function updateRoomNextBadges(j){
+ if(ROOM_RESULT!==j)return;if(!j.roomLookup)j.roomLookup=new Map(j.rooms.map(r=>[roomKey(r),r]));
+ document.querySelectorAll("#rres [data-room-followup]").forEach(b=>{const room=j.roomLookup.get(b.dataset.roomFollowup);if(!room)return;const next=roomFollowup(room,j);b.textContent=next.label;b.dataset.state=next.state;b.title=next.title});
+}
+function refreshRoomDetail(j){if(ROOM_DETAIL&&ROOM_DETAIL.j===j&&$("#room-detail").open)renderRoomDayDetail()}
+// Memory-only inventories: no account data is persisted in browser storage.
+const ROOM_DAY_CACHE=new Map();let ROOM_DAY_TASK=null,ROOM_DAY_QUEUE=Promise.resolve(),ROOM_FORM_REVISION=0,ROOM_QUERY_PENDING=null;
+function roomReadQuery(){
+ const extra={};document.querySelectorAll("#rextra [data-f]").forEach(i=>{if(i.value.trim())extra[i.dataset.f]=i.value.trim()});
+ return{mode:roomQueryMode(),campus:$("#rc").value,building:$("#rb").value,kind:$("#rt").value,date:$("#rd").value,weeks:$("#rw").value,weekday:$("#rwd").value,hide_special:$("#rhs").checked,periods:`${$("#rp1").value}-${$("#rp2").value}`,seat_min:$("#rs1").value,seat_max:$("#rs2").value,exam_min:$("#re1").value,exam_max:$("#re2").value,extra};
+}
+function roomScopeKey(q){return JSON.stringify([q.mode,q.date,q.campus,q.building,q.kind,q.seat_min||"",q.seat_max||"",q.exam_min||"",q.exam_max||"",Object.entries(q.extra||{}).sort()])}
+function stopRoomPrefetch(){if(ROOM_DAY_TASK)ROOM_DAY_TASK.cancelled=true;ROOM_DAY_TASK=null}
+function clearRoomCache(){stopRoomPrefetch();ROOM_DAY_CACHE.clear();ROOM_FORM_REVISION++;ROOM_REQUEST++;ROOM_QUERY_PENDING=null;const b=$("#rq");if(b){b.disabled=false;b.textContent="查询空教室"}}
+function freshRoomRecords(day){const now=Date.now();for(const[p,r]of Object.entries(day.records))if(r.expires<=now)delete day.records[p];return day.records}
+function roomCacheEntry(query){
+ const key=roomScopeKey(query);let entry=ROOM_DAY_CACHE.get(key);
+ if(!entry){entry={day:{records:{},loading:false,error:"",request:null},meta:null};ROOM_DAY_CACHE.set(key,entry);if(ROOM_DAY_CACHE.size>3)ROOM_DAY_CACHE.delete(ROOM_DAY_CACHE.keys().next().value)}
+ freshRoomRecords(entry.day);return entry;
+}
+function roomCachedResult(query){
+ if(query.mode!=="date")return null;const entry=ROOM_DAY_CACHE.get(roomScopeKey(query));if(!entry||!entry.meta)return null;
+ const records=freshRoomRecords(entry.day),[a,b]=query.periods.split("-").map(Number);if(!(a>=1&&b>=a&&b<=12))return null;
+ for(let p=a;p<=b;p++)if(!records[p])return null;
+ const candidates=records[a].rooms.filter(r=>{for(let p=a+1;p<=b;p++)if(!records[p].freeSet.has(roomKey(r)))return false;return true});
+ const kept=query.hide_special?candidates.filter(r=>!r.special):candidates,m=periodMap();
+ const rooms=kept.map(r=>({...r,free_date:query.date,free_periods:Array.from({length:b-a+1},(_,i)=>a+i).join(","),free_time:m[a]?.[0]&&m[b]?.[1]?m[a][0]+"–"+m[b][1]:""}));
+ return{...entry.meta,periods:[a,b],rooms,total:candidates.length,hidden_special:candidates.length-kept.length,day:entry.day,from_cache:true};
+}
+function mergeRoomRecords(j,r,batch){
+ if(r.date!==j.date||!Array.isArray(r.records))throw new Error("全天空闲记录未获取完整");const seen=new Set();
+ for(const record of r.records){const p=record.period;if(record.complete!==true||record.date!==j.date||!batch.includes(p)||seen.has(p)||!Array.isArray(record.rooms))throw new Error("全天空闲记录未获取完整");seen.add(p);j.day.records[p]=roomDayRecord(record.rooms,record.fetched_at)}
+ if(r.partial||seen.size!==batch.length)throw new Error("部分节次未获取");
+}
+function refreshRoomDayUsers(day){const j=ROOM_RESULT;if(j&&j.day===day){updateRoomNextBadges(j);refreshRoomDetail(j)}}
+function loadRoomDay(j,generation){
+ if(!j.day)return Promise.resolve();if(j.day.request){if(!j.day.task?.cancelled)return j.day.request;return j.day.request.then(()=>ROOM_RESULT?.day===j.day?loadRoomDay(j,ROOM_REQUEST):undefined)}
+ freshRoomRecords(j.day);const key=roomScopeKey(j.query);
+ if(ROOM_DAY_TASK&&ROOM_DAY_TASK.key!==key)stopRoomPrefetch();
+ const missing=Array.from({length:12},(_,i)=>i+1).filter(p=>!j.day.records[p]);if(!missing.length)return Promise.resolve();
+ missing.sort((a,b)=>(a<=j.periods[1])-(b<=j.periods[1])||a-b);
+ const task={key,cancelled:false};ROOM_DAY_TASK=task;j.day.task=task;j.day.loading=true;j.day.error="";refreshRoomDayUsers(j.day);
+ // Queue batches across scope changes: an old in-flight batch may finish,
+ // but cannot overlap a new batch or schedule further old-scope requests.
+ const work=async()=>{let incomplete=false;try{
+  for(let start=0;start<missing.length;start+=4){
+   if(task.cancelled)return;const batch=missing.slice(start,start+4).filter(p=>!j.day.records[p]||j.day.records[p].expires<=Date.now());if(!batch.length)continue;
+   const r=await api("/api/rooms/day",{...j.query,mode:"date",date:j.date,day_periods:batch});if(task.cancelled)return;
+   try{mergeRoomRecords(j,r,batch)}catch(error){incomplete=true;if(r.session_expired)throw error}
+   refreshRoomDayUsers(j.day);
+  }
+  if(incomplete)throw new Error("部分节次未获取");
+ }catch(_){if(!task.cancelled)j.day.error="部分节次未获取，未确认的节次已单独标出，可重试。"}
+ finally{j.day.loading=false;j.day.request=null;if(ROOM_DAY_TASK===task)ROOM_DAY_TASK=null;refreshRoomDayUsers(j.day)}};
+ const pending=ROOM_DAY_QUEUE.then(work,work);j.day.request=pending;ROOM_DAY_QUEUE=pending.catch(()=>{});return pending;
+}
+function roomFormChanged(){
+ ROOM_FORM_REVISION++;
+ const query=roomReadQuery();if(ROOM_DAY_TASK&&ROOM_DAY_TASK.key!==roomScopeKey(query))stopRoomPrefetch();
+}
+$("#t-js").addEventListener("change",e=>{if(e.target.matches("input,select")&&!e.target.closest("#rres"))roomFormChanged()});
+document.querySelectorAll("#rst-presets [data-sp]").forEach(b=>b.addEventListener("click",roomFormChanged));
 function showRoomFailure(error){const original=String(error?.message||"查询未成功，请稍后重试。"),technical=/HTTP\s*\d{3}|尝试：|cxkxjs|Traceback/i.test(original)||original.length>160;$("#room-error-message").textContent=(technical?"空教室查询失败，请检查网络或在「更多 → 登录」切换登录方式后重试。":original)+(RR.length?" 已保留上次查询结果。":"");$("#room-switch-login").hidden=!(technical||error?.connectionAction);$("#room-error").hidden=false}
 $("#room-switch-login").onclick=()=>{document.querySelector('nav button[data-t="sz"]').click();location.hash="sz";$("#network-route").scrollIntoView({behavior:"smooth",block:"center"})};
-$("#rq").onclick=async()=>{const b=$("#rq");b.disabled=true;b.textContent="查询中…";$("#room-error").hidden=true;try{const extra={};document.querySelectorAll("#rextra [data-f]").forEach(i=>{if(i.value.trim())extra[i.dataset.f]=i.value.trim()});
- const qMode=roomQueryMode();const j=await api("/api/rooms",{mode:qMode,campus:$("#rc").value,building:$("#rb").value,kind:$("#rt").value,date:$("#rd").value,weeks:$("#rw").value,weekday:$("#rwd").value,hide_special:$("#rhs").checked,periods:`${$("#rp1").value}-${$("#rp2").value}`,seat_min:$("#rs1").value,seat_max:$("#rs2").value,exam_min:$("#re1").value,exam_max:$("#re2").value,extra});RR=j.rooms;renderRooms(j)}catch(e){showRoomFailure(e)}finally{b.disabled=false;b.textContent="查询"}};
+async function runRoomQuery(){
+ await ROOM_BUILDINGS_READY;const query=roomReadQuery(),signature=JSON.stringify(query);
+ if(ROOM_QUERY_PENDING&&ROOM_QUERY_PENDING.signature===signature)return ROOM_QUERY_PENDING.promise;
+ const b=$("#rq"),generation=++ROOM_REQUEST,revision=ROOM_FORM_REVISION;b.disabled=true;b.textContent="查询中…";$("#room-error").hidden=true;
+ if(ROOM_DAY_TASK&&ROOM_DAY_TASK.key!==roomScopeKey(query))stopRoomPrefetch();
+ const work=async()=>{
+ try{
+  const j=roomCachedResult(query)||await api("/api/rooms",query);if(generation!==ROOM_REQUEST||revision!==ROOM_FORM_REVISION)return;
+  j.query=query;if(j.mode==="date"&&j.periods[1]<=12){
+   const entry=roomCacheEntry(query);entry.meta={mode:j.mode,date:j.date,week:j.week,weeks:j.weeks,weekday:j.weekday};j.day=entry.day;
+   // Selected-interval positives are only a fallback for displayed rooms.
+   // They must never masquerade as complete single-period inventories.
+  }
+  RR=j.rooms;j.showBuilding=new Set(RR.map(r=>r.building||"")).size>1;ROOM_DAY_ONLY_FAV=false;if(["day_run","day_total"].includes(RS.k))RS={k:"name",d:1};
+  if(ROOM_DETAIL&&ROOM_DETAIL.j!==j)$("#room-detail").close();renderRooms(j);roomScrollTo("#rres");if(j.day)loadRoomDay(j,generation);
+ }catch(e){if(generation===ROOM_REQUEST&&revision===ROOM_FORM_REVISION){showRoomFailure(e);if(ROOM_RESULT)renderRooms(ROOM_RESULT);roomScrollTo("#room-error")}}
+ finally{if(generation===ROOM_REQUEST){b.disabled=false;b.textContent="查询空教室";ROOM_QUERY_PENDING=null}}
+ };
+ const promise=Promise.resolve().then(work);ROOM_QUERY_PENDING={signature,promise};return promise;
+}
+$("#rq").onclick=()=>runRoomQuery();
 let OA=null,OAQ={kw:"",dept:""},OAERR="",OACH="179577",OACHS=null,OAPREFS=null,OACAT=null,OAMANAGE=false,OAPICK=null;
 function oaFilter(items,q){const k=(q.kw||"").trim().toLowerCase();return items.filter(i=>(!q.dept||i.dept===q.dept)&&(!k||(i.title+" "+i.dept).toLowerCase().includes(k)))}
 function oaLink(u,label){try{const p=new URL(u||"");if(!/^https?:$/.test(p.protocol))return"";const h=p.hostname;if(!(h==="jlu.edu.cn"||h.endsWith(".jlu.edu.cn")||/\.(jdyy\.cn|jdey\.com\.cn|zrlyyy\.com)$/.test(h)))return""}catch(_){return""}return`<a class="btn ghost" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${label}</a>`}
@@ -862,12 +1112,13 @@ document.querySelector('nav button[data-t="oa"]').addEventListener("click",()=>{
 let SITES=null,LINKN={};const SITEN=id=>(SITES&&SITES[id]&&SITES[id].name)||LINKN[id]||id;
 const SST={ok:["已登录","done"],expired:["已过期","miss"],missing:["未登录","chip"],unknown:["未知","chip"]};
 async function loadSessions(){try{const r=await fetch("/api/sessions");if(!r.ok)return null;const j=await r.json();if(!j||j.ok===false||!Array.isArray(j.sites))return null;const m={};j.sites.forEach(s=>{if(s&&s.id)m[s.id]=s});return m}catch(_){return null}}
-function stBadge(s){if(!s)return"";const t=s.external_browser?["浏览器状态未知","chip"]:s.state==="ok"&&s.id!=="vpn"?["会话已保存","done"]:SST[s.state]||SST.unknown;return`<span class="${t[1]}" title="${esc(s.message||"")}">${t[0]}</span>`}
+function siteHasLoginStatus(id){return !["xsxk","lib"].includes(id)}
+function stBadge(s){if(!s||!siteHasLoginStatus(s.id))return"";const t=s.external_browser?["浏览器状态未知","chip"]:s.state==="ok"&&s.id!=="vpn"?["会话已保存","done"]:SST[s.state]||SST.unknown;return`<span class="${t[1]}" title="${esc(s.message||"")}">${t[0]}</span>`}
 let LOGIN_MODE=null,ACTIVE_LOGIN_MODE="direct";
 function syncLoginChoice(){const selected=LOGIN_MODE||ACTIVE_LOGIN_MODE;document.querySelectorAll("[data-login-mode]").forEach(b=>{const on=b.dataset.loginMode===selected;b.classList.toggle("on",on);b.setAttribute("aria-pressed",String(on))});$("#login-method-hint").textContent=selected==="webvpn"?"未连接校园网时使用；同一次认证会连接应用内 WebVPN 并验证教务，无需先登录直连教务。":"已连接校园网时使用，直接登录并同步教务数据。";if(typeof renderDeviceNet==="function")renderDeviceNet();$("#lgbtn").textContent=selected!==ACTIVE_LOGIN_MODE?"切换方式并登录":LOGGED?"重新登录 / 切换账号":"登录并同步"}
 document.querySelectorAll("[data-login-mode]").forEach(b=>b.onclick=()=>{LOGIN_MODE=b.dataset.loginMode;syncLoginChoice()});
 function loginFeedback(message){const p=$("#login-feedback");p.textContent=message||"";p.hidden=!message}
-function renderNetworkState(state){ACTIVE_LOGIN_MODE=state.mode==="webvpn"?"webvpn":"direct";if(LOGIN_MODE===null)LOGIN_MODE=ACTIVE_LOGIN_MODE;const last=state.last_connection?.route;$("#network-route-current").textContent=ACTIVE_LOGIN_MODE==="webvpn"?"校外 WebVPN":"校园网直连";$("#network-route-last").hidden=!last;$("#network-route-last").textContent=last?"最近成功连接："+(last==="webvpn"?"WebVPN":"直连"):"";syncLoginChoice()}
+function renderNetworkState(state){if(ACTIVE_LOGIN_MODE!==(state.mode==="webvpn"?"webvpn":"direct"))clearRoomCache();ACTIVE_LOGIN_MODE=state.mode==="webvpn"?"webvpn":"direct";if(LOGIN_MODE===null)LOGIN_MODE=ACTIVE_LOGIN_MODE;const last=state.last_connection?.route;$("#network-route-current").textContent=ACTIVE_LOGIN_MODE==="webvpn"?"校外 WebVPN":"校园网直连";$("#network-route-last").hidden=!last;$("#network-route-last").textContent=last?"最近成功连接："+(last==="webvpn"?"WebVPN":"直连"):"";syncLoginChoice()}
 // Android 直连时提示「当前走移动数据 / Wi-Fi 未通过网关认证」；桌面端接口无提示，不改变任何行为
 let DEVICE_NET_HINT="";function renderDeviceNet(){const sel=LOGIN_MODE||ACTIVE_LOGIN_MODE,c=$("#device-net-hint");if(c){c.hidden=!(DEVICE_NET_HINT&&sel!=="webvpn");c.textContent=DEVICE_NET_HINT}let lgTarget="";try{lgTarget=LG&&LG.target}catch(_){}const d=$("#lg-device-net");if(d){d.hidden=!(DEVICE_NET_HINT&&lgTarget==="jwxt");d.textContent=DEVICE_NET_HINT}}
 async function loadDeviceNet(){try{const j=await (await fetch("/api/network/device")).json();DEVICE_NET_HINT=(j&&j.direct_hint)||""}catch(_){DEVICE_NET_HINT=""}renderDeviceNet()}
@@ -881,7 +1132,7 @@ const lkA=(u,t,c)=>LKOK(u)?`<a class="btn ${c}" href="${esc(u)}" target="_blank"
 async function loadLinks(){const b=$("#links-b");let j;try{j=await api("/api/links")}catch(e){b.innerHTML=`<p class="sub" style="margin:0">读取失败：${esc(e.message)}</p>`;return}
  const L=(j.links||[]).filter(x=>LKOK(x.url));L.forEach(x=>LINKN[x.id]=x.name);SITES=await loadSessions();const S=id=>SITES&&SITES[id];
  L.forEach(x=>{const s=S(x.id);if(!x.vpn_url&&s&&typeof s.vpn_url==="string"&&LKOK(s.vpn_url))x.vpn_url=s.vpn_url});if(!L.length){b.innerHTML='<p class="sub" style="margin:0">没有可显示的入口。</p>';return}
- b.innerHTML=`<div class="lgrid">${L.map(x=>`<div class="lk"><div class="hd"><span class="ic" aria-hidden="true">${esc(x.icon||"↗")}</span><b>${esc(x.name)}</b>${x.campus_only?'<span class="tag">校内网</span>':""}${stBadge(S(x.id))}</div>${S(x.id)&&S(x.id).checked_at?`<div class="lg">状态检查于 ${esc(String(S(x.id).checked_at).replace("T"," ").slice(0,16))}</div>`:""}<div class="sub">${esc(x.purpose||"")}</div>${x.login?`<div class="lg">🔑 ${esc(x.login)}</div>`:""}${x.campus_only&&!x.vpn_url?'<div class="lg">校外请先连接校园 VPN</div>':""}<div class="row">${x.sso_url&&/^\/api\/sso\/jump\?/.test(x.sso_url)?`<a class="btn pri" href="${esc(x.sso_url)}" target="_blank" rel="noopener" title="用已登录的统一认证直接进入">打开 ↗</a>`:lkA(x.url,"打开 ↗","pri")}${x.vpn_url?lkA(x.vpn_url,"经 VPN 打开 ↗","ghost"):""}</div></div>`).join("")}</div>`+
+ b.innerHTML=`<div class="lgrid">${L.map(x=>`<div class="lk"><div class="hd"><span class="ic" aria-hidden="true">${esc(x.icon||"↗")}</span><b>${esc(x.name)}</b>${x.campus_only?'<span class="tag">校内网</span>':""}${stBadge(S(x.id))}</div>${siteHasLoginStatus(x.id)&&S(x.id)&&S(x.id).checked_at?`<div class="lg">状态检查于 ${esc(String(S(x.id).checked_at).replace("T"," ").slice(0,16))}</div>`:""}<div class="sub">${esc(x.purpose||"")}</div>${x.login?`<div class="lg">🔑 ${esc(x.login)}</div>`:""}${x.campus_only&&!x.vpn_url?'<div class="lg">校外请先连接校园 VPN</div>':""}<div class="row">${x.sso_url&&/^\/api\/sso\/jump\?/.test(x.sso_url)?`<a class="btn pri" href="${esc(x.sso_url)}" target="_blank" rel="noopener" title="用已登录的统一认证直接进入">打开 ↗</a>`:lkA(x.url,"打开 ↗","pri")}${x.vpn_url?lkA(x.vpn_url,"经 VPN 打开 ↗","ghost"):""}</div></div>`).join("")}</div>`+
  `<p class="sub" style="margin:12px 0 0">链接在新窗口打开，账号在对应网站登录，本工具不保存这些网站的密码。${j.warning?" ⚠ "+esc(j.warning):""}</p>`}
 document.querySelector('nav button[data-t="sz"]').addEventListener("click",()=>{if(!window.__lk){window.__lk=1;loadLinks()}loadNetworkState()});
 // ---- 新版本提醒：不弹窗、不强制，只在「更多」里显示，并在导航上加一个小圆点 ----
@@ -916,8 +1167,8 @@ $("#lgu").addEventListener("input",lgSync);$("#lgp").addEventListener("focus",e=
 let LOGGED=false;function lgInfo(ok){LOGGED=!!ok;if(ok)gradeSessionState="ok";const i=$("#lginfo");if(i)i.textContent=ok?"✓ 已保存教务登录会话，请按当前网络选择校园网直连或校外 WebVPN。":gradeSessionState==="expired"?"登录会话已过期，请选择当前网络对应的方式重新登录；本地成绩单仍可计算。":"请选择当前网络对应的方式，登录后可同步课表、成绩和学业数据；也可离线导入成绩单。";syncLoginChoice()}
 async function openLogin(target){if(LOGIN_MODE===null)await loadNetworkState();target=target==="vpn"||target==="jwxt"?target:LOGIN_MODE==="webvpn"?"vpn":"jwxt";LG={step:"pw",target};if(typeof loadDeviceNet==="function"){renderDeviceNet();loadDeviceNet()}const _vc=$("#lg-vpn-continue");_vc.hidden=true;if(_vc.classList)_vc.classList.remove("pri");const _go=$("#lgo");if(_go.classList){_go.classList.add("pri");_go.classList.remove("ghost")};$("#lgt").textContent=target==="vpn"?"校外登录 · WebVPN 与教务":"校园网登录 · 直连教务";lgErr("");$("#lgp").value="";$("#lgok").hidden=!LOGGED;if(LOGGED)$("#lgp").value=PW_MASK;$("#lgw").value="";lgView();try{const j=await (await fetch("/api/login")).json();if(j.saved_username&&!$("#lgu").value)$("#lgu").value=j.saved_username;lgAcc(j.accounts||(j.saved_username?[j.saved_username]:[]));lgSync();const ok=LOGGED||!!(j.session&&j.session.logged_in);if(ok)LOGGED=true;$("#lgok").hidden=!ok;if((ok||(LG.acc||[]).includes($("#lgu").value.trim()))&&(!$("#lgp").value||$("#lgp").value===PW_MASK))$("#lgp").value=PW_MASK}catch(_){}const d=$("#login");if(d.showModal)d.showModal();else d.setAttribute("open","");$("#lgu").value?$("#lgp").focus():$("#lgu").focus()}
 async function lgPost(path,body){let r;try{r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})})}catch(e){let alive=false;try{alive=(await fetch("/api/session",{cache:"no-store"})).ok}catch(_){}LG.retry=true;throw new Error(alive?"和 SuperJLU 后台的连接中断了（教务响应慢或被安全软件拦截），请再点一次重试":"SuperJLU 后台已经退出，请从托盘或开始菜单重新打开 SuperJLU 后再登录")}let j={};try{j=await r.json()}catch(_){}if(!r.ok||j.ok===false){const error=new Error(j.error||("HTTP "+r.status));error.canConnectVpn=!!j.can_connect_vpn;error.payload=j;throw error}return j}
-async function lgDone(result={}){$("#login").close();LOGIN_MODE=LG.target==="vpn"?"webvpn":"direct";await loadNetworkState();await loadLinks();if(LG.target==="vpn"&&!result.jwxt_ready){const message=result.warning||"WebVPN 已连接，但教务尚未验证，请重试登录或同步。";loginFeedback(message);toast(message,true);return}loginFeedback("");lgInfo(true);D=Object.assign(D||{},{session_expired:false,session:null,needs_bootstrap:true});try{renderSession()}catch(_){}try{await fullRefresh({toastOnStart:"登录成功，正在刷新各页面…",okToast:null,failPrefix:"登录成功，刷新失败："})}catch(_){}await loadNetworkState()}
-async function lgSendCode(){const j=await lgPost((LG.target==="vpn"?"/api/vpn/login/":"/api/login/")+"send_code",{});if(j.step==="code_sent"){LG.step="code";LG.retry=false;toast("微信验证码已发送");return true}LG.step="cap";LG.retry=true;lgErr(j.error||"发送失败，请重试");return false}
+async function lgDone(result={}){clearRoomCache();$("#login").close();LOGIN_MODE=LG.target==="vpn"?"webvpn":"direct";await loadNetworkState();await loadLinks();if(LG.target==="vpn"&&!result.jwxt_ready){const message=result.warning||"WebVPN 已连接，但教务尚未验证，请重试登录或同步。";loginFeedback(message);toast(message,true);return}loginFeedback("");lgInfo(true);D=Object.assign(D||{},{session_expired:false,session:null,needs_bootstrap:true});try{renderSession()}catch(_){}try{await fullRefresh({toastOnStart:"登录成功，正在刷新各页面…",okToast:null,failPrefix:"登录成功，刷新失败："})}catch(_){}await loadNetworkState()}
+async function lgSendCode(){const j=await lgPost((LG.target==="vpn"?"/api/vpn/login/":"/api/login/")+"send_code",{});if(j.step==="code_sent"){LG.step="code";LG.retry=false;lgView();$("#lgw").value="";$("#lgw").focus();toast("微信验证码已发送");return true}LG.step="cap";LG.retry=true;lgErr(j.error||"发送失败，请重试");return false}
 async function lgSubmit(ev){ev.preventDefault();lgErr("");const b=$("#lgo");b.disabled=true;try{
  if(LG.step==="pw"){const j=await lgPost((LG.target==="vpn"?"/api/vpn/login/":"/api/login/")+"start",{username:$("#lgu").value.trim(),password:$("#lgp").value===PW_MASK?"":$("#lgp").value,remember:$("#lgr").checked});$("#lgp").value=PW_MASK;if(j.step==="success"){await lgDone(j);return}LG.step="cap";LG.retry=false;lgView();b.textContent="发送中…";await lgSendCode()}
  else if(LG.step==="cap"){await lgSendCode()}

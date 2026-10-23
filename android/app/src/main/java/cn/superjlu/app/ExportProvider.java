@@ -2,6 +2,7 @@ package cn.superjlu.app;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
@@ -14,7 +15,12 @@ import java.io.IOException;
 
 /** 只读导出缓存里的课表文件，供日历或分享面板打开。不接受外部写入。 */
 public class ExportProvider extends ContentProvider {
-    public static final String AUTHORITY = "cn.superjlu.app.exports";
+    /** Match the manifest placeholder, including local-test application IDs. */
+    public static Uri uriFor(Context context, File file) {
+        return new Uri.Builder().scheme("content")
+                .authority(context.getPackageName() + ".exports")
+                .appendPath(file.getName()).build();
+    }
 
     @Override public boolean onCreate() { return true; }
 

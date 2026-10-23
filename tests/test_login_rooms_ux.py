@@ -47,8 +47,8 @@ def test_rooms_single_form_no_mode_tabs_and_slim_result_cols():
     assert 'class="m-week" hidden' not in PAGE and 'class="m-study" hidden' not in PAGE
     assert 'id="rst-presets" hidden' not in PAGE
     assert "rdToWeek" in PAGE and "weekToRd" in PAGE
-    assert "roomQueryMode" in PAGE and "const qMode=roomQueryMode()" in PAGE
-    assert 'data-sp="1-4"' in PAGE and 'data-sp="5-8"' in PAGE and 'data-sp="9-11"' in PAGE
+    assert "roomQueryMode" in PAGE and "mode:roomQueryMode()" in PAGE
+    assert 'data-sp="1-4"' in PAGE and 'data-sp="5-8"' in PAGE and 'data-sp="9-12"' in PAGE
     # 结果表去掉与筛选重复的校区/日期/节次/时间列
     assert '["campus","学校校区"]' not in PAGE
     assert '["free_date","空闲日期"]' not in PAGE

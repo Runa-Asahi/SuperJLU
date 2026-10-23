@@ -78,7 +78,7 @@
         </receiver>
         <provider
             android:name=".ExportProvider"
-            android:authorities="cn.superjlu.app.exports"
+            android:authorities="${applicationId}.exports"
             android:exported="false"
             android:grantUriPermissions="true" />
     </application>

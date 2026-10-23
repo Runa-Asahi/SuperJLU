@@ -204,6 +204,7 @@ public class MainActivity extends Activity {
         else applyLegacyBarIcons(w, dark);
     }
 
+    @android.annotation.TargetApi(30)
     private void applyBarIcons(Window w, boolean dark) {
         WindowInsetsController c = w.getInsetsController();
         if (c == null) return;
@@ -298,7 +299,7 @@ public class MainActivity extends Activity {
 
     private void openIcs(File out) {
         if (isDestroyed()) return;
-        Uri uri = Uri.parse("content://" + ExportProvider.AUTHORITY + "/" + out.getName());
+        Uri uri = ExportProvider.uriFor(this, out);
         Intent send = new Intent(Intent.ACTION_SEND);
         send.setType("text/calendar");
         send.putExtra(Intent.EXTRA_STREAM, uri);

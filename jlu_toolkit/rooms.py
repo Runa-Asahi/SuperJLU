@@ -436,28 +436,42 @@ PAGE_SIZE = 200
 MAX_PAGES = 60
 
 
-def fetch_all_pages(client, ep: str, form: dict, first_obj, first_rows: list) -> list:
+def fetch_all_pages(client, ep: str, form: dict, first_obj, first_rows: list,
+                    require_complete: bool = False) -> list:
     """按 totalSize 翻页拉全；没有 totalSize 时直到某页不足一页为止。"""
     rows = list(first_rows)
     total = _total(first_obj)
     size = int(form.get("pageSize") or 0)
+    if require_complete and not size and (total is None or len(rows) < total):
+        raise jwxt.JwxtError("空闲记录缺少完整分页信息，请重试")
     if not size or (total is not None and len(rows) >= total) or (total is None and len(first_rows) < size):
         return rows
     page = int(form.get("pageNumber") or 1)
+    last_count = len(first_rows)
     while page < MAX_PAGES:
         page += 1
         code, text, _ = client.post_raw(ep, {**form, "pageNumber": str(page)}, APP)
         if code != 200:
+            if require_complete:
+                raise jwxt.JwxtError("空闲记录未获取完整，请重试")
             break
         try:
             hit = _rows_any(json.loads(text))
         except (json.JSONDecodeError, ValueError):
+            if require_complete:
+                raise jwxt.JwxtError("空闲记录未获取完整，请重试")
             break
         if not hit or not hit[1]:
+            if require_complete and (not hit or (total is not None and len(rows) < total)):
+                raise jwxt.JwxtError("空闲记录未获取完整，请重试")
             break
         rows += hit[1]
+        last_count = len(hit[1])
         if (total is not None and len(rows) >= total) or len(hit[1]) < size:
             break
+    if require_complete and ((total is not None and len(rows) < total)
+                             or (total is None and last_count >= size and page >= MAX_PAGES)):
+        raise jwxt.JwxtError("空闲记录未获取完整，请重试")
     return rows
 
 
@@ -535,13 +549,16 @@ def _attempts(meta: dict, profile: Optional[dict]):
 
 
 def query_rooms(client, q: RoomQuery, profile_path: Optional[Path] = None,
-                meta: Optional[dict] = None, max_tries: int = 40) -> tuple[list[Room], dict]:
+                meta: Optional[dict] = None, max_tries: int = 40,
+                require_complete: bool = False, enter_app: bool = True,
+                profile_data: Optional[dict] = None) -> tuple[list[Room], dict]:
     """返回 (空教室列表, 命中的 profile)。全部失败则抛 JwxtError（附各尝试的 code/msg）。"""
-    client.enter_emap_app(APP)
+    if enter_app:
+        client.enter_emap_app(APP)
     if meta is None:
         meta = cached_meta(client)
-    profile = None
-    if profile_path and profile_path.exists():
+    profile = profile_data
+    if profile_data is None and profile_path and profile_path.exists():
         try:
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, ValueError):
@@ -551,7 +568,9 @@ def query_rooms(client, q: RoomQuery, profile_path: Optional[Path] = None,
         if i >= max_tries:
             break
         form = _paged(fn(q))
-        code, text, _ = client.post_raw(ep, form, APP)
+        code, text, final = client.post_raw(ep, form, APP)
+        if require_complete and jwxt.looks_like_login_redirect(final, text if not text.lstrip().startswith("{") else ""):
+            raise jwxt.SessionExpiredError()
         if code != 200:
             errs.append(f"{ep.rsplit('/', 1)[-1]}/{sname}:HTTP{code}")
             continue
@@ -566,11 +585,13 @@ def query_rooms(client, q: RoomQuery, profile_path: Optional[Path] = None,
             errs.append(f"{ep.rsplit('/', 1)[-1]}/{sname}:code={_s(obj.get('code')) if isinstance(obj, dict) else '?'} {msg}")
             continue
         prof = {"endpoint": ep, "scheme": sname, "datas_key": hit[0]}
-        if profile_path:
+        if profile_path and profile_data is None:
             profile_path.write_text(json.dumps(prof, ensure_ascii=False), encoding="utf-8")
-        raw = fetch_all_pages(client, ep, form, obj, hit[1])
+        raw = fetch_all_pages(client, ep, form, obj, hit[1], require_complete)
         prof["total"] = _total(obj)
         rs = [r for r in (row_to_room(x) for x in raw if isinstance(x, dict)) if r]
+        if require_complete and len(rs) != len(raw):
+            raise jwxt.JwxtError("空闲记录包含无法识别的教室，请重试")
         return post_filter(rs, q), prof
     raise jwxt.JwxtError("空教室查询未成功；尝试：" + "；".join(errs[:12]))
 

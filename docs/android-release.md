@@ -62,6 +62,18 @@ local.19 在 OPPO Find X8 Ultra / ColorOS 16 / Android 16 上未弹窗，local.2
 空教室上次查询结果应保留，点击入口只能导航到登录卡片，不能自动切换路由。
 网络失败时保留缓存，不得把连接问题当成账号过期。学校 OA 原站可经校园网或学校 VPN 访问；应用内选择「校外 WebVPN」后 OA 同步也会走应用内 VPN，浏览器 WebVPN 登录不会自动接通程序会话。WinHTTP 12029 等校外真实会话仍须真机分别验证。
 
+## 正式版与独立测试版共存
+
+独立测试包必须使用不同的 `applicationId`。课表导出 provider 的 authority 使用
+`${applicationId}.exports`，分享 URI 由 `ExportProvider.uriFor(context, file)` 根据运行时
+包名生成；不能固定为 `cn.superjlu.app.exports`，否则不同包名仍可能因 provider 冲突而无法共存。
+正式包沿用 `cn.superjlu.app.exports`，例如独立 `.local` 测试包使用
+`cn.superjlu.app.local.exports`。组件的类名/namespace 和数据访问权限保持原有约定。
+
+`ExportProviderTest` 验证正式/测试包名生成不同 URI，并验证合并后的 manifest 与实际
+provider 一致、课表文件可读。发布前仍需真机验证同时安装及两套课表导出。详见
+[空教室卡片与全天预加载](room-day-query.md#回归与维护者复测)中的复测清单。
+
 ## Chaquopy 与 cryptography
 
 `secure_store` 在 Android 下用 Android Keystore（别名 `jlu-toolkit-storage`，AES/GCM/NoPadding）包裹 32 字节主密钥，
