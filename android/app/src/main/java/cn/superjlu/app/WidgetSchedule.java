@@ -140,4 +140,33 @@ final class WidgetSchedule {
         }
         return c.getTimeInMillis();
     }
+
+    /** 7 天内的下一节（含正在上的）。返回 {dayOffset, item}，没有则 null。 */
+    Object[] upcoming(Calendar now) {
+        Calendar d = (Calendar) now.clone();
+        for (int off = 0; off < 7; off++) {
+            List<Item> l = off == 0 ? remainingToday(now) : on(d);
+            if (!l.isEmpty()) return new Object[]{off, l.get(0)};
+            d.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return null;
+    }
+
+    static String dayTag(int off, Calendar now) {
+        if (off == 0) return "今天";
+        if (off == 1) return "明天";
+        Calendar d = (Calendar) now.clone(); d.add(Calendar.DAY_OF_MONTH, off);
+        return "周" + "一二三四五六日".charAt(weekday(d) - 1);
+    }
+
+    /** 通知文案 {标题, 正文}；无课返回 null。 */
+    String[] notifyText(Calendar now) {
+        Object[] u = upcoming(now);
+        if (u == null) return null;
+        int off = (Integer) u[0]; Item i = (Item) u[1];
+        int m = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
+        boolean on = off == 0 && i.startMin <= m;
+        String when = on ? "上课中" : dayTag(off, now) + " " + i.hm(false);
+        return new String[]{i.name, when + (i.location.isEmpty() ? "" : " · " + i.location)};
+    }
 }

@@ -369,8 +369,7 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface public String backgroundHint() {
-            return BackgroundHelper.hint(BackgroundHelper.brand())
-                    + (BackgroundHelper.ignoringBattery(MainActivity.this) ? "（已忽略电池优化）" : "");
+            return BackgroundHelper.hint(BackgroundHelper.brand());
         }
 
         @JavascriptInterface public String brandLabel() {
@@ -432,6 +431,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        // 被划掉/杀进程后系统会清掉本应用的常驻通知；回到前台时按已保存的开关补发
+        try { WidgetUpdater.updateAll(this); } catch (RuntimeException ignored) {}
         resumed = true;
         if (baseUrl != null) { pingKeepalive(); scheduleKeepalive(); }
     }

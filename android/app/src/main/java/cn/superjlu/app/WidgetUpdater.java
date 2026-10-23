@@ -32,8 +32,8 @@ final class WidgetUpdater {
 
     static void save(Context c, String json) {
         if (json == null || json.length() > 1_000_000) return;
-        if (json.equals(prefs(c).getString(KEY_DATA, null))) return;
-        prefs(c).edit().putString(KEY_DATA, json).apply();
+        // 内容相同也要刷新：重新打开 App 时借此补发被系统清掉的通知
+        if (!json.equals(prefs(c).getString(KEY_DATA, null))) prefs(c).edit().putString(KEY_DATA, json).apply();
         updateAll(c);
     }
 
@@ -66,53 +66,33 @@ final class WidgetUpdater {
     static RemoteViews todayViews(Context c, WidgetSchedule s, Calendar now) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_today);
         v.setOnClickPendingIntent(R.id.w_root, openApp(c));
-        v.setTextViewText(R.id.w_title, nowWeekText(s, now));
-        if (!s.valid) {
-            v.setTextViewText(R.id.w_label, "课表");
-            v.setTextViewText(R.id.w_name, "打开 SuperJLU 同步课表");
-            v.setTextViewText(R.id.w_sub, "");
-            return v;
-        }
-        List<WidgetSchedule.Item> left = s.remainingToday(now);
-        int m = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
-        if (left.isEmpty()) {
-            v.setTextViewText(R.id.w_label, "今天");
-            v.setTextViewText(R.id.w_name, "今天没有课了");
-            v.setTextViewText(R.id.w_sub, "");
-        } else {
-            WidgetSchedule.Item i = left.get(0);
-            boolean on = i.startMin <= m;
-            v.setTextViewText(R.id.w_label, on ? "正在上 · 还剩 " + (i.endMin - m) + " 分钟" : "下一节 · " + i.hm(false));
-            v.setTextViewText(R.id.w_name, i.name);
-            v.setTextViewText(R.id.w_sub, i.hm(false) + "-" + i.hm(true) + " · " + i.periodText() + (i.location.isEmpty() ? "" : " · " + i.location)
-                    + (left.size() > 1 ? "\n之后还有 " + (left.size() - 1) + " 节" : ""));
-        }
+        String[] t = s.valid ? s.notifyText(now) : null;
+        v.setTextViewText(R.id.w_name, !s.valid ? "打开应用同步课表" : t == null ? "近期没有课" : t[0]);
+        v.setTextViewText(R.id.w_sub, t == null ? "" : t[1]);
         return v;
     }
 
     static RemoteViews listViews(Context c, WidgetSchedule s, Calendar now) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_week);
         v.setOnClickPendingIntent(R.id.w_root, openApp(c));
-        v.setTextViewText(R.id.w_title, s.valid ? nowWeekText(s, now) + " · 剩余课程" : "SuperJLU 课表");
+        v.setTextViewText(R.id.w_title, s.valid && s.weekOf(now) >= 1 ? "第" + s.weekOf(now) + "周" : "课表");
         int r = 0;
         if (s.valid) {
             Calendar d = (Calendar) now.clone();
-            String[] wds = {"一", "二", "三", "四", "五", "六", "日"};
             for (int day = 0; day < 7 && r < ROWS.length; day++) {
+                if (day > 0 && WidgetSchedule.weekday(d) == 1) break; // 只到本周日
                 List<WidgetSchedule.Item> items = day == 0 ? s.remainingToday(d) : s.on(d);
-                String tag = day == 0 ? "今天" : day == 1 ? "明天" : "周" + wds[WidgetSchedule.weekday(d) - 1];
                 for (WidgetSchedule.Item i : items) {
                     if (r >= ROWS.length) break;
-                    v.setTextViewText(ROWS[r], tag + " " + i.hm(false) + "  " + i.name + (i.location.isEmpty() ? "" : " @" + i.location));
+                    v.setTextViewText(ROWS[r], WidgetSchedule.dayTag(day, now) + " " + i.hm(false) + "  " + i.name + (i.location.isEmpty() ? "" : " · " + i.location));
                     v.setViewVisibility(ROWS[r], android.view.View.VISIBLE);
                     r++;
                 }
                 d.add(Calendar.DAY_OF_MONTH, 1);
-                if (WidgetSchedule.weekday(d) == 1 && day > 0) break; // 只看本周剩余（到周日）
             }
         }
         if (r == 0) {
-            v.setTextViewText(ROWS[0], s.valid ? "本周没有剩余课程" : "打开应用同步课表后显示");
+            v.setTextViewText(ROWS[0], s.valid ? "本周没课了" : "打开应用同步课表");
             v.setViewVisibility(ROWS[0], android.view.View.VISIBLE);
             r = 1;
         }
@@ -123,16 +103,11 @@ final class WidgetUpdater {
     static void updateNotification(Context c, WidgetSchedule s, Calendar now, boolean enabled) {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
-        if (!enabled || !s.valid) { nm.cancel(NOTIFY_ID); return; }
-        List<WidgetSchedule.Item> left = s.remainingToday(now);
-        if (left.isEmpty()) { nm.cancel(NOTIFY_ID); return; }
-        WidgetSchedule.Item i = left.get(0);
-        int m = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
+        String[] t = enabled && s.valid ? s.notifyText(now) : null;
+        if (t == null) { nm.cancel(NOTIFY_ID); return; }
         Notification.Builder b;
-        // VISIBILITY_PUBLIC：在用户允许锁屏显示敏感内容时，通知会出现在锁屏上（不是桌面式锁屏小组件）。
         if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel ch = new NotificationChannel(CHANNEL, "下一节课（通知栏/锁屏）", NotificationManager.IMPORTANCE_LOW);
-            ch.setDescription("在通知栏显示下一节课；若系统允许锁屏显示通知内容，也会出现在锁屏上。不是桌面式锁屏小组件。");
+            NotificationChannel ch = new NotificationChannel(CHANNEL, "下一节课", NotificationManager.IMPORTANCE_LOW);
             ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             ch.setShowBadge(false);
             nm.createNotificationChannel(ch);
@@ -141,8 +116,7 @@ final class WidgetUpdater {
             b = new Notification.Builder(c).setPriority(Notification.PRIORITY_LOW);
         }
         b.setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle((i.startMin <= m ? "正在上：" : "下一节：") + i.name)
-                .setContentText(i.hm(false) + "-" + i.hm(true) + " · " + i.periodText() + (i.location.isEmpty() ? "" : " · " + i.location))
+                .setContentTitle(t[0]).setContentText(t[1])
                 .setOngoing(true).setShowWhen(false).setOnlyAlertOnce(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setContentIntent(openApp(c));

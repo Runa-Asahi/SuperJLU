@@ -98,28 +98,14 @@ final class BackgroundHelper {
     }
 
     static String hint(String brand) {
-        String lock = "最近任务里「锁定」本应用只能在系统界面手动操作（下拉或长按卡片），应用无法代为设置";
-        if (match(brand, "xiaomi", "redmi", "poco", "blackshark"))
-            return "小米/红mi/POCO：开启「自启动」，省电策略选「无限制」。" + lock + "。";
-        if (match(brand, "huawei", "honor"))
-            return "华为/荣耀：应用启动管理改为「手动管理」并全部允许。" + lock + "。";
-        if (match(brand, "oppo", "realme", "oneplus", "coloros"))
-            return "OPPO/一加/真我：允许「自启动」和「后台运行」。" + lock + "。";
-        if (match(brand, "vivo", "iqoo"))
-            return "vivo/iQOO：后台耗电管理选「允许后台高耗电」。" + lock + "。";
-        if (match(brand, "samsung"))
-            return "三星：电池 → 后台使用限制里把 SuperJLU 设为「从不休眠」。" + lock + "。";
-        if (match(brand, "meizu", "flyme"))
-            return "魅族：允许后台运行，并把 SuperJLU 加入省电白名单。" + lock + "。";
-        if (match(brand, "lenovo", "motorola", "zuk"))
-            return "联想/摩托罗拉：允许后台运行，关闭省电限制。" + lock + "。";
-        if (match(brand, "asus"))
-            return "华硕：在 Mobile Manager 里允许自启动与后台运行。" + lock + "。";
-        if (match(brand, "tecno", "infinix", "itel", "transsion"))
-            return "传音系（Tecno/Infinix/itel）：允许自启动并关闭后台限制。" + lock + "。";
-        if (match(brand, "google", "pixel", "aosp", "nothing", "fairphone"))
-            return "原生/Pixel：点「允许后台运行」忽略电池优化即可。最近任务锁定因系统而异，应用无法代为设置。";
-        return "点上方按钮打开系统后台/自启动设置；若页面打不开会回到应用详情。" + lock + "。";
+        String lock = "最近任务里加锁需手动操作。";
+        if (match(brand, "xiaomi", "redmi", "poco", "blackshark")) return "开启自启动，省电策略选「无限制」。" + lock;
+        if (match(brand, "huawei", "honor")) return "启动管理改为手动并全部允许。" + lock;
+        if (match(brand, "oppo", "realme", "oneplus", "coloros")) return "允许自启动和后台运行。" + lock;
+        if (match(brand, "vivo", "iqoo")) return "允许后台高耗电。" + lock;
+        if (match(brand, "samsung")) return "后台使用限制设为「从不休眠」。" + lock;
+        if (match(brand, "google", "pixel", "aosp", "nothing", "fairphone")) return "允许后台运行即可。" + lock;
+        return "允许自启动和后台运行。" + lock;
     }
 
     /** 品牌代号，给 UI 显示「检测到：小米」之类。 */

@@ -58,12 +58,41 @@ public class WidgetScheduleTest {
             assertFalse(BackgroundHelper.hint(b).isEmpty());
             assertFalse(BackgroundHelper.brandLabel(b).isEmpty());
         }
-        assertTrue(BackgroundHelper.hint("vivo vivo").toLowerCase().contains("vivo"));
-        assertTrue(BackgroundHelper.hint("google pixel").contains("无法代为设置"));
+        assertTrue(BackgroundHelper.hint("vivo vivo").contains("高耗电"));
+        assertTrue(BackgroundHelper.hint("google pixel").contains("手动"));
         assertEquals("小米/红米/POCO", BackgroundHelper.brandLabel("xiaomi redmi poco"));
         assertEquals("原生 Android", BackgroundHelper.brandLabel("google pixel"));
         assertTrue(BackgroundHelper.autostartIntents("xiaomi").size() >= 3);
         assertTrue(BackgroundHelper.autostartIntents("huawei honor").size() >= 4);
         assertTrue(BackgroundHelper.autostartIntents("oppo coloros").size() >= 4);
     }
+
+    @Test public void notifyTextSurvivesEndOfDay() {
+        WidgetSchedule s = new WidgetSchedule(J);
+        String[] t = s.notifyText(at(2026, 10, 22, 8, 10));
+        assertEquals("高数", t[0]); assertEquals("上课中 · A101", t[1]);
+        t = s.notifyText(at(2026, 10, 22, 7, 0));
+        assertEquals("今天 08:00 · A101", t[1]);
+        // 当天课上完后改显示下一天的课，而不是让通知消失
+        t = s.notifyText(at(2026, 10, 29, 20, 0)); // 第8周周四晚 → 周五体育
+        assertEquals("体育", t[0]); assertEquals("明天 08:00", t[1]);
+        assertNull(s.notifyText(at(2026, 12, 1, 8, 0)));
+    }
+
+    @Test public void notificationRepostedAfterProcessDeath() {
+        android.content.Context c = androidx_ctx();
+        WidgetUpdater.prefs(c).edit().putBoolean(WidgetUpdater.KEY_NOTIFY, true).putString(WidgetUpdater.KEY_DATA, J).commit();
+        android.app.NotificationManager nm = (android.app.NotificationManager) c.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
+        nm.cancelAll(); // 模拟系统在划掉 App 时清掉通知
+        new WidgetReceiver().onReceive(c, new android.content.Intent(android.content.Intent.ACTION_BOOT_COMPLETED));
+        org.robolectric.shadows.ShadowNotificationManager sh = org.robolectric.Shadows.shadowOf(nm);
+        // 是否有课取决于当前日期，只要有近期课程就应补发；数据都在 2026 秋季
+        WidgetSchedule ws = new WidgetSchedule(J);
+        assertEquals(ws.notifyText(Calendar.getInstance()) != null, sh.getAllNotifications().size() == 1);
+        WidgetUpdater.prefs(c).edit().putBoolean(WidgetUpdater.KEY_NOTIFY, false).commit();
+        WidgetUpdater.updateAll(c);
+        assertEquals(0, sh.getAllNotifications().size());
+    }
+
+    static android.content.Context androidx_ctx() { return org.robolectric.RuntimeEnvironment.getApplication(); }
 }
