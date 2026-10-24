@@ -209,9 +209,18 @@ def _save_accounts(accounts: list, path: Path) -> Path:
     return _secret(path).save({"username": top["username"], "password": top["password"], "accounts": accounts})
 
 
-def save_credentials(username: str, password: str, path: Optional[Path] = None) -> Path:
-    """保存账号密码（可多账号，最近使用的排第一）：优先系统钥匙串加密（见 secure_store），否则 0600 明文文件。"""
+def save_credentials(username: str, password: str, path: Optional[Path] = None) -> Optional[Path]:
+    """保存账号密码（可多账号，最近使用的排第一），仅在能加密时保存（见 secure_store）。
+
+    钥匙串不可用时不保存密码（只保留会话），并删除旧的明文凭据，返回 None。
+    """
     path = path or default_cred_path()
+    if not secure_store.can_encrypt():
+        secure_store._warn("系统钥匙串不可用，不保存密码（仅保留本次会话）")
+        sf = _secret(path)
+        if sf.plain_path.is_file():
+            sf.plain_path.unlink()
+        return None
     accts = [a for a in _cred_accounts(_secret(path).load()) if a["username"] != username]
     return _save_accounts([{"username": username, "password": password}] + accts, path)
 

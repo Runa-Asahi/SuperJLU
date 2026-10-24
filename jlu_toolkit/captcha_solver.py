@@ -10,8 +10,7 @@
 from __future__ import annotations
 
 import collections
-import pickle
-import zlib
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -32,12 +31,11 @@ def load_templates() -> list:
     global _TEMPLATES
     if _TEMPLATES is not None:
         return _TEMPLATES
-    path = Path(__file__).resolve().parent / "data" / "digit_templates.bin"
-    raw = zlib.decompress(path.read_bytes())
-    meta = pickle.loads(raw)
+    path = Path(__file__).resolve().parent / "data" / "digit_templates.json"
+    meta = json.loads(path.read_text(encoding="utf-8"))
     items = []
     for ch, packed in meta["items"]:
-        items.append((str(ch), _unpack_bits(packed, meta["tw"] * meta["th"])))
+        items.append((str(ch), _unpack_bits(bytes.fromhex(packed), meta["tw"] * meta["th"])))
     _TEMPLATES = items
     return items
 

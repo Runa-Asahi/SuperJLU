@@ -66,15 +66,18 @@ def test_migrates_legacy_plaintext(cfg, mem):
     assert jwxt.JwxtClient().load_session()
 
 
-def test_fallback_file_when_no_keyring(cfg, monkeypatch, capsys):
+def test_no_password_saved_when_no_keyring(cfg, monkeypatch, capsys):
     monkeypatch.setenv("JLU_TOOLKIT_NO_KEYRING", "1")
-    monkeypatch.setattr(secure_store, "_warned", False)
-    path = jwxt.save_credentials("u", "p")
-    assert path.name == "credentials.json"
+    cfg.mkdir(parents=True, exist_ok=True)
+    legacy = cfg / "credentials.json"
+    legacy.write_text(json.dumps({"username": "u", "password": "old"}), encoding="utf-8")
+    assert jwxt.save_credentials("u", "p") is None
     assert "警告" in capsys.readouterr().err
-    assert jwxt.load_credentials() == ("u", "p")
-    if os.name == "posix":
-        assert (path.stat().st_mode & 0o777) == 0o600
+    assert not legacy.exists()
+    assert jwxt.load_credentials() is None
+    # 会话仍可明文保存
+    jwxt.JwxtClient().save_session()
+    assert jwxt.JwxtClient().load_session()
 
 
 def test_wrong_key_raises_clear_error(cfg, mem):

@@ -26,7 +26,8 @@ def _req(url, method="GET"):
         return e.code, e.read().decode()
 
 
-def test_accounts_list_and_delete(srv):
+def test_accounts_list_and_delete(srv, monkeypatch):
+    monkeypatch.setattr(jwxt.secure_store, "can_encrypt", lambda: True)
     jwxt.save_credentials("alice", "SECRET-A")
     jwxt.save_credentials("bob", "SECRET-B")
     code, body = _req(srv + "/api/login/accounts")

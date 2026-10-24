@@ -474,7 +474,8 @@ def _ensure_login(x) -> jwxt.JwxtClient:
 
     if x.save_credentials:
         path = jwxt.save_credentials(username, password)
-        print(f"已保存凭据到 {path}（权限 600）", file=sys.stderr)
+        if path:
+            print(f"已加密保存凭据到 {path}", file=sys.stderr)
     password = None  # noqa: F841
 
     # 预进入课表/成绩应用，写入 _WEU 等，再落盘会话

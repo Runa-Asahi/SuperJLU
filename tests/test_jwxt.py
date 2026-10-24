@@ -307,7 +307,8 @@ def test_captcha_save_path_prefers_termux_downloads(tmp_path, monkeypatch):
     assert p == downloads / "x.jpg"
 
 
-def test_save_load_credentials(tmp_path):
+def test_save_load_credentials(tmp_path, monkeypatch):
+    monkeypatch.setattr(jwxt.secure_store, "can_encrypt", lambda: True)
     path = tmp_path / "credentials.json"
     jwxt.save_credentials("prefix", "p1", path)
     assert jwxt.load_credentials(path) == ("prefix", "p1")

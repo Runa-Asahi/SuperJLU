@@ -16,7 +16,7 @@ hidden = (collect_submodules("jlu_toolkit") + collect_submodules("keyring.backen
           + ["keyring.backends.Windows", "win32ctypes.core", "win32ctypes.pywin32.win32cred",
              "pystray._win32", "cryptography.hazmat.primitives.ciphers.aead",
              "openpyxl", "xlrd"])  # 成绩单导入（函数内延迟 import）
-datas = collect_data_files("jlu_toolkit")  # 含 data/digit_templates.bin（验证码模板）、demo、campus_links
+datas = collect_data_files("jlu_toolkit")  # 含 data/digit_templates.json（验证码模板）、demo、campus_links
 datas += [(ICON, os.path.join("assets", "brand"))]
 binaries = []
 # 可选：装了 ddddocr（.[ocr]）就连同 onnxruntime 与模型一起打包

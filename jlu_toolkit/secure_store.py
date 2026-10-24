@@ -4,7 +4,7 @@
 Linux Secret Service；Android/Chaquopy 下改为用 Android Keystore 包裹后存文件），数据用 AES-256-GCM 加密后写到 ``<config>/<name>.enc``。
 会话 cookie 往往超过 Windows 凭据管理器的单条大小上限，所以钥匙串里只放密钥。
 
-钥匙串或 cryptography 不可用（如 Termux、无桌面的 Linux）时退回明文 JSON 文件，
+钥匙串或 cryptography 不可用（如 Termux、无桌面的 Linux）时会话退回明文 JSON 文件（不保存密码），
 权限 0600，并在 stderr 提示一次。设 ``JLU_TOOLKIT_NO_KEYRING=1`` 可强制使用文件。
 
 旧版明文 ``<name>.json`` 会在第一次读取时透明迁移为加密文件并删除明文。
@@ -215,6 +215,11 @@ def _get_key(create: bool) -> Optional[bytes]:
     except Exception as e:  # noqa: BLE001
         last_error = f"钥匙串读写失败：{type(e).__name__}: {e}"
         return None
+
+
+def can_encrypt() -> bool:
+    """当前能否加密保存（钥匙串 / Android Keystore 与 cryptography 均可用）。"""
+    return _aesgcm() is not None and _get_key(create=True) is not None
 
 
 def _warn_plain(path: Path) -> None:
