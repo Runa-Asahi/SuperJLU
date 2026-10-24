@@ -30,17 +30,20 @@ def _walk(nodes, seen=None):
 def run(rooms: bool = True, seats: int = 100, root=None) -> dict:
     from . import ui
     store = ui.Store(root or ui.data_dir())
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), ui.make_handler(store))
+    handler = ui.make_handler(store)
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{port}"
+    auth = {ui.TOKEN_HEADER: handler.auth_token}
 
     def get(path):
-        with urllib.request.urlopen(base + path, timeout=60) as r:
+        with urllib.request.urlopen(urllib.request.Request(base + path, headers=auth), timeout=60) as r:
             return r.status, r.read()
 
     def post(path, body):
-        req = urllib.request.Request(base + path, json.dumps(body).encode(), {"Content-Type": "application/json"})
+        req = urllib.request.Request(base + path, json.dumps(body).encode(),
+                                     {"Content-Type": "application/json", **auth})
         try:
             with urllib.request.urlopen(req, timeout=180) as r:
                 return r.status, json.loads(r.read())

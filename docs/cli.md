@@ -157,7 +157,7 @@ jlu-toolkit fetch --user 你的邮箱前缀 --force-login
 # 登录成功后会自动打开课表/成绩应用入口（避免接口 403）
 # 若仍 403：加 --debug 查看是否有 CASTGC / _WEU
 jlu-toolkit explore            # 只读探测，报告在 ~/storage/downloads/
-jlu-toolkit ui                 # 手机浏览器打开 http://127.0.0.1:8765/
+jlu-toolkit ui                 # 手机浏览器打开终端打印的完整地址（http://127.0.0.1:8765/?t=…）
 # 图形验证码默认自动识别（纯 Pillow，无需 ddddocr）
 # 识别错了会自动刷新最多 5 次，再不行才让你手输
 # 需要看图时加：--show-captcha
@@ -166,9 +166,14 @@ jlu-toolkit ui                 # 手机浏览器打开 http://127.0.0.1:8765/
 ## 网页界面（`jlu-toolkit ui`）
 
 ```bash
-jlu-toolkit ui            # 浏览器打开 http://127.0.0.1:8765/
+jlu-toolkit ui            # 浏览器打开终端打印的完整地址（http://127.0.0.1:8765/?t=…）
 jlu-toolkit ui --demo     # 用示例数据先看看效果
 ```
+
+本地界面只监听 127.0.0.1，但同一台设备上的其它程序也能连到这个端口，所以接口要求本地令牌：
+打印出来的地址带 `?t=<令牌>`，第一次打开时换成 HttpOnly Cookie 并跳回 `/`，之后书签直接用
+`http://127.0.0.1:8765/` 即可。令牌保存在配置目录的 `ui_token`（权限 600），删除后下次启动会重新生成。
+脚本访问接口时加请求头 `X-SuperJLU-Token: <令牌>`。
 
 成绩页支持加权成绩、加权绩点，以及保研加权（不含限选课程）、奖学金加权、所有课程三个内置模板。模板规则参考 [JLU-score-calculator](https://github.com/Aohpup/JLU-score-calculator)，仅作起点；不同学院政策不同，请核对当年规定，逐门调整后另存为自定义模板。模板保留基础规则与手动覆盖，新增课程按基础规则选择；原有方案仍可使用。
 

@@ -3,7 +3,7 @@ import threading
 
 import pytest
 
-from jlu_toolkit import desktop
+from jlu_toolkit import desktop, ui
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +52,8 @@ def test_main_starts_opens_and_quits(cfg):
         on_quit()
         return True
     assert desktop.main(opener=opened.append, tray=fake_tray) == 0
-    assert opened == [seen["url"]] and seen["running"] == int(seen["url"].rsplit(":", 1)[1].strip("/"))
+    assert opened == [ui.launch_url(seen["url"])] and "?t=" not in seen["url"]  # 托盘提示不含令牌
+    assert seen["running"] == int(seen["url"].rsplit(":", 1)[1].strip("/"))
     assert desktop.read_state() is None  # 退出后清理
 
 
@@ -64,7 +65,7 @@ def test_second_launch_opens_existing(cfg):
     try:
         called = []
         assert desktop.main(opener=opened.append, tray=lambda *a: called.append(1)) == 0
-        assert opened == [url] and called == []
+        assert opened == [ui.launch_url(url)] and called == []
     finally:
         httpd.shutdown()
         httpd.server_close()
@@ -135,7 +136,7 @@ def test_running_on_default_port_without_state(cfg):
     try:
         assert desktop.read_state() is None
         assert desktop.main(opener=opened.append, tray=lambda *a: pytest.fail("不应再启动")) == 0
-        assert opened == [desktop.url_for(desktop.DEFAULT_PORT)]
+        assert opened == [ui.launch_url(desktop.url_for(desktop.DEFAULT_PORT))]
     finally:
         httpd.shutdown()
         httpd.server_close()

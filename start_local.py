@@ -3,13 +3,14 @@ import threading
 import webbrowser
 from pathlib import Path
 
-from jlu_toolkit import __version__, desktop
+from jlu_toolkit import __version__, desktop, ui
 
 
 def main():
     # A running server keeps its imported Python modules in memory. Always
     # start this checkout so reopening the launcher picks up local edits.
-    server, url = desktop.start_server()
+    server, base = desktop.start_server()
+    url = ui.launch_url(base, server.RequestHandlerClass.auth_token)
     print(f"SuperJLU {__version__}: {url}", flush=True)
     print(f"Source: {Path(__file__).resolve().parent}", flush=True)
     if server.server_address[1] != desktop.DEFAULT_PORT:

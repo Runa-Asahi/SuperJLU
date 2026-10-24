@@ -13,6 +13,7 @@ import datetime as dt
 import base64
 import binascii
 import json
+import os
 import re
 import shutil
 import threading
@@ -55,8 +56,68 @@ def data_dir() -> Path:
     return d
 
 
+import hmac as _hmac
 import secrets as _secrets
 SSO_NONCE = _secrets.token_urlsafe(18)  # 每次启动换新；只经同源 /api/links 下发
+
+# 本地接口令牌：只监听 127.0.0.1 挡不住同机的其它程序（Android 上任何有联网权限的 App
+# 都能连 127.0.0.1:18765 读成绩、换 CAS 票据），所以除图标外的请求都要带令牌——
+# 浏览器 / WebView 用 HttpOnly Cookie，原生代码（Android Java、自检脚本）用请求头。
+# 令牌存在私有配置目录，重启后不变，已打开的标签页和书签照常可用。
+TOKEN_COOKIE = "superjlu_t"
+TOKEN_HEADER = "X-SuperJLU-Token"
+TOKEN_FILE = "ui_token"
+_TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
+_PUBLIC_PATHS = ("/favicon.svg", "/favicon.ico")
+_PAGE_PATHS = ("/", "/index.html")
+LOCKED_PAGE = """<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>SuperJLU</title></head>
+<body style="font-family:system-ui,sans-serif;max-width:32em;margin:15vh auto;padding:0 16px;line-height:1.7">
+<h2>请从 SuperJLU 打开界面</h2>
+<p>为保护你的账号和成绩，本地界面只接受 SuperJLU 自己打开的页面。
+请点系统托盘里的「打开 SuperJLU」，或重新运行 SuperJLU。</p>
+<p>命令行启动时，请使用终端里打印的完整地址。</p></body></html>"""
+
+
+def token_path() -> Path:
+    return jwxt.config_dir() / TOKEN_FILE
+
+
+def load_or_create_token() -> str:
+    """读取（缺失或损坏时生成）本地接口令牌，文件权限 0600。"""
+    p = token_path()
+    try:
+        t = p.read_text(encoding="utf-8").strip()
+        if _TOKEN_RE.match(t):
+            return t
+    except OSError:
+        pass
+    t = _secrets.token_urlsafe(32)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(TOKEN_FILE + ".tmp")
+    tmp.write_text(t, encoding="utf-8")
+    try:
+        os.chmod(tmp, 0o600)
+    except OSError:
+        pass
+    os.replace(tmp, p)
+    return t
+
+
+def launch_url(base: str, token: Optional[str] = None) -> str:
+    """打开界面用的地址：服务端校验 ?t= 后种 Cookie，再 302 回不带令牌的 /。"""
+    return base.rstrip("/") + "/?t=" + (token or load_or_create_token())
+
+
+def _token_ok(headers, token: str) -> bool:
+    got = headers.get(TOKEN_HEADER) or ""
+    if not got:
+        for part in (headers.get("Cookie") or "").split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == TOKEN_COOKIE:
+                got = v
+                break
+    return bool(got) and _hmac.compare_digest(got.encode(), token.encode())
 
 
 class Store:
@@ -977,13 +1038,15 @@ def campus_links_api(override: Optional[Path] = None) -> dict:
     return r
 
 
-def make_handler(store: Store, login: Optional[LoginFlow] = None):
+def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optional[str] = None):
     from . import webvpn
     login = login or webvpn.direct_login_flow()
     vpn_login = webvpn.login_flow()
+    token = token or load_or_create_token()
 
     class H(BaseHTTPRequestHandler):
         server_version = "SuperJLU-UI"
+        auth_token = token
 
         def log_message(self, fmt, *args):  # 安静
             pass
@@ -1009,6 +1072,32 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
         def _host_ok(self) -> bool:
             host = (self.headers.get("Host") or "").split(":")[0]
             return host in ALLOWED_HOSTS
+
+        def _gate(self) -> bool:
+            """Host 校验 + 本地令牌；返回 True 表示已经回应（拒绝，或种 Cookie 后跳转）。"""
+            import urllib.parse
+            if not self._host_ok():
+                self._send(403, b"forbidden", "text/plain")
+                return True
+            u = urllib.parse.urlsplit(self.path)
+            if u.path in _PUBLIC_PATHS:
+                return False
+            t = urllib.parse.parse_qs(u.query).get("t", [""])[0]
+            if self.command == "GET" and u.path in _PAGE_PATHS and t \
+                    and _hmac.compare_digest(t.encode(), token.encode()):
+                cookie = f"{TOKEN_COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000"
+                self._send(302, b"", "text/plain",
+                           {"Location": "/", "Set-Cookie": cookie, "Referrer-Policy": "no-referrer"})
+                return True
+            if _token_ok(self.headers, token):
+                return False
+            if self.command == "GET" and u.path in _PAGE_PATHS:
+                self._send(401, LOCKED_PAGE.encode(), "text/html; charset=utf-8",
+                           {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
+            else:
+                self._json({"ok": False, "auth_required": True,
+                            "error": "未授权的本地请求：请从 SuperJLU 重新打开界面"}, 401)
+            return True
 
         def _send(self, code: int, body: bytes, ctype: str, extra: Optional[dict] = None):
             self.send_response(code)
@@ -1048,8 +1137,8 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
             return True
 
         def do_DELETE(self):
-            if not self._host_ok():
-                return self._send(403, b"forbidden", "text/plain")
+            if self._gate():
+                return
             path = self.path.split("?")[0]
             if path.startswith("/api/login/accounts/"):
                 import urllib.parse
@@ -1060,8 +1149,8 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
                 self._send(404, b"not found", "text/plain")
 
         def do_GET(self):
-            if not self._host_ok():
-                return self._send(403, b"forbidden", "text/plain")
+            if self._gate():
+                return
             path = self.path.split("?")[0]
             if self._oa_sub("GET"):
                 return
@@ -1161,7 +1250,9 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None):
             self._send(404, b"not found", "text/plain")
 
         def do_POST(self):
-            if not self._host_ok() or "application/json" not in (self.headers.get("Content-Type") or ""):
+            if self._gate():
+                return
+            if "application/json" not in (self.headers.get("Content-Type") or ""):
                 return self._send(403, b"forbidden", "text/plain")
             if self._oa_sub("POST"):
                 return
@@ -1329,8 +1420,9 @@ def seed_demo(root: Path) -> None:
 
 def serve(port: int = 8765, root: Optional[Path] = None, open_browser: bool = False) -> None:
     store = Store(root or data_dir())
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), make_handler(store))
-    url = f"http://127.0.0.1:{httpd.server_address[1]}/"
+    handler = make_handler(store)
+    httpd = ThreadingHTTPServer(("127.0.0.1", port), handler)
+    url = launch_url(f"http://127.0.0.1:{httpd.server_address[1]}/", handler.auth_token)
     print(f"SuperJLU 界面已启动：{url}\n数据目录：{store.root}\n按 Ctrl+C 退出。", flush=True)
     if open_browser:
         import webbrowser

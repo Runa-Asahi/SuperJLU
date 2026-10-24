@@ -13,6 +13,7 @@ import os
 import socket
 import sys
 import threading
+import urllib.error
 import urllib.request
 import webbrowser
 from pathlib import Path
@@ -84,14 +85,19 @@ def clear_state(port: int) -> None:
 
 
 def is_running(port: int, timeout: float = 1.5) -> bool:
-    """端口上是否是 SuperJLU 的 UI 服务（看 Server 头，避免把别的程序当成旧实例）。"""
+    """端口上是否是 SuperJLU 的 UI 服务（看 Server 头，避免把别的程序当成旧实例）。
+
+    不带令牌探测：端口上可能是别的程序，令牌不能发给它；SuperJLU 的 401 同样带 Server 头。
+    """
     try:
         op = urllib.request.build_opener(urllib.request.ProxyHandler({}))  # 本机地址不走代理
         with op.open(url_for(port) + "api/session", timeout=timeout) as r:
             srv = r.headers.get("Server") or ""
-            return any(h in srv for h in SERVER_HEADERS)
+    except urllib.error.HTTPError as e:
+        srv = e.headers.get("Server") or ""
     except Exception:  # noqa: BLE001
         return False
+    return any(h in srv for h in SERVER_HEADERS)
 
 
 def existing_instance() -> Optional[int]:
@@ -191,16 +197,21 @@ def run_tray(url: str, on_quit: Callable[[], None], opener: Callable[[str], obje
 
 def main(argv=None, opener: Callable[[str], object] = webbrowser.open,
          tray: Callable = run_tray, wait: Optional[Callable[[], None]] = None) -> int:
+    from . import ui
     log = _setup_logging()
     old = existing_instance()
     if old:
         log.info("已有实例在端口 %s，打开浏览器", old)
-        opener(url_for(old))
+        opener(ui.launch_url(url_for(old)))  # 同一配置目录，令牌与旧实例相同
         return 0
     httpd, url = start_server()
     port = httpd.server_address[1]
     write_state(port)
-    log.info("SuperJLU 已启动：%s", url)
+    log.info("SuperJLU 已启动：%s", url)  # 日志和托盘提示只写不带令牌的地址
+    token = httpd.RequestHandlerClass.auth_token
+
+    def open_ui(u: str):
+        return opener(ui.launch_url(u, token))
     stopped = threading.Event()
 
     def shutdown():
@@ -213,13 +224,13 @@ def main(argv=None, opener: Callable[[str], object] = webbrowser.open,
 
     try:
         try:
-            opener(url)
+            open_ui(url)
         except Exception:  # noqa: BLE001
             log.exception("打开浏览器失败")
-        if not tray(url, shutdown, opener):
+        if not tray(url, shutdown, open_ui):
             log.info("无托盘（缺少 pystray/Pillow 或图标），前台运行；Ctrl+C 退出")
             if sys.stdout is not None:
-                print(f"{APP_NAME} 已启动：{url}  （Ctrl+C 退出）", flush=True)
+                print(f"{APP_NAME} 已启动：{ui.launch_url(url, token)}  （Ctrl+C 退出）", flush=True)
             (wait or (lambda: stopped.wait()))()
     except KeyboardInterrupt:
         pass

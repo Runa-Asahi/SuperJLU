@@ -16,6 +16,7 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.graphics.Color;
+import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -51,7 +52,11 @@ public class MainActivity extends Activity {
     private static final int DARK_BG = Color.parseColor("#0e0f12");
     private static final int LIGHT_NAV = Color.parseColor("#ffffff");
     private static final int DARK_NAV = Color.parseColor("#17191e");
+    /** 本地接口令牌（与 jlu_toolkit.ui.TOKEN_COOKIE / TOKEN_HEADER 一致）：同机其它 App 拿不到。 */
+    static final String TOKEN_COOKIE = "superjlu_t";
+    static final String TOKEN_HEADER = "X-SuperJLU-Token";
     private volatile String baseUrl;
+    private volatile String authToken;
     private String barTheme = "system";
     private long lastShareMs;
     private boolean resumed;
@@ -108,10 +113,12 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             try {
                 ensurePython();
-                String url = Python.getInstance().getModule("jlu_android")
-                        .callAttr("start", getFilesDir().getAbsolutePath(), appVersion(this)).toString();
+                com.chaquo.python.PyObject mod = Python.getInstance().getModule("jlu_android");
+                String url = mod.callAttr("start", getFilesDir().getAbsolutePath(), appVersion(this)).toString();
+                String token = mod.callAttr("auth_token").toString();
+                authToken = token;
                 baseUrl = url;
-                main.post(() -> { web.loadUrl(url); scheduleKeepalive(); });
+                main.post(() -> openUi(url, token));
             } catch (Throwable t) {
                 main.post(() -> ((TextView) findViewById(R.id.splash_msg))
                         .setText("启动失败：" + t));
@@ -240,11 +247,22 @@ public class MainActivity extends Activity {
         return true;
     }
 
+    /** 先给 WebView 种本地接口令牌 Cookie（HttpOnly），再加载界面；种失败时退回 ?t= 交换。 */
+    private void openUi(String url, String token) {
+        CookieManager cm = CookieManager.getInstance();
+        cm.setAcceptCookie(true);
+        cm.setCookie(url, TOKEN_COOKIE + "=" + token + "; Path=/; HttpOnly; SameSite=Strict", ok -> {
+            web.loadUrl(Boolean.TRUE.equals(ok) ? url : url + "?t=" + Uri.encode(token));
+            scheduleKeepalive();
+        });
+    }
+
     /** WebView 忽略 a[download] 时的兜底：本机 /api/ics 仍拉下来交给日历。 */
     private void fetchAndShare(String url) {
         HttpURLConnection c = null;
         try {
             c = (HttpURLConnection) new URL(url).openConnection();
+            if (authToken != null) c.setRequestProperty(TOKEN_HEADER, authToken);
             c.setInstanceFollowRedirects(false);
             c.setConnectTimeout(8000);
             c.setReadTimeout(20000);
@@ -419,11 +437,13 @@ public class MainActivity extends Activity {
     /** 续期接口由 Python 侧提供；旧版本没有这个接口（404）或失败都静默忽略。 */
     private void pingKeepalive() {
         final String b = baseUrl;
+        final String t = authToken;
         if (b == null) return;
         new Thread(() -> {
             HttpURLConnection c = null;
             try {
                 c = (HttpURLConnection) new URL(b + "api/session/keepalive").openConnection();
+                if (t != null) c.setRequestProperty(TOKEN_HEADER, t);
                 c.setRequestMethod("POST");
                 c.setConnectTimeout(5000);
                 c.setReadTimeout(30000);
