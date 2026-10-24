@@ -5,7 +5,7 @@ description = "吉大课表/成绩本地工具：导入文件或从教务 HTTP �
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Runa-Asahi" }]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["jlu", "吉林大学", "课表", "绩点", "ical", "mcp"]
 classifiers = [
     "Programming Language :: Python :: 3",

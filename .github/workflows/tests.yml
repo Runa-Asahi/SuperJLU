@@ -5,7 +5,6 @@ on:
     paths-ignore:
       - 'wechat/**'
   push:
-    branches-ignore: [main]
     paths-ignore:
       - 'wechat/**'
 
@@ -18,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.10", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +38,8 @@ jobs:
         run: node tests/js_network_test.js
       - name: Timetable personal edits UI (Node)
         run: node tests/js_schedule_edit_test.js
+      - name: Boot periods TDZ (Node)
+        run: node tests/js_boot_periods_tdz_test.js
       - name: update card (node)
         run: node tests/js_update_card_test.js
       - name: UI script syntax (node --check)
