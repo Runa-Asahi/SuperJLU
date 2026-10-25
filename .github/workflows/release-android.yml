@@ -93,10 +93,16 @@ jobs:
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > "$ks"
           mkdir -p dist
           "$bt/zipalign" -f -p 4 "$in" "$RUNNER_TEMP/aligned.apk"
-          "$bt/apksigner" sign --ks "$ks" --ks-type PKCS12 --ks-key-alias "$ANDROID_KEY_ALIAS" \
+          "$bt/apksigner" sign --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --ks "$ks" --ks-type PKCS12 --ks-key-alias "$ANDROID_KEY_ALIAS" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD \
             --out "dist/$APK_NAME" "$RUNNER_TEMP/aligned.apk"
           "$bt/apksigner" verify --print-certs "dist/$APK_NAME" | grep -i "SHA-256"
+          # 部分 ROM 安装器只认 v1(JAR) 签名：按 minSdk 21 校验，确保 v1/v2/v3 均有效
+          out=$("$bt/apksigner" verify -v --min-sdk-version 21 "dist/$APK_NAME")
+          echo "$out"
+          echo "$out" | grep -q "v1 scheme (JAR signing): true" || { echo "v1 签名缺失"; exit 1; }
+          echo "$out" | grep -q "v2 scheme (APK Signature Scheme v2): true" || { echo "v2 签名缺失"; exit 1; }
+          echo "$out" | grep -q "v3 scheme (APK Signature Scheme v3): true" || { echo "v3 签名缺失"; exit 1; }
           rm -f "$ks"
           rm -f "dist/$APK_NAME.idsig"
           (cd dist && sha256sum "$APK_NAME" > "$APK_NAME.sha256" && cat "$APK_NAME.sha256")
@@ -128,5 +134,4 @@ jobs:
           body_path: .github/release-notes.md
           files: |
             dist/SuperJLU-*.apk
-            dist/SuperJLU-*.apk.sha256
           fail_on_unmatched_files: true

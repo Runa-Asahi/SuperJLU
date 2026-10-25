@@ -68,5 +68,4 @@ jobs:
           body_path: .github/release-notes.md
           files: |
             dist/SuperJLU.exe
-            dist/SuperJLU.exe.sha256
           fail_on_unmatched_files: true
