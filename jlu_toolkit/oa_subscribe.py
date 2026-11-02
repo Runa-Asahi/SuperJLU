@@ -144,7 +144,7 @@ def sync(client, channel: str = oa.DEFAULT_CHANNEL, root: Optional[Path] = None)
     st.update({"updated": _now(), "seeded": True})
     _dump(r / SEEN_FILE, st)
     if items and not college.is_channel(channel):
-        oa.save(r, {"channel": channel, "fetched_at": st["updated"], "items": items, "channels": {}})
+        oa.save(r, {"channel": channel, "fetched_at": st["updated"], "items": items, "channels": {}, "page1": True})
     return {"channel": channel, "first_run": first, "fetched": len(items), "new": [] if first else new,
             "seeded": len(new) if first else 0}
 

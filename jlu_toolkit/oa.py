@@ -105,8 +105,6 @@ class _ListParser(HTMLParser):
                 self._in = "dept"
         elif tag == "span" and self._cur is not None and not self._cur["time"]:
             self._in = "time"
-        elif tag == "font" and self._in == "title":
-            self._cur["top"] = True
 
     def handle_endtag(self, tag):
         if tag == "a" and self._chan:
@@ -131,6 +129,8 @@ def parse_list(html: str) -> dict:
     items = []
     for it in p.items:
         t = re.sub(r"\s+", " ", it["title"]).strip()
+        # 置顶只认标题里的「[置顶]」字样；OA 也会用 <font> 标红「新」等，不能据此当置顶。
+        it["top"] = bool(re.match(r"^\[?置顶\]?", t))
         t = re.sub(r"^\[?置顶\]?\s*", "", t)
         items.append({"id": it["id"], "title": t, "dept": it["dept"].strip(), "time": parse_time(it["time"]),
                       "top": it["top"], "channel": it["channel"],
@@ -355,6 +355,7 @@ def fetch_notices(client, channel: str = DEFAULT_CHANNEL, keyword: str = "", lim
             break
     items = _select(items, keyword, variant, channel, channel_filter)
     return {"search": "server" if variant else ("local" if keyword else "none"),
+            "page1": not keyword and bool(items),
             "pages_scanned": page, "channel_filtered": bool(channel_filter and variant), "channel": channel, "channel_name": channels.get(channel) or KNOWN_CHANNELS.get(channel, ""),
             "fetched_at": dt.datetime.now().isoformat(timespec="seconds"), "count": min(len(items), limit),
             "items": items[:limit], "channels": channels}
@@ -371,6 +372,12 @@ def resolve_category(cat: str, known: dict) -> str:
     raise ValueError(f"未知分类：{cat}（先运行 jlu-toolkit oa --probe 发现栏目）")
 
 
+def sort_key(i: dict) -> tuple:
+    """按发布时间，再按数字 id（字符串比较会让 1000000 排在 999999 后面）。"""
+    sid = str(i.get("id") or "")
+    return (str(i.get("time") or ""), int(sid) if sid.isdigit() else -1, sid)
+
+
 def save(root: Path, res: dict) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     f = root / "oa_notices.json"
@@ -382,9 +389,15 @@ def save(root: Path, res: dict) -> Path:
             old = {}
     store = old.get("channels_items") or {}
     prev = {i["id"]: i for i in store.get(res["channel"], [])}
+    if res.get("page1"):
+        # 置顶条目都在第 1 页；本次没出现在置顶里的旧条目说明已取消置顶，不能一直挂在最上面。
+        pinned = {i["id"] for i in res["items"] if i.get("top")}
+        for k, v in prev.items():
+            if v.get("top") and k not in pinned:
+                prev[k] = {**v, "top": False}
     for i in res["items"]:
         prev[i["id"]] = {**prev.get(i["id"], {}), **i}
-    store[res["channel"]] = sorted(prev.values(), key=lambda i: (i["time"], i["id"]), reverse=True)[:500]
+    store[res["channel"]] = sorted(prev.values(), key=sort_key, reverse=True)[:500]
     ch_updated = dict(old.get("channels_updated") or {})
     if res.get("fetched_at"):
         ch_updated[str(res["channel"])] = res["fetched_at"]

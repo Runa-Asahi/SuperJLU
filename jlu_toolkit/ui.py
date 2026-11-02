@@ -911,7 +911,7 @@ def oa_notices_api(store: Store, q: dict) -> dict:
         items = [_oa_item(i) for i in ((d.get("channels_items") or {}).get(ch) or []) if isinstance(i, dict)]
     if kw:
         items = [i for i in items if kw in i["title"] or kw in i["dept"]]
-    items.sort(key=lambda i: (i["top"], i["time"], i["id"]), reverse=True)
+    items.sort(key=lambda i: (i["top"], *oa.sort_key(i)), reverse=True)
     items = items[:limit]
     from . import college as _col
     cname = known.get(ch) or oa.KNOWN_CHANNELS.get(ch) or _col.link_channels().get(ch) or _col.channels().get(ch) or ""

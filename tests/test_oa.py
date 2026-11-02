@@ -215,3 +215,39 @@ def test_fetch_detail_and_merge(tmp_path):
     assert merged["text"] == "正文" and merged["attachments"][0]["name"] == "附件"
     cached = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
     assert cached["channels_items"]["179577"][0]["text"] == "正文"
+
+
+def _row(i, t, d, top=False, extra=""):
+    mark = "<font class=red>[置顶]</font>" if top else ""
+    return (f'<div class="li rel"><a class="font14" href="PortalInformation!getInformation.action?id={i}&channelId=179577">'
+            f'{mark}{extra}{t}</a><a class="column">示例处</a><span class="time">{d}&nbsp;08:00</span></div>')
+
+
+def test_font_without_pin_marker_is_not_pinned():
+    r = oa.parse_list(_row(1, "示例新通知", "2026-10-30", extra="<font color=red>NEW</font>") + _row(2, "示例置顶", "2026-10-01", True))
+    assert [(i["id"], i["top"]) for i in r["items"]] == [("1", False), ("2", True)]
+    assert r["items"][1]["title"] == "示例置顶"
+
+
+def test_unpinned_old_notice_does_not_stay_on_top(tmp_path):
+    """#161：安装时置顶的旧通知取消置顶后，不能永远排在新通知上面。"""
+    from jlu_toolkit import ui
+    old = oa.parse_list(_row(900, "示例奖学金评选", "2026-10-10", True) + _row(899, "示例旧通知", "2026-10-09"))
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t1", "items": old["items"], "channels": {}, "page1": True})
+    new = oa.parse_list(_row(950, "示例新置顶", "2026-11-01", True) + _row(949, "示例新通知", "2026-10-31"))
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t2", "items": new["items"], "channels": {}, "page1": True})
+    ids = [i["id"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"]]
+    assert ids == ["950", "949", "900", "899"]
+
+
+def test_keyword_result_does_not_clear_pins(tmp_path):
+    a = oa.parse_list(_row(5, "示例置顶", "2026-10-10", True))
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t1", "items": a["items"], "channels": {}, "page1": True})
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t2", "items": [], "channels": {}})
+    d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert d["channels_items"]["179577"][0]["top"] is True
+
+
+def test_numeric_id_tiebreak():
+    items = [{"id": "999999", "time": "2026-10-01"}, {"id": "1000000", "time": "2026-10-01"}]
+    assert sorted(items, key=oa.sort_key, reverse=True)[0]["id"] == "1000000"
