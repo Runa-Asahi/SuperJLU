@@ -173,7 +173,8 @@ class Recalculator:
                     # Another login must not receive this account's job result.
                     if owner(summary(self.client_factory())) != owner(target):
                         raise jwxt.JwxtError("账号已切换，未写入原账号的重算结果")
-                    task = Sync(client, self.store.root, force=True, grades=self.store.grades())
+                    task = Sync(client, self.store.root, force=True, grades=self.store.grades(),
+                                courses_now=self.store.official_courses())
                     task.completion()
                     task.curriculum()
                     self.update(state="success", message="已重新计算，课程和学分已更新。", progress=100)
