@@ -915,16 +915,51 @@ def oa_notices_api(store: Store, q: dict) -> dict:
     items = items[:limit]
     from . import college as _col
     cname = known.get(ch) or oa.KNOWN_CHANNELS.get(ch) or _col.link_channels().get(ch) or _col.channels().get(ch) or ""
+    # 学院栏目已在上面把 d["updated"] 改成该学院自己的 at；OA 栏目用分栏目时间戳。
+    fetched = d.get("updated") if extra.get("source") == "college" else oa.channel_fetched_at(d, ch)
     return {"ok": True, "channel": ch, "channel_name": cname,
-            "count": len(items), "fetched_at": d.get("updated"), "items": items, **extra}
+            "count": len(items), "fetched_at": fetched, "items": items, **extra}
 
 
-def oa_notice_api(store: Store, nid: str) -> Optional[dict]:
-    """GET /api/oa/notice?id= —— 单条（含本地已缓存的正文/附件，若有）。"""
+def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optional[dict]:
+    """GET /api/oa/notice?id= —— 单条；OA 条目若本地无正文则联网拉取并写入缓存。"""
+    from . import oa
+    nid = str(nid or "")
+    raw = None
     for lst in ((_oa_data(store).get("channels_items") or {}).values()):
         for i in lst or []:
             if isinstance(i, dict) and str(i.get("id")) == nid:
-                return {"ok": True, "item": _oa_item(i, full=True)}
+                raw = i
+                break
+        if raw is not None:
+            break
+    if raw is not None:
+        item = _oa_item(raw, full=True)
+        need = fetch_body and not (item.get("text") or "").strip()
+        if need and _oa_url(raw.get("url")):
+            try:
+                client = jwxt.JwxtClient()
+                has = bool(client.load_session())
+                detail = oa.fetch_detail(client, raw)
+                if has:
+                    try:
+                        client.save_session()
+                    except Exception:  # noqa: BLE001
+                        pass
+                merged = oa.merge_detail(store.root, nid, detail) or {**raw, **{
+                    "text": detail.get("text") or "",
+                    "attachments": detail.get("attachments") or [],
+                }}
+                item = _oa_item(merged, full=True)
+                if not (item.get("text") or "").strip():
+                    item["detail_error"] = "这篇通知没有正文，可点上方打开原文查看。"
+            except jwxt.LoginError:
+                item["detail_error"] = "登录状态已失效，请重新登录后再查看正文。"
+            except jwxt.NetworkError:
+                item["detail_error"] = "通知正文暂时打不开，请稍后再试。"
+            except Exception:  # noqa: BLE001
+                item["detail_error"] = "通知正文读取出错，请稍后再试。"
+        return {"ok": True, "item": item}
     from . import college
     i = college.find(store.root, nid)
     if i:
@@ -935,7 +970,7 @@ def oa_notice_api(store: Store, nid: str) -> Optional[dict]:
 
 
 def oa_refresh_api(store: Store, body: dict) -> dict:
-    """POST /api/oa/refresh —— 只抓第 1 页（max_pages=1），写回本地缓存。"""
+    """POST /api/oa/refresh —— 拉取若干页列表写回本地缓存（见 oa.REFRESH_*）。"""
     from . import oa
     from . import college
     ch = _resolve(str(body.get("category") or ""), _oa_known(store))
@@ -944,7 +979,7 @@ def oa_refresh_api(store: Store, body: dict) -> dict:
         return oa_notices_api(store, {"category": ch})
     client = jwxt.JwxtClient()
     has = bool(client.load_session())
-    res = oa.fetch_notices(client, ch, limit=30, max_pages=1)
+    res = oa.fetch_notices(client, ch, limit=oa.REFRESH_LIMIT, max_pages=oa.REFRESH_MAX_PAGES)
     oa.save(store.root, res)
     if has:
         client.save_session()

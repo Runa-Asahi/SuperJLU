@@ -30,6 +30,9 @@ LIST = BASE + "/PortalInformation!jldxList.action"
 DETAIL = BASE + "/PortalInformation!getInformation.action"
 DEFAULT_CHANNEL = "179577"  # 校内通知
 KNOWN_CHANNELS = {"179577": "校内通知"}
+# UI / 全局刷新：多翻几页，避免置顶占满首页时普通通知长期不更新。每页大约十余条，5 页约 75 条，上限 100。
+REFRESH_LIMIT = 100
+REFRESH_MAX_PAGES = 5
 _WRITE = re.compile(r"(save|submit|update|delete|del|approve|audit|deal|send|add|modify)", re.I)
 
 
@@ -158,9 +161,25 @@ def parse_detail(html: str) -> dict:
     body = re.search(r'class="[^"]*\bcontent_font\b[^"]*"[^>]*>(.*?)(?:<div class="[^"]*(?:fujian|attach|bottom)|<a [^>]*attachdownload|</body>|$)',
                      html or "", re.S)
     text = re.sub(r"<[^>]+>", "", body.group(1)) if body else ""
-    atts = re.findall(r'href="([^"]*(?:attachdownload|download)[^"]*)"', html or "")
+    attachments = []
+    seen = set()
+    for m in re.finditer(
+            r'<a[^>]*href="([^"]*(?:attachdownload|download)[^"]*)"[^>]*>(.*?)</a>',
+            html or "", re.S | re.I):
+        href = m.group(1).strip()
+        if not href or href in seen:
+            continue
+        seen.add(href)
+        name = re.sub(r"<[^>]+>", "", m.group(2)).strip() or "附件"
+        attachments.append({"name": name, "url": urllib.parse.urljoin(BASE + "/", href)})
+    if not attachments:
+        for href in re.findall(r'href="([^"]*(?:attachdownload|download)[^"]*)"', html or "", re.I):
+            if href in seen:
+                continue
+            seen.add(href)
+            attachments.append({"name": "附件", "url": urllib.parse.urljoin(BASE + "/", href)})
     return {"title": cls("content_t"), "time_dept": cls("content_time"),
-            "text": re.sub(r"\n\s*\n+", "\n", text).strip(), "attachments": len(atts)}
+            "text": re.sub(r"\n\s*\n+", "\n", text).strip(), "attachments": attachments}
 
 
 # ───────────────────────── 访问 ─────────────────────────
@@ -366,10 +385,78 @@ def save(root: Path, res: dict) -> Path:
     for i in res["items"]:
         prev[i["id"]] = {**prev.get(i["id"], {}), **i}
     store[res["channel"]] = sorted(prev.values(), key=lambda i: (i["time"], i["id"]), reverse=True)[:500]
-    out = {"updated": res["fetched_at"], "channels": {**old.get("channels", {}), **res.get("channels", {})},
+    ch_updated = dict(old.get("channels_updated") or {})
+    if res.get("fetched_at"):
+        ch_updated[str(res["channel"])] = res["fetched_at"]
+    out = {"updated": res.get("fetched_at") or old.get("updated"),
+           "channels_updated": ch_updated,
+           "channels": {**old.get("channels", {}), **res.get("channels", {})},
            "channels_items": store}
     f.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return f
+
+
+def channel_fetched_at(data: dict, channel: str) -> Optional[str]:
+    """当前栏目自己的刷新时间；旧缓存没有分栏目字段时回退到顶层 updated。"""
+    data = data if isinstance(data, dict) else {}
+    ch_updated = data.get("channels_updated") or {}
+    if isinstance(ch_updated, dict):
+        v = ch_updated.get(str(channel))
+        if v:
+            return str(v)
+    v = data.get("updated")
+    return str(v) if v else None
+
+
+def fetch_detail(client, item: dict) -> dict:
+    """按列表项的详情链接拉取正文与附件（只读 GET）。"""
+    url = str((item or {}).get("url") or "")
+    if not url:
+        cid = str((item or {}).get("id") or "")
+        ch = str((item or {}).get("channel") or DEFAULT_CHANNEL)
+        if not cid:
+            raise ValueError("缺少通知链接")
+        url = f"{DETAIL}?id={urllib.parse.quote(cid)}&channelId={urllib.parse.quote(ch)}"
+    code, html, final = get(client, url)
+    if code != 200 or needs_login(final, html):
+        raise jwxt.LoginError("OA 需要登录后才能查看通知正文")
+    d = parse_detail(html)
+    return {"title": d["title"], "time_dept": d["time_dept"], "text": d["text"],
+            "attachments": d["attachments"]}
+
+
+def merge_detail(root: Path, notice_id: str, detail: dict) -> Optional[dict]:
+    """把正文/附件写回本地缓存中对应通知，返回更新后的条目。"""
+    root = Path(root)
+    f = root / "oa_notices.json"
+    if not f.exists():
+        return None
+    try:
+        data = json.loads(f.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, ValueError):
+        return None
+    store = data.get("channels_items") or {}
+    nid = str(notice_id)
+    for ch, items in store.items():
+        if not isinstance(items, list):
+            continue
+        for idx, it in enumerate(items):
+            if not isinstance(it, dict) or str(it.get("id")) != nid:
+                continue
+            updated = dict(it)
+            if detail.get("text"):
+                updated["text"] = detail["text"]
+            atts = detail.get("attachments")
+            if isinstance(atts, list):
+                updated["attachments"] = atts
+            if detail.get("title") and not updated.get("title"):
+                updated["title"] = detail["title"]
+            items[idx] = updated
+            store[ch] = items
+            data["channels_items"] = store
+            f.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            return updated
+    return None
 
 
 # ───────────────────────── 探测（只输出计数/字段名） ─────────────────────────
@@ -425,7 +512,7 @@ def probe(client, anon_client=None) -> dict:
         d = parse_detail(html3)
         rep["detail"] = {"endpoint": "PortalInformation!getInformation.action", "pattern": "id=<id>&channelId=<ch>",
                          "status": code3, "has_title": bool(d["title"]), "has_time_dept": bool(d["time_dept"]),
-                         "text_chars": len(d["text"]), "attachments": d["attachments"]}
+                         "text_chars": len(d["text"]), "attachments": len(d["attachments"])}
         rep["search_variants"] = search_variants(client)
     disc = discover_channels(anon_client or client)
     allch = {**disc["channels"], **got["channels"]}

@@ -366,7 +366,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
   <div id="oa-pick-b"></div>
   <div class="row" style="margin-top:12px"><button type="button" class="btn ghost" id="oa-pick-skip">先跳过</button><span class="sp"></span><button type="button" class="btn pri" id="oa-pick-ok" disabled>开始使用</button></div>
  </div>
- <div class="card"><div class="row"><h2 style="margin:0">通知 <span class="sub" id="oa-meta"></span></h2><span class="sp"></span><button class="btn" id="oa-ref" title="只取第 1 页">⟳ 更新</button></div>
+ <div class="card"><div class="row"><h2 style="margin:0">通知 <span class="sub" id="oa-meta"></span></h2><span class="sp"></span><button class="btn" id="oa-ref" title="从学校拉取最新通知">⟳ 更新</button></div>
   <div class="seg" id="oa-ch" style="margin:12px 0 0;overflow-x:auto" hidden></div>
   <div id="oa-manage" hidden></div>
   <div class="oaf" style="margin-top:12px"><input id="oa-kw" type="search" placeholder="搜索标题或发文单位（本地筛选）"><select id="oa-dept"><option value="">全部单位</option></select></div>
@@ -1103,7 +1103,7 @@ function renderOA(){const box=$("#oa-box");queueMicrotask(()=>{if(OA&&OA.offline
  const hint=needNet?`<div class="state" style="padding:10px 4px"><b>学院官网暂未连通</b>${esc(OA.hint||"")}</div>`:"";
  $("#oa-meta").textContent=all.length?`${all.length} 条${OA.fetched_at?" · 更新于 "+String(OA.fetched_at).replace("T"," ").slice(0,16):""}`:(linkOnly?"官网入口":"");
  if(linkOnly){const u=OA.source_url||"";box.innerHTML=`<div class="state"><b>打开学院官网查看通知</b><div class="sub" style="margin-top:6px">${esc(OA.hint||"该学院暂不支持自动抓取列表。")}</div><div style="margin-top:14px">${oaLink(u,"打开官网 ↗")||'<span class="sub">暂无可用链接</span>'}</div></div>`;return}
- if(!all.length){box.innerHTML=hint||(OA.source==="college"?`<div class="state"><b>还没有消息</b>点右上角「更新」从学院官网取第一页。</div>`:`<div class="state"><b>还没有通知</b>点右上角「更新」从校内通知取第一页。</div>`);return}
+ if(!all.length){box.innerHTML=hint||(OA.source==="college"?`<div class="state"><b>还没有消息</b>点右上角「更新」从学院官网拉取最新通知。</div>`:`<div class="state"><b>还没有通知</b>点右上角「更新」从校内通知拉取最新通知。</div>`);return}
  const it=oaFilter(all,OAQ);if(!it.length){box.innerHTML=`<div class="state"><b>没有符合条件的通知</b>换个关键词或单位试试。</div>`;return}
  box.innerHTML=hint+`<ul class="oal">${it.map(i=>`<li data-id="${esc(i.id)}" tabindex="0"><div class="tt">${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}<span class="mt">${esc(i.dept||"未知单位")} · ${esc(i.time||"")}</span></div><span class="ar">›</span></li>`).join("")}</ul>`;
  box.querySelectorAll("li").forEach(li=>{li.onclick=()=>openOA(li.dataset.id);li.onkeydown=e=>{if(e.key==="Enter")openOA(li.dataset.id)}})}
@@ -1143,11 +1143,11 @@ async function openOA(id){const v=$("#oa-detail-v");$("#oa-list-v").hidden=true;
  let i;try{i=(await api("/api/oa/notice?id="+encodeURIComponent(id))).item}catch(e){v.innerHTML=`<div class="card"><button class="btn ghost" id="oa-back">‹ 返回</button><div class="state"><b>读取失败</b>${esc(e.message)}</div></div>`;$("#oa-back").onclick=oaBack;return}
  const atts=i.attachments||[];
  v.innerHTML=`<div class="card oad"><div class="row" style="margin-bottom:10px"><button class="btn ghost" id="oa-back">‹ 返回</button><span class="sp"></span>${oaLink(i.url,i.source==="college"?"打开原文 ↗":"在 OA 中打开 ↗")}</div><h2>${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}</h2><div class="sub">${esc(i.dept||"未知单位")} · ${esc(i.time||"")}</div>`+
-  (i.text?`<div class="body">${esc(i.text)}</div>`:`<div class="state" style="padding:28px 8px">${i.source==="college"?"<b>学院新闻只保存标题</b>点“打开原文”在新标签页查看。":"<b>本地没有正文</b>点“在 OA 中打开”查看原文；校外可校外登录 · WebVPN 与教务 访问 OA。"}</div>`)+
+  (i.text?`<div class="body">${esc(i.text)}</div>`:`<div class="state" style="padding:28px 8px">${i.source==="college"?"<b>学院新闻只保存标题</b>点“打开原文”在新标签页查看。":(i.detail_error?`<b>${esc(i.detail_error)}</b>`:"<b>暂时没有正文</b>")+" 可点上方打开原文查看。"}</div>`)+
   (atts.length?`<h2 style="font-size:15px;margin-top:6px">附件 <span class="sub">${atts.length}</span></h2><div class="att">${atts.map(a=>`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(a.name)}</a>`).join("")}</div>`:"")+`</div>`;
  $("#oa-back").onclick=oaBack}
 $("#oa-kw").oninput=e=>{OAQ.kw=e.target.value;renderOA()};$("#oa-dept").onchange=e=>{OAQ.dept=e.target.value;renderOA()};
-$("#oa-ref").onclick=async()=>{const b=$("#oa-ref");b.disabled=true;b.textContent="更新中…";try{OA=await api("/api/oa/refresh",{category:OACH});OAERR="";renderOA();const bad=["network_error","need_campus"].includes(OA.status);toast(OA.status==="link_only"?"请打开学院官网查看":bad?"学院官网暂未连通，已保留本地通知":"已更新第一页",bad)}catch(e){toast(e.message)}finally{b.disabled=false;b.textContent="⟳ 更新"}};
+$("#oa-ref").onclick=async()=>{const b=$("#oa-ref");b.disabled=true;b.textContent="更新中…";try{OA=await api("/api/oa/refresh",{category:OACH});OAERR="";renderOA();const bad=["network_error","need_campus"].includes(OA.status);toast(OA.status==="link_only"?"请打开学院官网查看":bad?"学院官网暂未连通，已保留本地通知":"已更新通知",bad)}catch(e){toast(e.message)}finally{b.disabled=false;b.textContent="⟳ 更新"}};
 document.querySelector('nav button[data-t="oa"]').addEventListener("click",()=>{(OA?Promise.resolve():loadOA()).then(loadSubs)});
 let SITES=null,LINKN={};const SITEN=id=>(SITES&&SITES[id]&&SITES[id].name)||LINKN[id]||id;
 const SST={ok:["已登录","done"],expired:["已过期","miss"],missing:["未登录","chip"],unknown:["未知","chip"]};

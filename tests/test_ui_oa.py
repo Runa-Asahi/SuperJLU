@@ -1,4 +1,4 @@
-"""Web UI 的 OA 通知接口：只读本地 data/oa_notices.json；刷新只取第 1 页。"""
+"""Web UI 的 OA 通知接口：列表读缓存；刷新多页；详情缺正文时联网补齐。"""
 import json
 import threading
 import urllib.error
@@ -84,20 +84,24 @@ def test_notice_detail(srv):
     assert code == 404 and j["ok"] is False
 
 
-def test_refresh_fetches_page_one_only(srv, monkeypatch):
+def test_refresh_fetches_multiple_pages(srv, monkeypatch):
     base, root = srv
     seen = {}
 
     def fake_fetch(client, channel="179577", keyword="", limit=30, max_pages=5):
-        seen.update(channel=channel, max_pages=max_pages)
+        seen.update(channel=channel, limit=limit, max_pages=max_pages)
         return {"channel": channel, "channel_name": "校内通知", "fetched_at": "2026-10-15T10:00:00", "count": 1,
                 "items": [{"id": "9", "title": "示例新通知", "dept": "示例处", "time": "2026-10-15 09:00",
                            "top": False, "channel": channel, "url": oa.BASE + "/x?id=9"}], "channels": {}}
     monkeypatch.setattr(jwxt.JwxtClient, "load_session", lambda self: False)
     monkeypatch.setattr(oa, "fetch_notices", fake_fetch)
     code, j = _post(base + "/api/oa/refresh", {})
-    assert code == 200 and j["ok"] and seen == {"channel": "179577", "max_pages": 1}
+    assert code == 200 and j["ok"]
+    assert seen == {"channel": "179577", "limit": oa.REFRESH_LIMIT, "max_pages": oa.REFRESH_MAX_PAGES}
     assert j["items"][0]["id"] == "9" and (root / "oa_notices.json").exists()
+    assert j["fetched_at"] == "2026-10-15T10:00:00"
+    data = json.loads((root / "oa_notices.json").read_text(encoding="utf-8"))
+    assert data["channels_updated"]["179577"] == "2026-10-15T10:00:00"
 
 
 def test_refresh_errors(srv, monkeypatch):
@@ -186,3 +190,74 @@ def test_channels_from_file_and_category(srv):
     assert j["channel"] == "179578"
     _, j = _get(base + "/api/oa/notices?category=179579")
     assert j["count"] == 0
+
+
+def test_fetched_at_is_per_channel(srv):
+    base, root = srv
+    data = {
+        "updated": "2026-11-02T18:00:00",
+        "channels_updated": {"179577": "2026-11-01T10:00:00", "179578": "2026-11-02T18:00:00"},
+        "channels": {"179577": "校内通知", "179578": "学术讲座"},
+        "channels_items": {
+            "179577": [{"id": "1", "title": "示例A", "dept": "处", "time": "2026-11-01 09:00",
+                        "top": False, "url": ""}],
+            "179578": [{"id": "2", "title": "示例B", "dept": "处", "time": "2026-11-02 09:00",
+                        "top": False, "url": ""}],
+        },
+    }
+    (root / "oa_notices.json").write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    (root / "oa_channels.json").write_text(json.dumps({"179578": "学术讲座"}, ensure_ascii=False), encoding="utf-8")
+    _, j = _get(base + "/api/oa/notices?category=179577")
+    assert j["fetched_at"] == "2026-11-01T10:00:00"
+    _, j = _get(base + "/api/oa/notices?category=179578")
+    assert j["fetched_at"] == "2026-11-02T18:00:00"
+
+
+def test_notice_detail_fetches_when_body_missing(srv, monkeypatch):
+    base, root = srv
+    sample = {
+        "updated": "2026-10-15T09:00:00",
+        "channels_updated": {"179577": "2026-10-15T09:00:00"},
+        "channels": {"179577": "校内通知"},
+        "channels_items": {"179577": [
+            {"id": "8", "title": "示例无正文", "dept": "示例处", "time": "2026-10-14 08:00", "top": False,
+             "channel": "179577",
+             "url": "https://oa.jlu.edu.cn/defaultroot/PortalInformation!getInformation.action?id=8&channelId=179577"},
+        ]},
+    }
+    (root / "oa_notices.json").write_text(json.dumps(sample, ensure_ascii=False), encoding="utf-8")
+
+    def fake_detail(client, item):
+        assert str(item.get("id")) == "8"
+        return {"title": "示例无正文", "time_dept": "", "text": "联网正文",
+                "attachments": [{"name": "说明.pdf", "url": oa.BASE + "/rd/download/attachdownload.jsp?res=1"}]}
+
+    monkeypatch.setattr(jwxt.JwxtClient, "load_session", lambda self: False)
+    monkeypatch.setattr(oa, "fetch_detail", fake_detail)
+    _, j = _get(base + "/api/oa/notice?id=8")
+    assert j["item"]["text"] == "联网正文"
+    assert j["item"]["attachments"][0]["name"] == "说明.pdf"
+    cached = json.loads((root / "oa_notices.json").read_text(encoding="utf-8"))
+    assert cached["channels_items"]["179577"][0]["text"] == "联网正文"
+
+
+def test_notice_detail_keeps_cache_on_network_error(srv, monkeypatch):
+    base, root = srv
+    sample = {
+        "updated": "2026-10-15T09:00:00", "channels": {"179577": "校内通知"},
+        "channels_items": {"179577": [
+            {"id": "8", "title": "示例无正文", "dept": "示例处", "time": "2026-10-14 08:00", "top": False,
+             "url": "https://oa.jlu.edu.cn/defaultroot/PortalInformation!getInformation.action?id=8&channelId=179577"},
+        ]},
+    }
+    (root / "oa_notices.json").write_text(json.dumps(sample, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setattr(jwxt.JwxtClient, "load_session", lambda self: False)
+
+    def boom(*a, **k):
+        raise jwxt.NetworkError("timeout")
+
+    monkeypatch.setattr(oa, "fetch_detail", boom)
+    code, j = _get(base + "/api/oa/notice?id=8")
+    assert code == 200 and j["ok"] and j["item"]["text"] == ""
+    assert "暂时打不开" in j["item"]["detail_error"]
+

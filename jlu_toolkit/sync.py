@@ -1,4 +1,4 @@
-"""一键同步：用已保存会话把课表/成绩/考试/校历/节次/官方绩点/学业完成写入数据目录。
+"""一键同步：用已保存会话把课表/成绩/考试/校历/节次/官方绩点/学业完成/校内通知写入数据目录。
 
 返回的摘要只含条数、成功/失败与非个人信息（学期代码、开学日期、节次数），
 可安全打印或贴给他人；个人数值（绩点、学分、成绩）只写入本地文件。
@@ -44,6 +44,25 @@ def _sync_adjustments(client, root: Path, term: str, courses: list) -> dict:
         "term": term, "fetched_at": dt.datetime.now().isoformat(timespec="seconds"),
         "items": [a.to_dict() for a in adjs], "changes": notes})
     return {"ok": True, "rows": len(adjs), "applied": sum(1 for n in notes if not n["skipped"])}
+
+
+def _sync_oa_notices(client, root: Path) -> dict:
+    """全局刷新时顺带更新校内通知。任何失败只记一笔，不抛给上层。"""
+    from . import oa
+    try:
+        res = oa.fetch_notices(client, oa.DEFAULT_CHANNEL,
+                               limit=oa.REFRESH_LIMIT, max_pages=oa.REFRESH_MAX_PAGES)
+        oa.save(root, res)
+        return {"ok": True, "count": res.get("count", 0),
+                "pages_scanned": res.get("pages_scanned", 0), "channel": res.get("channel")}
+    except jwxt.LoginError as e:
+        return {"ok": False, "error": "需要登录后才能更新通知", "login_needed": True}
+    except jwxt.NetworkError:
+        return {"ok": False, "error": "通知暂时连不上，请稍后再试"}
+    except Exception as e:  # noqa: BLE001
+        import logging
+        logging.getLogger("superjlu.sync").exception("同步校内通知失败")
+        return {"ok": False, "error": f"通知更新出错（{type(e).__name__}）"}
 
 
 def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None, *, force_academic: bool = False) -> dict:
@@ -137,6 +156,9 @@ def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None, *, 
         step(name, fn)
     if login_err is None and adjustments_enabled(root):
         s["schedule_adjustments"] = _sync_adjustments(client, root, term, courses_cache)
+    # 通知单独收尾：失败不影响教务结果；只刷默认「校内通知」栏目，避免全局刷新拖太久。
+    if login_err is None:
+        s["oa_notices"] = _sync_oa_notices(client, root)
     try:
         client.save_session()
     except Exception:  # noqa: BLE001
