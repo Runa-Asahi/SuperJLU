@@ -906,7 +906,7 @@ def fetch_completion(client, grades=None) -> dict:
             groups = []
     if not summary and not plan:
         if plan_error is not None:
-            raise jwxt.JwxtError(f"学业完成未返回数据，培养方案补充查询失败：{plan_error}") from plan_error
+            raise jwxt.JwxtError("教务没有返回学业完成数据，培养方案也暂时读取不到，请稍后再试") from plan_error
         raise jwxt.JwxtError("学业完成与培养方案均为空")
     comp = parse_completion(summary, plan, groups)
     if grades is not None and any(g.get("earned") in (None, 0) for g in comp["groups"]):

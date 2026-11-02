@@ -1438,7 +1438,8 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
                     if academic_job.status()["state"] in ("submitting", "running", "syncing"):
                         return self._json({"ok": False, "error": "教务正在重新计算，请完成后再更新"}, 409)
                     from .academic import Sync as AcademicSync
-                    task = AcademicSync(_client(), store.root, force=True, grades=store.grades())
+                    task = AcademicSync(_client(), store.root, force=True, grades=store.grades(),
+                                        courses_now=store.official_courses())
                     task.completion()
                     task.curriculum()
                     return self._json({"ok": True, **store.snapshot()})
