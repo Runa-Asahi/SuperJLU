@@ -22,7 +22,7 @@ PERIODS = {
 def test_login_auto_sends_wechat_code_after_password():
     assert "lgSendCode" in PAGE
     assert 'LG.step==="pw"' in PAGE
-    assert "await lgSendCode()" in PAGE
+    assert "await lgSendCode(flow)" in PAGE
     # 密码通过后同一提交里就会发码，cap 步留给「重新发送」
     pw = PAGE.split("if(LG.step===\"pw\")", 1)[1].split("else if(LG.step===\"cap\")", 1)[0]
     assert "lgSendCode" in pw

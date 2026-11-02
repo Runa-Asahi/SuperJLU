@@ -46,7 +46,7 @@ def _sync_adjustments(client, root: Path, term: str, courses: list) -> dict:
     return {"ok": True, "rows": len(adjs), "applied": sum(1 for n in notes if not n["skipped"])}
 
 
-def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> dict:
+def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None, *, force_academic: bool = False) -> dict:
     """逐步同步；某步 LoginError 时停止后续步骤，但已成功写入的文件保留。
 
     失败时把已完成摘要挂到异常的 ``partial`` 上，方便 UI 仍展示刚刷到的课表等。
@@ -121,38 +121,15 @@ def sync_all(client: "jwxt.JwxtClient", root: Path, term: str | None = None) -> 
         _wjson(root / "official_gpa.json", g)
         return {"ok": True, "source": g.get("source"), "fields": [i["key"] for i in g["items"]]}
 
+    from .academic import Sync as AcademicSync
+    academic_sync = AcademicSync(client, root, force=force_academic,
+                                 grades=grades_cache, courses_now=courses_cache)
+
     def _prog():
-        c = meta.fetch_completion(client, grades=grades_cache)
-        # 先用本地已有培养方案挂上课程，避免 plan 步骤失败时留下「全是 0、点不开」的课组
-        from . import plan as pl, secure_store
-        prev = secure_store.load_json(root / "plan_courses.json")
-        if prev and (prev.get("courses") or prev.get("tree_nodes")):
-            try:
-                c = pl.attach_to_completion(c, prev)
-            except Exception:
-                pass
-        _wjson(root / "completion.json", c)
-        return {"ok": True, "groups": len(c["groups"]),
-                "has_required": c["required"] is not None, "has_earned": c["earned"] is not None,
-                "groups_with_earned": sum(1 for g in c["groups"] if g.get("earned") is not None),
-                "groups_derived": c.get("groups_derived", 0),
-                "has_tree": bool(c.get("tree")),
-                "groups_with_courses": sum(1 for g in c["groups"] if g.get("courses"))}
+        return academic_sync.completion()
 
     def _plan():
-        from . import plan as pl
-        p = pl.fetch_plan(client, grades=grades_cache, courses_now=courses_cache)
-        _wjson(root / "plan_courses.json", p)
-        cf = root / "completion.json"
-        from . import secure_store
-        comp = secure_store.load_json(cf)
-        if comp is not None:
-            _wjson(cf, pl.attach_to_completion(comp, p))
-        st: dict = {}
-        for c in p["courses"]:
-            st[c["status"]] = st.get(c["status"], 0) + 1
-        return {"ok": True, "count": p["count"], "source": p["source"], "status_counts": st,
-                "with_group": sum(1 for c in p["courses"] if c.get("group") or c.get("group_code"))}
+        return academic_sync.curriculum()
 
     for name, fn in (("schedule", _courses), ("grades", _grades), ("exams", _exams),
                      ("calendar", _cal), ("periods", _periods),

@@ -87,4 +87,4 @@ def test_page_sessions_hook_defensive():
 def test_header_title_never_truncated():
     assert '<span class="ttl">SuperJLU</span>' in PAGE
     assert "header .ttl{white-space:nowrap;flex:none}" in PAGE
-    assert "safe-area-inset-top" in PAGE and 'aria-label="刷新"' in PAGE
+    assert "safe-area-inset-top" in PAGE and 'aria-label="强制刷新"' in PAGE
