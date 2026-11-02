@@ -83,11 +83,23 @@ class Sync:
         write_state(self.root, info)
         return {"ok": True, "cached": False, "groups": len(comp.get("groups") or [])}
 
+    def _refresh_cached_selection(self):
+        data = secure_store.load_json(self.root / "plan_courses.json")
+        n = _refresh_selection(data, self.courses_now)
+        if n:
+            secure_store.save_json(self.root / "plan_courses.json", endpoints.scrub(data))
+            comp = secure_store.load_json(self.root / "completion.json")
+            if comp:
+                secure_store.save_json(self.root / "completion.json",
+                                       endpoints.scrub(plan.attach_to_completion(comp, data)))
+        return n
+
     def curriculum(self):
         if not self.cached and not self.completion_written:
             return {"ok": False, "error": "学业查询未完成，培养方案缓存未更新"}
         if self.cached:
-            return {"ok": True, "cached": True}
+            added = self._refresh_cached_selection()
+            return {"ok": True, "cached": True, **({"added": added} if added else {})}
         data = plan.fetch_plan(self.client, grades=self.grades, courses_now=self.courses_now)
         if not data.get("courses") and not data.get("tree_nodes"):
             raise jwxt.JwxtError("教务未返回培养方案课程明细，已保留原缓存")
@@ -100,6 +112,26 @@ class Sync:
                     cached_calculated_at=str((comp or {}).get("calculated_at") or info.get("school_calculated_at") or ""))
         write_state(self.root, info)
         return {"ok": True, "cached": False, "count": data.get("count", len(data.get("courses") or []))}
+
+
+def _refresh_selection(data: dict, courses_now) -> int:
+    """缓存命中时也把本学期课表并进培养方案明细（不联网）：方案外新选的课补成「在修」，未修→在修。"""
+    if not courses_now or not isinstance(data, dict):
+        return 0
+    courses = data.get("courses")
+    if not isinstance(courses, list):
+        return 0
+    now = {(c.name or "").strip() for c in courses_now}
+    flipped = 0
+    for c in courses:
+        if isinstance(c, dict) and c.get("status") == "未修" and c.get("name") in now:
+            c["status"], c["status_code"] = "在修", plan.STATUS_CODE["在修"]
+            flipped += 1
+    extra = plan._extras(courses, [], courses_now)
+    courses.extend(extra)
+    if extra:
+        data["count"] = len(courses)
+    return flipped + len(extra)
 
 
 class Recalculator:
