@@ -1483,7 +1483,7 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
             except Exception as e:  # noqa: BLE001
                 import logging
                 logging.getLogger("superjlu.desktop").exception("POST %s 失败", self.path)
-                return self._json({"ok": False, "error": f"{type(e).__name__}: {e}"}, 500)
+                return self._json({"ok": False, "error": "出了点问题，请稍后再试；如果一直这样，请重新打开 SuperJLU"}, 500)
 
     return H
 
