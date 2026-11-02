@@ -143,3 +143,27 @@ def test_failed_submit_is_not_automatically_replayed(setup, monkeypatch):
     job = academic.Recalculator(ui.Store(root), lambda: object())
     job.run()
     assert len(attempts) == 1 and job.status()["state"] == "unconfirmed"
+
+
+def test_recalculation_and_manual_update_keep_current_schedule_courses(setup, monkeypatch):
+    """#150：方案外的本学期已选课程依赖课表；重算 / 从教务更新也必须带上课表。"""
+    root, row, calls = setup
+    seen = []
+    monkeypatch.setattr(academic.plan, "fetch_plan",
+                        lambda *a, **k: seen.append(k.get("courses_now")) or {"courses": [{"name": "S"}], "count": 1})
+    store = ui.Store(root)
+    marker = [object()]
+    monkeypatch.setattr(ui.Store, "official_courses", lambda self: marker)
+    def post(client, path, fields, app):
+        if path.endswith("bysc.do"):
+            return {"code": "0"}
+        row["CZSJ"] = "T9"
+        return {"datas": {"byscjd": {"rows": [{"YWCS": "1", "ZS": "1"}]}}}
+    monkeypatch.setattr(academic.meta, "_post", post)
+    monkeypatch.setattr(academic, "time", SimpleNamespace(monotonic=lambda: 0, sleep=lambda _: None))
+    job = academic.Recalculator(store, lambda: object())
+    job.run(timeout=5, interval=0)
+    assert job.status()["state"] == "success" and seen and seen[-1] is marker
+    import inspect
+    src = inspect.getsource(ui)
+    assert "courses_now=store.official_courses()" in src

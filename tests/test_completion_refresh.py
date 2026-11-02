@@ -89,7 +89,7 @@ def test_completion_empty_and_plan_forbidden_is_still_failure(route):
     routes = dict(R)
     routes[meta.EP_PLAN] = (403, "Forbidden")
     routes[meta.EP_COMPLETION] = {"datas": {"cxxsscfa": {"rows": []}}}
-    with pytest.raises(jwxt.JwxtError, match="培养方案补充查询失败.*403"):
+    with pytest.raises(jwxt.JwxtError, match="培养方案也暂时读取不到"):
         meta.fetch_completion(_client(route, routes))
 
 
