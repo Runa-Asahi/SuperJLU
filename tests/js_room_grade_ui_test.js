@@ -179,18 +179,35 @@ roomEntryHandler();roomEntryHandler();assert.equal(roomInitializations,1);
 
 
 async function loginCodeFocusChecks(){
- for(const target of ['jwxt','vpn']){
-  const nodes={'#lg2':{hidden:true},'#lg3':{hidden:true},'#lgo':{},'#lgw':{value:'old'}};
-  let focused=0,result={step:'code_sent'};const paths=[];
-  nodes['#lgw'].focus=()=>{assert.equal(nodes['#lg2'].hidden,false);assert.equal(nodes['#lg3'].hidden,false);focused++};
-  const c=vm.createContext({LG:{step:'cap',target},$:k=>nodes[k],toast(){},lgErr(){},lgPost:async path=>{paths.push(path);return result}});
-  vm.runInContext(page.split('\n').filter(l=>l.startsWith('function lgView(')||l.startsWith('async function lgSendCode(')).join('\n'),c);
-  assert.equal(await c.lgSendCode(),true);assert.equal(focused,1);assert.equal(nodes['#lgw'].value,'');
-  assert.equal(paths[0],target==='vpn'?'/api/vpn/login/send_code':'/api/login/send_code');
-  nodes['#lgw'].value='keep';result={step:'captcha_retry',error:'synthetic failure'};
-  assert.equal(await c.lgSendCode(),false);assert.equal(focused,1);assert.equal(nodes['#lgw'].value,'keep');
+ for(const target of ['jwxt','vpn'])for(const step of ['pw','cap']){
+  const nodes={'#lg1':{},'#lg2':{hidden:true},'#lg3':{hidden:true},'#lgo':{disabled:false},'#lgw':{value:'old'},
+   '#lgu':{value:'synthetic'},'#lgp':{value:'test-only'},'#lgr':{checked:true},'#login':{open:true},'#lg-vpn-continue':{}};
+  let focused=0,result={step:'code_sent'},mode='send';const paths=[];
+  nodes['#lgw'].focus=()=>{
+   assert.equal(nodes['#lg2'].hidden,false);assert.equal(nodes['#lg3'].hidden,false);
+   assert.equal(nodes['#lg1'].inert,true);assert.equal(nodes['#lgo'].disabled,false);
+   assert.equal(nodes['#lgo'].textContent,'完成登录');focused++;
+  };
+  const c=vm.createContext({LG:{step,target},PW_MASK:'mask',$:k=>nodes[k],toast(){},lgErr(){},
+   lgPost:async path=>{paths.push(path);if(mode==='expired')throw new Error('已失效');
+    return path.endsWith('/start')?{step:'need_captcha'}:result}});
+  vm.runInContext(page.split('\n').filter(l=>l.startsWith('function lgResendView(')||l.startsWith('function lgView(')||l.startsWith('async function lgSendCode(')).join('\n'),c);
+  vm.runInContext(page.slice(page.indexOf('async function lgSubmit('),page.indexOf('$('+JSON.stringify('#lg-vpn-continue')+').onclick=')),c);
+  const submit=()=>c.lgSubmit({preventDefault(){}});
+  // Test the full submit, including finally: focus must follow the last render and re-enable.
+  await submit();assert.equal(focused,1);assert.equal(nodes['#lgw'].value,'');
+  assert.equal(paths.at(-1),target==='vpn'?'/api/vpn/login/send_code':'/api/login/send_code');
+  // A failed resend must neither clear an existing code nor move focus.
+  nodes['#lgw'].value='keep';c.LG.step='cap';result={step:'captcha_retry',error:'synthetic failure'};
+  await submit();assert.equal(focused,1);assert.equal(nodes['#lgw'].value,'keep');
+  // Definite expiry restores access to credentials; retrying can focus the code again.
+  mode='expired';await submit();assert.equal(c.LG.step,'pw');assert.equal(nodes['#lg1'].inert,false);
+  mode='send';result={step:'code_sent'};await submit();assert.equal(focused,2);
+  // A late response cannot focus a closed dialog, and busy submissions are ignored.
+  nodes['#login'].open=false;c.LG.step='cap';await submit();assert.equal(focused,2);
+  const before=paths.length;nodes['#lgo'].disabled=true;await submit();assert.equal(paths.length,before);
  }
- console.log('Login code: direct/WebVPN sends reveal the input before focus; failed sends preserve focus and input.');
+ console.log('Login code: direct/WebVPN focus follows submit cleanup; credentials cannot regain focus; failures, expiry, close and duplicate submit handled.');
 }
 loginCodeFocusChecks().catch(e=>{console.error(e);process.exitCode=1});
 
@@ -219,3 +236,45 @@ const rendered={innerHTML:''};renderCtx.$=selector=>selector==='#room-detail-day
 renderCtx.ROOM_DETAIL={room:sample,j:{periods:[5,6],day:{records:{},loading:true}},block:-1};
 vm.runInContext(page.slice(page.indexOf('function roomDayGauge('),page.indexOf('function roomDayCard('))+page.slice(page.indexOf('function renderRoomDayDetail('),page.indexOf('$("#room-detail-close")')),renderCtx);
 renderCtx.renderRoomDayDetail();assert.equal((rendered.innerHTML.match(/data-room-period=/g)||[]).length,12);assert.equal((rendered.innerHTML.match(/<path /g)||[]).length,12);assert.doesNotMatch(rendered.innerHTML,/data-room-pair=|查看单节详情/);assert.match(rendered.innerHTML,/未确认/);
+
+// Exercise delayed responses against the production state machine, without school traffic.
+async function loginRecoveryChecks(){
+ function setup(step,target){
+  const nodes=new Map(),calls=[];let now=100000,focuses=0,done=0,reply;
+  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'synthetic',open:true,disabled:false,checked:true,focus(){focuses++},close(){this.open=false}});return nodes.get(id)};
+  const c=vm.createContext({LG:{step,target},PW_MASK:'mask',$:node,Date:{now:()=>now},toast(){},lgErr(){},lgDone:async()=>done++,fetch:async()=>({}),
+   lgPost:(path)=>{calls.push(path);return new Promise((resolve,reject)=>{reply={resolve,reject}})}});
+  vm.runInContext(page.split('\n').filter(l=>['function lgResendView(','function lgView(','async function lgSendCode(','function lgCancel('].some(p=>l.startsWith(p))).join('\n'),c);
+  vm.runInContext(page.slice(page.indexOf('async function lgSubmit('),page.indexOf('$("#lg-vpn-continue").onclick=')),c);
+  return {c,node,calls,get reply(){return reply},get focuses(){return focuses},get done(){return done},advance(){now+=60000}};
+ }
+ for(const target of ['jwxt','vpn'])for(const step of ['pw','cap','code'])for(const fail of [false,true]){
+  const t=setup(step,target),pending=t.c.lgSubmit({preventDefault(){}});
+  t.c.lgCancel();assert.equal(t.node('#login').open,false);
+  const fresh=t.c.LG={step:'pw',target:target==='vpn'?'jwxt':'vpn',busy:true};
+  t.node('#login').open=true;t.node('#lgo').disabled=true;
+  if(fail)t.reply.reject(new Error('已失效'));else t.reply.resolve({step:step==='cap'?'code_sent':'success'});
+  await pending;
+  assert.equal(t.c.LG,fresh);assert.equal(fresh.step,'pw');assert.equal(fresh.busy,true);
+  assert.equal(t.node('#lgo').disabled,true);assert.equal(t.focuses,0);assert.equal(t.done,0);
+ }
+ for(const target of ['jwxt','vpn']){
+  const t=setup('cap',target),ev={preventDefault(){}};
+  let pending=t.c.lgSubmit(ev);t.reply.resolve({step:'code_sent'});await pending;
+  assert.equal(t.c.LG.resendAt,160000);assert.equal(t.node('#lg-resend').disabled,true);
+  const count=t.calls.length;await t.c.lgSubmit(ev,true);assert.equal(t.calls.length,count);
+  t.advance();t.c.lgResendView();assert.equal(t.node('#lg-resend').disabled,false);
+  pending=t.c.lgSubmit(ev,true);assert.equal(t.node('#lg-resend').disabled,true);
+  assert.ok(t.calls.at(-1).endsWith('/send_code'));
+  t.reply.resolve({step:'code_sent'});await pending;assert.equal(t.c.LG.resendAt,220000);assert.equal(t.focuses,2);
+ }
+ const c=vm.createContext({});
+ vm.runInContext(page.split('\n').filter(l=>l.startsWith('function progRefreshError(')||l.startsWith('function refreshSummary(')).join('\n'),c);
+ const partial={completion:{ok:true},plan_courses:{ok:false,error:'synthetic failure'}};
+ assert.match(c.progRefreshError(partial),/培养方案明细.*synthetic failure/);
+ assert.match(c.refreshSummary(partial),/学业总览 ✓ · 培养方案明细 ✗/);
+ assert.equal(c.progRefreshError({completion:{ok:true},plan_courses:{ok:true}}),'');
+ assert.match(c.progRefreshError({completion:{ok:false,login_needed:true}}),/学业总览.*登录已过期/);
+ console.log('Login recovery: stale success/errors after cancel/reopen ignored; both routes enforce resend cooldown; curriculum failures stay visible and clear on success.');
+}
+loginRecoveryChecks().catch(e=>{console.error(e);process.exitCode=1});

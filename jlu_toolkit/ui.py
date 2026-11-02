@@ -406,6 +406,7 @@ class Store:
                                            and bool(undo.get("ops"))}
 
     def snapshot(self, source: str = "jwxt") -> dict:
+        from . import academic
         gs = self.grades()
         saved_import = self._json("imported_grades.json", None)
         try:
@@ -434,6 +435,7 @@ class Store:
             "first_monday_source": ("manual" if self.settings().get("first_monday")
                                     else "calendar" if self.calendar().get("first_monday") else None),
             "official_gpa": self._json("official_gpa.json", None),
+            "academic_meta": {k: v for k, v in academic.state(self.root).items() if k != "owner"},
             "completion": self._json("completion.json", None),
             "plan_courses": self._json("plan_courses.json", None),
             "gpa_all": core.gpa(gs),
@@ -480,12 +482,12 @@ def cache_info(store: Store) -> dict:
     }
 
 
-def refresh_from_jwxt(store: Store) -> dict:
+def refresh_from_jwxt(store: Store, force_academic: bool = False) -> dict:
     """用已保存会话拉取全部数据；不做交互登录。"""
     from .sync import sync_all
 
     client = _client()
-    result = sync_all(client, store.root)
+    result = sync_all(client, store.root, force_academic=force_academic)
     try:
         store.p("bootstrap_done").write_text(dt.datetime.now().isoformat(timespec="seconds"), encoding="utf-8")
     except OSError:
@@ -1042,6 +1044,8 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
     from . import webvpn
     login = login or webvpn.direct_login_flow()
     vpn_login = webvpn.login_flow()
+    from .academic import Recalculator
+    academic_job = Recalculator(store, _client)
     token = token or load_or_create_token()
 
     class H(BaseHTTPRequestHandler):
@@ -1291,6 +1295,8 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
                 return self._json({"ok": True, "saved_username": login.saved_username(),
                                    "accounts": login.accounts(),
                                    "session": jwxt.session_status()})
+            if path == "/api/academic/recalculate":
+                return self._json({"ok": True, **academic_job.status()})
             if path == "/api/data":
                 from urllib.parse import parse_qs
                 source = parse_qs(self.path.partition("?")[2]).get("grade_source", ["jwxt"])[0]
@@ -1428,10 +1434,21 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
                     if r["session"].get("session_expired"):
                         raise jwxt.SessionExpiredError()
                     return self._json({**r, **cache_info(store)})
+                elif self.path == "/api/academic/refresh":
+                    if academic_job.status()["state"] in ("submitting", "running", "syncing"):
+                        return self._json({"ok": False, "error": "教务正在重新计算，请完成后再更新"}, 409)
+                    from .academic import Sync as AcademicSync
+                    task = AcademicSync(_client(), store.root, force=True, grades=store.grades())
+                    task.completion()
+                    task.curriculum()
+                    return self._json({"ok": True, **store.snapshot()})
+                elif self.path == "/api/academic/recalculate":
+                    return self._json({"ok": True, **academic_job.start(body.get("confirmed") is True)})
                 elif self.path == "/api/refresh":
                     # 部分模块已写入本地时也要把 snapshot 带回，避免 UI 卡在空状态只能重进
                     try:
-                        result = refresh_from_jwxt(store)
+                        result = (refresh_from_jwxt(store, force_academic=True) if body.get("force_academic") is True
+                                  else refresh_from_jwxt(store))
                         return self._json({"ok": True, "result": result, **store.snapshot()})
                     except jwxt.LoginError as e:
                         partial = getattr(e, "partial", None)

@@ -73,6 +73,9 @@ def test_token_persisted_and_well_formed():
     ("GET", "/api/ics", None),
     ("POST", "/api/login/start", b'{"username":"","password":""}'),
     ("POST", "/api/refresh", b"{}"),
+    ("GET", "/api/academic/recalculate", None),
+    ("POST", "/api/academic/recalculate", b'{"confirmed":true}'),
+    ("POST", "/api/academic/refresh", b'{}'),
     ("DELETE", "/api/login/accounts/stu", None),
 ])
 def test_api_rejects_without_token(srv, method, path, body):
@@ -130,6 +133,32 @@ def test_header_token_and_public_favicon(srv):
     port, token, _ = srv
     assert _req(port, "GET", "/api/session", {ui.TOKEN_HEADER: token})[0] == 200
     assert _req(port, "GET", "/favicon.svg")[0] == 200
+
+
+def test_academic_job_requires_confirmation_even_with_token(srv):
+    port, token, _ = srv
+    headers = {ui.TOKEN_HEADER: token, "Content-Type": "application/json"}
+    assert _req(port, "GET", "/api/academic/recalculate", headers)[0] == 200
+    for body in (b"{}", b'{"confirmed":false}', b'{"confirmed":"true"}'):
+        assert _req(port, "POST", "/api/academic/recalculate", headers, body)[0] == 400
+
+
+def test_manual_academic_update_only_reads_academic_data(srv, monkeypatch):
+    from jlu_toolkit import academic
+    calls = []
+    class FakeSync:
+        def __init__(self, client, root, **kwargs):
+            assert kwargs["force"] is True
+        def completion(self):
+            calls.append("completion")
+        def curriculum(self):
+            calls.append("curriculum")
+    monkeypatch.setattr(academic, "Sync", FakeSync)
+    monkeypatch.setattr(ui, "_client", lambda: object())
+    port, token, _ = srv
+    headers = {ui.TOKEN_HEADER: token, "Content-Type": "application/json"}
+    assert _req(port, "POST", "/api/academic/refresh", headers, b"{}")[0] == 200
+    assert calls == ["completion", "curriculum"]
 
 
 def test_host_check_still_applies_with_token(srv):

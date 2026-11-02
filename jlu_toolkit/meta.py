@@ -253,8 +253,12 @@ def parse_completion(summary: dict, plan: dict, groups: list) -> dict:
             "passed": passed,
             "missing": round(missing, 2) if missing is not None else None,
         })
-    req = _f(summary.get("YQXF")) or _f(plan.get("ZSYQXF"))
-    done = _f(summary.get("WCXF")) or _f(plan.get("YWCXF"))
+    req = _f(summary.get("YQXF"))
+    done = _f(summary.get("WCXF"))
+    if req is None:
+        req = _f(plan.get("ZSYQXF"))
+    if done is None:
+        done = _f(plan.get("YWCXF"))
     return {
         "plan": _s(summary.get("PYFAMC")) or _s(plan.get("PYFAMC")),
         "required": req,
@@ -875,7 +879,15 @@ def fetch_plan_courses(client, pyfadm: str, page_size: int = 500) -> list:
 
 
 def fetch_completion(client, grades=None) -> dict:
-    plan = _plan_row(client)
+    # The plan supplies fallback fields; its permissions can differ from completion.
+    # A rejected optional lookup must not hide a working completion application.
+    plan_error = None
+    try:
+        plan = _plan_row(client)
+    except jwxt.LoginError:
+        raise
+    except jwxt.JwxtError as e:
+        plan, plan_error = {}, e
     client.enter_emap_app(APP_XYWCCX)
     rows = _rows(_post(client, EP_COMPLETION, {"SCLBDM": "04", "*order": "-CZSJ"}, APP_XYWCCX), "cxxsscfa")
     summary = rows[0] if rows else {}
@@ -888,9 +900,13 @@ def fetch_completion(client, grades=None) -> dict:
                 "BYNJDM": _s(summary.get("BYNJDM")) or "-",
                 "SCLBDM": _s(summary.get("SCLBDM")) or "04",
             }, APP_XYWCCX), "cxscfakz")
+        except jwxt.LoginError:
+            raise
         except jwxt.JwxtError:
             groups = []
     if not summary and not plan:
+        if plan_error is not None:
+            raise jwxt.JwxtError(f"学业完成未返回数据，培养方案补充查询失败：{plan_error}") from plan_error
         raise jwxt.JwxtError("学业完成与培养方案均为空")
     comp = parse_completion(summary, plan, groups)
     if grades is not None and any(g.get("earned") in (None, 0) for g in comp["groups"]):

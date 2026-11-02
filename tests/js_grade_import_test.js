@@ -85,20 +85,32 @@ async function main(){
  // A successful full refresh (including the one after login) updates the other
  // modules while retaining the imported transcript and unsaved selection.
  const refresh=page.split('\n').find(line=>line.startsWith('async function fullRefresh('));
- let loadSubsCalls=0;
- const refreshed=vm.createContext({D:{...local},dirty:true,bootRefreshing:false,
+ let loadSubsCalls=0,syncResult={};const notices=[],refreshBodies=[];
+ const progressError=page.split('\n').find(line=>line.startsWith('function progRefreshError('));
+ const refreshed=vm.createContext({D:{...local},dirty:true,bootRefreshing:false,PROG_ERR:'',
   $:()=>({innerHTML:'refresh',disabled:false}),window:{__rm:1},
   setSyncInd:()=>{},
-  api:async()=>({...remote,result:{}}),renderAll:()=>{},toast:()=>{},
+  api:async(path,body)=>{refreshBodies.push(body);return {...remote,result:syncResult}},renderAll:()=>{},toast:(message,error)=>notices.push({message,error}),
   refreshSummary:()=>'',loadOA:()=>Promise.resolve(),loadSubs:()=>{loadSubsCalls++;return Promise.resolve()}});
- vm.runInContext(helpers+refresh,refreshed);
+ vm.runInContext(helpers+progressError+'\n'+refresh,refreshed);
  await refreshed.fullRefresh({});
  await Promise.resolve();await Promise.resolve();
  assert.equal(refreshed.D.grade_source,'import');
  assert.equal(refreshed.D.grades,local.grades);
  assert.equal(refreshed.D.courses,remote.courses);
  assert.equal(refreshed.dirty,true);
+ assert.equal(refreshBodies[0].force_academic,false);
  assert.equal(loadSubsCalls,1,'fullRefresh must chain loadSubs after loadOA');
+ syncResult={completion:{ok:true},plan_courses:{ok:false,error:'synthetic curriculum failure'}};
+ await refreshed.fullRefresh({});
+ assert.match(refreshed.PROG_ERR,/培养方案明细.*synthetic curriculum failure/);
+ assert.equal(notices.at(-1).error,true);
+ syncResult={completion:{ok:true},plan_courses:{ok:true}};
+ await refreshed.fullRefresh({});
+ assert.equal(refreshed.PROG_ERR,'');
+ assert.equal(notices.at(-1).error,false);
+ await refreshed.fullRefresh({forceAcademic:true});
+ assert.equal(refreshBodies.at(-1).force_academic,true);
  console.log('Grade import: offline states, refresh preservation, file limits and document-wide drops passed.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
