@@ -60,7 +60,8 @@ def test_parse_list():
 
 def test_detail():
     d = oa.parse_detail(DETAIL)
-    assert d["title"] == "放假安排" and d["text"] == "正文" and d["attachments"] == 1
+    assert d["title"] == "放假安排" and d["text"] == "正文" and len(d["attachments"]) == 1
+    assert d["attachments"][0]["name"] == "附件" and "attachdownload" in d["attachments"][0]["url"]
 
 
 def test_fetch_and_save(tmp_path):
@@ -75,6 +76,8 @@ def test_fetch_and_save(tmp_path):
     oa.save(tmp_path, r2)
     d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
     assert len(d["channels_items"]["179577"]) == 5 and d["channels"]["179578"] == "学术讲座"
+    assert d["channels_updated"]["179577"] == r2["fetched_at"]
+    assert oa.channel_fetched_at(d, "179577") == r2["fetched_at"]
 
 
 def test_login_needed():
@@ -189,3 +192,26 @@ def test_channels_discovery():
     d = oa.discover_channels(Fake(1))
     assert d["channels"]["190001"] == "学术讲座" and d["channels"]["190002"] == "放假安排"
     assert d["sources"]["jldx_left.js"] == 1
+
+
+def test_channel_fetched_at_prefers_per_channel():
+    d = {"updated": "2026-11-01T10:00:00",
+         "channels_updated": {"179577": "2026-11-01T10:00:00", "179578": "2026-11-02T18:00:00"}}
+    assert oa.channel_fetched_at(d, "179577") == "2026-11-01T10:00:00"
+    assert oa.channel_fetched_at(d, "179578") == "2026-11-02T18:00:00"
+    assert oa.channel_fetched_at({"updated": "2026-10-01T00:00:00"}, "179577") == "2026-10-01T00:00:00"
+
+
+def test_fetch_detail_and_merge(tmp_path):
+    item = {"id": "111", "title": "放假安排", "channel": "179577",
+            "url": oa.DETAIL + "?id=111&channelId=179577"}
+    d = oa.fetch_detail(Fake(1), item)
+    assert d["text"] == "正文" and len(d["attachments"]) == 1
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-02T12:00:00",
+                       "items": [{"id": "111", "title": "放假安排", "dept": "校长办公室",
+                                  "time": "2026-10-01 08:05", "top": True, "channel": "179577",
+                                  "url": item["url"]}], "channels": {}})
+    merged = oa.merge_detail(tmp_path, "111", d)
+    assert merged["text"] == "正文" and merged["attachments"][0]["name"] == "附件"
+    cached = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert cached["channels_items"]["179577"][0]["text"] == "正文"
