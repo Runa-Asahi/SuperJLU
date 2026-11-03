@@ -348,3 +348,24 @@ def test_e2e_old_version_cache_then_live_refresh(tmp_path):
     before = (tmp_path / "oa_notices.json").read_text(encoding="utf-8")
     oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": [], "channels": {}})
     assert json.loads(before)["channels_items"] == json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))["channels_items"]
+
+
+def test_old_cache_pins_not_trusted_before_refresh(tmp_path):
+    from jlu_toolkit import ui
+    old = {"updated": "2026-11-02T20:00:00", "channels": {}, "channels_items": {"179577": [
+        {"id": "70100001", "title": "示例小米奖学金", "dept": "示例处", "time": "今天 09:00", "top": True, "url": ""},
+        {"id": "70100002", "title": "示例较新通知", "dept": "示例处", "time": "2026-10-20", "top": False, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    st = ui.Store(tmp_path)
+    j = ui.oa_notices_api(st, {})["items"]
+    assert [i["id"] for i in j] == ["70100002", "70100001"] and not any(i["top"] for i in j)
+    assert ui.oa_notice_api(st, "70100001", fetch_body=False)["item"]["top"] is False
+    # 新版本刷新第 1 页后置顶可信；之后离线读取仍保留
+    r = oa.parse_list(LIVE, NOW)
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": r["items"],
+                       "channels": {}, "page1": True})
+    j = ui.oa_notices_api(ui.Store(tmp_path), {})["items"]
+    assert sum(i["top"] for i in j) == 7 and j[0]["top"] and j[0]["id"] == "71707541"
+    # 关键字搜索结果写入不影响已确认的置顶
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T11:00:00", "items": [], "channels": {}})
+    assert sum(i["top"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"]) == 7

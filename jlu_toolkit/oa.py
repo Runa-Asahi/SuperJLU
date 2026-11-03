@@ -464,15 +464,25 @@ def save(root: Path, res: dict) -> Path:
     for i in res["items"]:
         prev[i["id"]] = {**prev.get(i["id"], {}), **i}
     store[res["channel"]] = sorted(prev.values(), key=sort_key, reverse=True)[:500]
+    verified = dict(old.get("pins_verified") or {})
+    if res.get("page1"):
+        verified[str(res["channel"])] = True
     ch_updated = dict(old.get("channels_updated") or {})
     if res.get("fetched_at"):
         ch_updated[str(res["channel"])] = res["fetched_at"]
     out = {"updated": res.get("fetched_at") or old.get("updated"),
            "channels_updated": ch_updated,
+           "pins_verified": verified,
            "channels": {**old.get("channels", {}), **res.get("channels", {})},
            "channels_items": store}
     f.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return f
+
+
+def pins_verified(data: dict, channel: str) -> bool:
+    """置顶标记是否由新版本读第 1 页时写入；旧版本缓存里的置顶可能早已取消，不可信。"""
+    v = (data or {}).get("pins_verified") if isinstance(data, dict) else None
+    return isinstance(v, dict) and bool(v.get(str(channel)))
 
 
 def channel_fetched_at(data: dict, channel: str) -> Optional[str]:

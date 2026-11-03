@@ -9,7 +9,7 @@ import pytest
 
 from jlu_toolkit import jwxt, oa, sessions, ui, webvpn
 
-SAMPLE = {"updated": "2026-10-15T09:00:00", "channels": {"179577": "校内通知"},
+SAMPLE = {"updated": "2026-10-15T09:00:00", "pins_verified": {"179577": True}, "channels": {"179577": "校内通知"},
           "channels_items": {"179577": [
               {"id": "1", "title": "示例：运动会停课安排", "dept": "示例教务处", "time": "2026-10-14 08:00",
                "top": False, "url": "https://oa.jlu.edu.cn/defaultroot/PortalInformation!getInformation.action?id=1&channelId=179577"},
