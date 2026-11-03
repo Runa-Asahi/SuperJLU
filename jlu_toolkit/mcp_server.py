@@ -130,7 +130,7 @@ def main():
                 known = _j.loads(f.read_text(encoding="utf-8"))
         except (jwxt.JwxtError, ValueError) as e:
             return {"error": str(e)}
-        items = known.get("channels_items", {}).get(ch, [])
+        items = oa.cached_items(known, ch)
         if keyword:
             items = [i for i in items if keyword in i.get("title", "") or keyword in i.get("dept", "")]
         return {"channel": ch, "updated": known.get("updated"), "count": len(items[:limit]), "items": items[:limit]}

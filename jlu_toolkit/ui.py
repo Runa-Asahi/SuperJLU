@@ -908,10 +908,11 @@ def oa_notices_api(store: Store, q: dict) -> dict:
                  "source_url": college.list_url(ch)}
         d = {**d, "updated": st.get("at") or d.get("updated")}
     else:
-        items = [_oa_item(i) for i in ((d.get("channels_items") or {}).get(ch) or []) if isinstance(i, dict)]
+        # 修正旧时间；旧版本缓存的置顶未经确认，不当置顶（刷新第 1 页后恢复）
+        items = [_oa_item(i) for i in oa.cached_items(d, ch)]
     if kw:
         items = [i for i in items if kw in i["title"] or kw in i["dept"]]
-    items.sort(key=lambda i: (i["top"], i["time"], i["id"]), reverse=True)
+    items.sort(key=lambda i: (i["top"], *oa.sort_key(i)), reverse=True)
     items = items[:limit]
     from . import college as _col
     cname = known.get(ch) or oa.KNOWN_CHANNELS.get(ch) or _col.link_channels().get(ch) or _col.channels().get(ch) or ""
@@ -926,10 +927,11 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
     from . import oa
     nid = str(nid or "")
     raw = None
-    for lst in ((_oa_data(store).get("channels_items") or {}).values()):
+    data = _oa_data(store)
+    for ch_id, lst in ((data.get("channels_items") or {}).items()):
         for i in lst or []:
             if isinstance(i, dict) and str(i.get("id")) == nid:
-                raw = i
+                raw = i if oa.pins_verified(data, ch_id) else {**i, "top": False}
                 break
         if raw is not None:
             break
@@ -951,6 +953,7 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
                     "attachments": detail.get("attachments") or [],
                 }}
                 item = _oa_item(merged, full=True)
+                item["top"] = bool(raw.get("top"))
                 if not (item.get("text") or "").strip():
                     item["detail_error"] = "这篇通知没有正文，可点上方打开原文查看。"
             except jwxt.LoginError:

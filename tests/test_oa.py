@@ -215,3 +215,190 @@ def test_fetch_detail_and_merge(tmp_path):
     assert merged["text"] == "正文" and merged["attachments"][0]["name"] == "附件"
     cached = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
     assert cached["channels_items"]["179577"][0]["text"] == "正文"
+
+
+def _row(i, t, d, top=False, extra=""):
+    mark = "<font class=red>[置顶]</font>" if top else ""
+    return (f'<div class="li rel"><a class="font14" href="PortalInformation!getInformation.action?id={i}&channelId=179577">'
+            f'{mark}{extra}{t}</a><a class="column">示例处</a><span class="time">{d}&nbsp;08:00</span></div>')
+
+
+def test_font_without_pin_marker_is_not_pinned():
+    r = oa.parse_list(_row(1, "示例新通知", "2026-10-30", extra="<font color=red>NEW</font>") + _row(2, "示例置顶", "2026-10-01", True))
+    assert [(i["id"], i["top"]) for i in r["items"]] == [("1", False), ("2", True)]
+    assert r["items"][1]["title"] == "示例置顶"
+
+
+def test_unpinned_old_notice_does_not_stay_on_top(tmp_path):
+    """#161：安装时置顶的旧通知取消置顶后，不能永远排在新通知上面。"""
+    from jlu_toolkit import ui
+    old = oa.parse_list(_row(900, "示例奖学金评选", "2026-10-10", True) + _row(899, "示例旧通知", "2026-10-09"))
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t1", "items": old["items"], "channels": {}, "page1": True})
+    new = oa.parse_list(_row(950, "示例新置顶", "2026-11-01", True) + _row(949, "示例新通知", "2026-10-31"))
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t2", "items": new["items"], "channels": {}, "page1": True})
+    ids = [i["id"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"]]
+    assert ids == ["950", "949", "900", "899"]
+
+
+def test_keyword_result_does_not_clear_pins(tmp_path):
+    a = oa.parse_list(_row(5, "示例置顶", "2026-10-10", True))
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t1", "items": a["items"], "channels": {}, "page1": True})
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "t2", "items": [], "channels": {}})
+    d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert d["channels_items"]["179577"][0]["top"] is True
+
+
+def test_numeric_id_tiebreak():
+    items = [{"id": "999999", "time": "2026-10-01"}, {"id": "1000000", "time": "2026-10-01"}]
+    assert sorted(items, key=oa.sort_key, reverse=True)[0]["id"] == "1000000"
+
+
+# ── 真实 OA 第 1 页节选（2026-11-03）：近两天的通知显示「今天/昨天 HH:MM」 ──
+import datetime as _dt
+from pathlib import Path as _P
+
+LIVE = (_P(__file__).parent / "fixtures" / "oa_live_p1.html").read_text(encoding="utf-8")
+NOW = _dt.datetime(2026, 11, 3, 10, 0, tzinfo=_dt.timezone(_dt.timedelta(hours=8)))
+
+
+def test_parse_time_relative_and_no_year():
+    assert oa.parse_time("今天\xa0\xa0 09:09", NOW) == "2026-11-03 09:09"
+    assert oa.parse_time("昨天  15:52", NOW) == "2026-11-02 15:52"
+    assert oa.parse_time("前天 08:00", NOW) == "2026-11-01 08:00"
+    assert oa.parse_time("10-30", NOW) == "2026-10-30"
+    assert oa.parse_time("12-30", NOW) == "2025-12-30"  # 不会跑到未来
+    assert oa.parse_time("2026-10-30", NOW) == "2026-10-30"
+    nyd = _dt.datetime(2027, 1, 1, 8, 0)
+    assert oa.parse_time("昨天 23:00", nyd) == "2026-12-31 23:00"
+
+
+def test_live_page1_fixture():
+    r = oa.parse_list(LIVE, NOW)
+    items = r["items"]
+    assert len(items) == 11 and sum(i["top"] for i in items) == 7 and r["total_pages"] == 2515
+    assert all(oa.is_dated(i["time"]) for i in items)
+    assert items[0]["time"] == "2026-11-02 09:18" and items[7]["time"] == "2026-11-03 09:09"
+    assert all(i["dept"] and not i["title"].startswith("[置顶]") for i in items)
+
+
+def test_relative_times_never_outrank_new_dates_after_days(tmp_path):
+    """#161 主因复现：旧缓存原样存了「今天 09:09」，字符串排序时永远压在真实日期上面。"""
+    from jlu_toolkit import ui
+    old_cache = {"updated": "2026-10-10T12:00:00", "channels_updated": {"179577": "2026-10-10T12:00:00"},
+                 "channels": {}, "channels_items": {"179577": [
+                     {"id": "100", "title": "示例奖学金", "dept": "示例处", "time": "今天 09:00", "top": False, "url": ""},
+                     {"id": "99", "title": "示例旧", "dept": "示例处", "time": "昨天 10:00", "top": False, "url": ""},
+                     {"id": "98", "title": "示例无日期", "dept": "示例处", "time": "未知", "top": False, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old_cache, ensure_ascii=False), encoding="utf-8")
+    # 读取时就迁移：旧版本留下的相对时间无法可靠还原，当作未知
+    j = ui.oa_notices_api(ui.Store(tmp_path), {})
+    assert [(i["id"], i["time"]) for i in j["items"]] == [("100", ""), ("99", ""), ("98", "")]
+    # 刷新后新通知排在最上面，无法识别日期的排最后
+    r = oa.parse_list(LIVE, NOW)
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": NOW.replace(tzinfo=None).isoformat(),
+                       "items": r["items"], "channels": {}, "page1": True})
+    ids = [i["id"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"] if not i["top"]]
+    assert ids[0] == "71736581" and ids[-1] == "98" and ids.index("100") > ids.index("71645669")
+    cached = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))["channels_items"]["179577"]
+    assert {i["id"]: i["time"] for i in cached}["100"] == ""
+    assert all(oa.is_dated(i["time"]) for i in cached if i["id"].startswith("71"))
+
+
+def test_undated_item_without_reference_sorts_last():
+    items = [{"id": "1", "time": "今天 09:00"}, {"id": "2", "time": "2026-01-01"}]
+    assert oa.normalize_cached(items, None)[0]["time"] == ""
+    assert sorted(items, key=oa.sort_key, reverse=True)[0]["id"] == "2"
+
+
+def test_legacy_relative_time_not_dated_by_later_refresh():
+    """旧缓存：10 月 10 日存下「今天 09:00」，11 月 2 日的刷新不能把它算成 11 月 2 日。"""
+    items = [{"id": "1", "time": "今天 09:00"}, {"id": "2", "time": "10-30"}, {"id": "3", "time": "2026-11-01"}]
+    out = oa.normalize_cached(items, "2026-11-02T18:00:00")
+    assert [i["time"] for i in out] == ["", "2026-10-30", "2026-11-01"]
+    assert [i["id"] for i in sorted(out, key=oa.sort_key, reverse=True)] == ["3", "2", "1"]
+
+
+def test_midnight_and_keyword_paths():
+    late = _dt.datetime(2026, 11, 3, 0, 5, tzinfo=_dt.timezone(_dt.timedelta(hours=8)))
+    assert oa.parse_time("昨天 23:59", late) == "2026-11-02 23:59"
+    utc = _dt.datetime(2026, 11, 2, 16, 30, tzinfo=_dt.timezone.utc)  # = 北京时间 11-03 00:30
+    assert oa.parse_time("今天 00:10", utc) == "2026-11-03 00:10"
+    oa._search_pref = ()
+    try:
+        assert oa.fetch_notices(Fake(1), keyword="教务")["page1"] is False
+    finally:
+        oa._search_pref = None
+    assert oa.fetch_notices(Fake(1))["page1"] is True
+
+
+def test_e2e_old_version_cache_then_live_refresh(tmp_path):
+    from jlu_toolkit import ui
+    old = {"updated": "2026-11-02T20:00:00", "channels": {}, "channels_items": {"179577": [
+        {"id": "70100001", "title": "示例小米奖学金", "dept": "示例处", "time": "今天 09:00", "top": True, "url": ""},
+        {"id": "70100000", "title": "示例旧通知", "dept": "示例处", "time": "昨天 10:00", "top": False, "url": ""},
+        {"id": "70090000", "title": "示例旧置顶", "dept": "示例处", "time": "2026-10-08", "top": True, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    r = oa.parse_list(LIVE, NOW)
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": r["items"],
+                       "channels": {}, "page1": True})
+    j = ui.oa_notices_api(ui.Store(tmp_path), {})["items"]
+    assert sum(i["top"] for i in j) == 7 and not any(i["id"].startswith("700") and i["top"] for i in j)
+    plain = [i for i in j if not i["top"]]
+    assert plain[0]["id"] == "71736581" and [i["id"] for i in plain[-3:]] == ["70090000", "70100001", "70100000"]
+    before = (tmp_path / "oa_notices.json").read_text(encoding="utf-8")
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": [], "channels": {}})
+    assert json.loads(before)["channels_items"] == json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))["channels_items"]
+
+
+def test_old_cache_pins_not_trusted_before_refresh(tmp_path):
+    from jlu_toolkit import ui
+    old = {"updated": "2026-11-02T20:00:00", "channels": {}, "channels_items": {"179577": [
+        {"id": "70100001", "title": "示例小米奖学金", "dept": "示例处", "time": "今天 09:00", "top": True, "url": ""},
+        {"id": "70100002", "title": "示例较新通知", "dept": "示例处", "time": "2026-10-20", "top": False, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    st = ui.Store(tmp_path)
+    j = ui.oa_notices_api(st, {})["items"]
+    assert [i["id"] for i in j] == ["70100002", "70100001"] and not any(i["top"] for i in j)
+    assert ui.oa_notice_api(st, "70100001", fetch_body=False)["item"]["top"] is False
+    # 新版本刷新第 1 页后置顶可信；之后离线读取仍保留
+    r = oa.parse_list(LIVE, NOW)
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": r["items"],
+                       "channels": {}, "page1": True})
+    j = ui.oa_notices_api(ui.Store(tmp_path), {})["items"]
+    assert sum(i["top"] for i in j) == 7 and j[0]["top"] and j[0]["id"] == "71707541"
+    # 关键字搜索结果写入不影响已确认的置顶
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T11:00:00", "items": [], "channels": {}})
+    assert sum(i["top"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"]) == 7
+
+
+def test_pins_verified_per_channel_and_zero_pins(tmp_path):
+    old = {"updated": "2026-11-02T20:00:00", "channels": {}, "channels_items": {
+        "179577": [{"id": "1", "title": "示例A", "dept": "", "time": "2026-10-01", "top": True, "url": ""}],
+        "179578": [{"id": "2", "title": "示例B", "dept": "", "time": "2026-10-01", "top": True, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    # 只刷新 179578，第 1 页没有置顶：该栏目标记已确认、置顶全部清掉；179577 仍未确认
+    new = [{"id": "3", "title": "示例C", "dept": "", "time": "2026-11-01", "top": False, "channel": "179578", "url": ""}]
+    oa.save(tmp_path, {"channel": "179578", "fetched_at": "2026-11-03T10:00:00", "items": new, "channels": {}, "page1": True})
+    d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert d["pins_verified"] == {"179578": True}
+    assert not any(i["top"] for i in d["channels_items"]["179578"])
+    assert d["channels_items"]["179577"][0]["top"] is True  # 原始数据保留
+    assert not any(i["top"] for i in oa.cached_items(d, "179577"))  # 但显示时不信任
+    assert oa.pins_verified(d, 179578)  # int 栏目号也能识别
+
+
+def test_subscribe_sync_marks_pins_verified(tmp_path):
+    from jlu_toolkit import oa_subscribe as osub
+    class C:
+        def _request(self, url, **kw):
+            return 200, LIVE, url, LIVE.encode()
+    osub.sync(C(), root=tmp_path)
+    d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert oa.pins_verified(d, "179577") and sum(i["top"] for i in oa.cached_items(d, "179577")) == 7
+
+
+def test_cached_items_used_by_mcp_path():
+    d = {"channels_items": {"179577": [
+        {"id": "1", "title": "示例旧置顶", "time": "今天 09:00", "top": True},
+        {"id": "2", "title": "示例新", "time": "2026-11-01", "top": False}]}}
+    assert [(i["id"], i["top"], i["time"]) for i in oa.cached_items(d, "179577")] == [("2", False, "2026-11-01"), ("1", False, "")]

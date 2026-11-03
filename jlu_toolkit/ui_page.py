@@ -1105,7 +1105,7 @@ function renderOA(){const box=$("#oa-box");queueMicrotask(()=>{if(OA&&OA.offline
  if(linkOnly){const u=OA.source_url||"";box.innerHTML=`<div class="state"><b>打开学院官网查看通知</b><div class="sub" style="margin-top:6px">${esc(OA.hint||"该学院暂不支持自动抓取列表。")}</div><div style="margin-top:14px">${oaLink(u,"打开官网 ↗")||'<span class="sub">暂无可用链接</span>'}</div></div>`;return}
  if(!all.length){box.innerHTML=hint||(OA.source==="college"?`<div class="state"><b>还没有消息</b>点右上角「更新」从学院官网拉取最新通知。</div>`:`<div class="state"><b>还没有通知</b>点右上角「更新」从校内通知拉取最新通知。</div>`);return}
  const it=oaFilter(all,OAQ);if(!it.length){box.innerHTML=`<div class="state"><b>没有符合条件的通知</b>换个关键词或单位试试。</div>`;return}
- box.innerHTML=hint+`<ul class="oal">${it.map(i=>`<li data-id="${esc(i.id)}" tabindex="0"><div class="tt">${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}<span class="mt">${esc(i.dept||"未知单位")} · ${esc(i.time||"")}</span></div><span class="ar">›</span></li>`).join("")}</ul>`;
+ box.innerHTML=hint+`<ul class="oal">${it.map(i=>`<li data-id="${esc(i.id)}" tabindex="0"><div class="tt">${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}<span class="mt">${esc(i.dept||"未知单位")}${i.time?" · "+esc(i.time):""}</span></div><span class="ar">›</span></li>`).join("")}</ul>`;
  box.querySelectorAll("li").forEach(li=>{li.onclick=()=>openOA(li.dataset.id);li.onkeydown=e=>{if(e.key==="Enter")openOA(li.dataset.id)}})}
 function renderOACh(){const box=$("#oa-ch"),l=OACHS||[];const show=l.length>=1;box.hidden=!show;if(!show){box.innerHTML="";return}
  const canEdit=!!(OAPREFS&&OAPREFS.onboarded);
@@ -1142,7 +1142,7 @@ function oaBack(){$("#oa-detail-v").hidden=true;$("#oa-list-v").hidden=false}
 async function openOA(id){const v=$("#oa-detail-v");$("#oa-list-v").hidden=true;v.hidden=false;v.innerHTML=`<div class="card"><div class="state"><div class="spin"></div><b>正在读取…</b></div></div>`;scrollTo(0,0);
  let i;try{i=(await api("/api/oa/notice?id="+encodeURIComponent(id))).item}catch(e){v.innerHTML=`<div class="card"><button class="btn ghost" id="oa-back">‹ 返回</button><div class="state"><b>读取失败</b>${esc(e.message)}</div></div>`;$("#oa-back").onclick=oaBack;return}
  const atts=i.attachments||[];
- v.innerHTML=`<div class="card oad"><div class="row" style="margin-bottom:10px"><button class="btn ghost" id="oa-back">‹ 返回</button><span class="sp"></span>${oaLink(i.url,i.source==="college"?"打开原文 ↗":"在 OA 中打开 ↗")}</div><h2>${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}</h2><div class="sub">${esc(i.dept||"未知单位")} · ${esc(i.time||"")}</div>`+
+ v.innerHTML=`<div class="card oad"><div class="row" style="margin-bottom:10px"><button class="btn ghost" id="oa-back">‹ 返回</button><span class="sp"></span>${oaLink(i.url,i.source==="college"?"打开原文 ↗":"在 OA 中打开 ↗")}</div><h2>${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}</h2><div class="sub">${esc(i.dept||"未知单位")}${i.time?" · "+esc(i.time):""}</div>`+
   (i.text?`<div class="body">${esc(i.text)}</div>`:`<div class="state" style="padding:28px 8px">${i.source==="college"?"<b>学院新闻只保存标题</b>点“打开原文”在新标签页查看。":(i.detail_error?`<b>${esc(i.detail_error)}</b>`:"<b>暂时没有正文</b>")+" 可点上方打开原文查看。"}</div>`)+
   (atts.length?`<h2 style="font-size:15px;margin-top:6px">附件 <span class="sub">${atts.length}</span></h2><div class="att">${atts.map(a=>`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(a.name)}</a>`).join("")}</div>`:"")+`</div>`;
  $("#oa-back").onclick=oaBack}

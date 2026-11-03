@@ -9,7 +9,7 @@ import pytest
 
 from jlu_toolkit import jwxt, oa, sessions, ui, webvpn
 
-SAMPLE = {"updated": "2026-10-15T09:00:00", "channels": {"179577": "校内通知"},
+SAMPLE = {"updated": "2026-10-15T09:00:00", "pins_verified": {"179577": True}, "channels": {"179577": "校内通知"},
           "channels_items": {"179577": [
               {"id": "1", "title": "示例：运动会停课安排", "dept": "示例教务处", "time": "2026-10-14 08:00",
                "top": False, "url": "https://oa.jlu.edu.cn/defaultroot/PortalInformation!getInformation.action?id=1&channelId=179577"},
@@ -261,3 +261,8 @@ def test_notice_detail_keeps_cache_on_network_error(srv, monkeypatch):
     assert code == 200 and j["ok"] and j["item"]["text"] == ""
     assert "暂时打不开" in j["item"]["detail_error"]
 
+
+
+def test_empty_time_has_no_dangling_separator():
+    from jlu_toolkit.ui_page import PAGE
+    assert '${esc(i.time||"")}' not in PAGE and PAGE.count('${i.time?" · "+esc(i.time):""}') == 2
