@@ -169,8 +169,9 @@ SuperJLU 也能接入 AI 助手（MCP），让 Claude、Cursor 等 AI 助手直�
 
 ## 特别鸣谢
 
-- **[@Aohpup](https://github.com/Aohpup)**：成绩加权分析、模板与导入等（[PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44)、[#45](https://github.com/Runa-Asahi/SuperJLU/pull/45)、[#67](https://github.com/Runa-Asahi/SuperJLU/pull/67)、[#81](https://github.com/Runa-Asahi/SuperJLU/pull/81)、[#85](https://github.com/Runa-Asahi/SuperJLU/pull/85)）。
+- **[@Aohpup](https://github.com/Aohpup)**：成绩加权分析、模板与导入等（[PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44)、[#45](https://github.com/Runa-Asahi/SuperJLU/pull/45)、[#67](https://github.com/Runa-Asahi/SuperJLU/pull/67)、[#81](https://github.com/Runa-Asahi/SuperJLU/pull/81)、[#85](https://github.com/Runa-Asahi/SuperJLU/pull/85)），以及通知同步问题的排查（[#161](https://github.com/Runa-Asahi/SuperJLU/issues/161)）。
 - **[@Dramadan-wow](https://github.com/Dramadan-wow)**：微信小程序端（[PR #82](https://github.com/Runa-Asahi/SuperJLU/pull/82)）。
+- **[@4520-Ui](https://github.com/4520-Ui)**：反馈校内通知停止更新的问题（[#161](https://github.com/Runa-Asahi/SuperJLU/issues/161)）。
 
 > 小程序相关需求请联系 `dramadan070925@qq.com`；其他项目参与者与小程序无关。
 
