@@ -798,14 +798,18 @@ def _oa_url(u) -> str:
     return full if pr.scheme in ("http", "https") and pr.hostname == "oa.jlu.edu.cn" else ""
 
 
-def _oa_item(i: dict, full: bool = False) -> dict:
+def _oa_item(i: dict, full: bool = False, link=None) -> dict:
+    link = link or _oa_url
     out = {"id": str(i.get("id") or ""), "title": str(i.get("title") or ""), "time": str(i.get("time") or ""),
-           "dept": str(i.get("dept") or ""), "top": bool(i.get("top")), "url": _oa_url(i.get("url"))}
+           "dept": str(i.get("dept") or ""), "top": bool(i.get("top")), "url": link(i.get("url"))}
     if full:
+        from . import article
         atts = i.get("attachments")
         out["text"] = str(i.get("text") or "")
-        out["attachments"] = [{"name": str(a.get("name") or "附件"), "url": _oa_url(a.get("url"))}
-                              for a in (atts if isinstance(atts, list) else []) if isinstance(a, dict) and _oa_url(a.get("url"))]
+        # 缓存里的正文再清洗一遍：只放行基础排版标签，防止旧数据或异常页面带进脚本/样式
+        out["html"] = article.clean_html(str(i.get("html") or ""), out["url"]) if i.get("html") else ""
+        out["attachments"] = [{"name": str(a.get("name") or "附件"), "url": link(a.get("url"))}
+                              for a in (atts if isinstance(atts, list) else []) if isinstance(a, dict) and link(a.get("url"))]
     return out
 
 
@@ -937,7 +941,7 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
             break
     if raw is not None:
         item = _oa_item(raw, full=True)
-        need = fetch_body and not (item.get("text") or "").strip()
+        need = fetch_body and not item.get("html")
         if need and _oa_url(raw.get("url")):
             try:
                 client = jwxt.JwxtClient()
@@ -949,7 +953,7 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
                     except Exception:  # noqa: BLE001
                         pass
                 merged = oa.merge_detail(store.root, nid, detail) or {**raw, **{
-                    "text": detail.get("text") or "",
+                    "text": detail.get("text") or "", "html": detail.get("html") or "",
                     "attachments": detail.get("attachments") or [],
                 }}
                 item = _oa_item(merged, full=True)
@@ -957,18 +961,31 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
                 if not (item.get("text") or "").strip():
                     item["detail_error"] = "这篇通知没有正文，可点上方打开原文查看。"
             except jwxt.LoginError:
-                item["detail_error"] = "登录状态已失效，请重新登录后再查看正文。"
+                if not item.get("text"):
+                    item["detail_error"] = "登录状态已失效，请重新登录后再查看正文。"
             except jwxt.NetworkError:
-                item["detail_error"] = "通知正文暂时打不开，请稍后再试。"
+                if not item.get("text"):
+                    item["detail_error"] = "通知正文暂时打不开，请稍后再试。"
             except Exception:  # noqa: BLE001
-                item["detail_error"] = "通知正文读取出错，请稍后再试。"
+                if not item.get("text"):
+                    item["detail_error"] = "通知正文读取出错，请稍后再试。"
         return {"ok": True, "item": item}
     from . import college
     i = college.find(store.root, nid)
     if i:
         src, _ = college._split(i.get("channel", ""))
-        return {"ok": True, "item": {**_oa_item(i, full=True), "url": college.safe_url(i.get("url"), src["host"]),
-                                     "source": "college"}}
+        link = lambda u: college.safe_url(u, src["host"])  # noqa: E731
+        if fetch_body and not i.get("html") and link(i.get("url")):
+            try:
+                detail = college.fetch_detail(i)
+                if detail.get("html"):
+                    i = college.merge_detail(store.root, nid, detail) or {**i, **detail}
+            except Exception:  # noqa: BLE001 — 官网打不开时保留「打开原文」
+                pass
+        item = {**_oa_item(i, full=True, link=link), "source": "college"}
+        if not item["html"] and not item["text"]:
+            item["detail_error"] = "暂时读不到正文，可点上方打开原文查看。"
+        return {"ok": True, "item": item}
     return None
 
 

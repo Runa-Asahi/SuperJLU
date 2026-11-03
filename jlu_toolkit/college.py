@@ -439,6 +439,31 @@ def save(root: Path, res: dict) -> Path:
     return f
 
 
+def fetch_detail(item: dict, getter=None) -> dict:
+    """学院文章页：清洗后的正文与附件（公开页面，免登录）。没解析到正文时 html 为空。"""
+    from . import article
+    src, _ = _split(str(item.get("channel") or ""))
+    url = safe_url(item.get("url"), src["host"])
+    if not url:
+        raise ValueError("缺少原文链接")
+    return article.extract((getter or _get)(url), url)
+
+
+def merge_detail(root: Path, nid: str, detail: dict) -> Optional[dict]:
+    d = load(root)
+    for ch, lst in (d.get("channels_items") or {}).items():
+        for k, i in enumerate(lst or []):
+            if isinstance(i, dict) and i.get("id") == nid:
+                lst[k] = {**i, "html": detail.get("html") or "", "text": detail.get("text") or "",
+                          "attachments": detail.get("attachments") or []}
+                f = root / CACHE
+                tmp = f.with_suffix(".tmp")
+                tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+                tmp.replace(f)
+                return lst[k]
+    return None
+
+
 def find(root: Path, nid: str) -> Optional[dict]:
     for lst in (load(root).get("channels_items") or {}).values():
         for i in lst or []:

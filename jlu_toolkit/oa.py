@@ -218,31 +218,17 @@ def normalize_cached(items: list, fetched_at=None) -> list:
 
 
 def parse_detail(html: str) -> dict:
+    """详情页：标题、时间单位、清洗后的正文 HTML/纯文本、附件。"""
+    from . import article
+
     def cls(name):
         m = re.search(rf'class="[^"]*\b{name}\b[^"]*"[^>]*>(.*?)</(?:div|h\d|p|span)>', html or "", re.S)
         return re.sub(r"<[^>]+>", "", m.group(1)).strip() if m else ""
-    body = re.search(r'class="[^"]*\bcontent_font\b[^"]*"[^>]*>(.*?)(?:<div class="[^"]*(?:fujian|attach|bottom)|<a [^>]*attachdownload|</body>|$)',
-                     html or "", re.S)
-    text = re.sub(r"<[^>]+>", "", body.group(1)) if body else ""
-    attachments = []
-    seen = set()
-    for m in re.finditer(
-            r'<a[^>]*href="([^"]*(?:attachdownload|download)[^"]*)"[^>]*>(.*?)</a>',
-            html or "", re.S | re.I):
-        href = m.group(1).strip()
-        if not href or href in seen:
-            continue
-        seen.add(href)
-        name = re.sub(r"<[^>]+>", "", m.group(2)).strip() or "附件"
-        attachments.append({"name": name, "url": urllib.parse.urljoin(BASE + "/", href)})
-    if not attachments:
-        for href in re.findall(r'href="([^"]*(?:attachdownload|download)[^"]*)"', html or "", re.I):
-            if href in seen:
-                continue
-            seen.add(href)
-            attachments.append({"name": "附件", "url": urllib.parse.urljoin(BASE + "/", href)})
+    a = article.extract(html, BASE + "/", [article.by_class("content_font")] + article.BODY_MATCHERS)
+    atts = a["attachments"] + [x for x in article.attachments(html, BASE + "/")
+                               if x["url"] not in {y["url"] for y in a["attachments"]}]
     return {"title": cls("content_t"), "time_dept": cls("content_time"),
-            "text": re.sub(r"\n\s*\n+", "\n", text).strip(), "attachments": attachments}
+            "html": a["html"], "text": a["text"], "attachments": atts}
 
 
 # ───────────────────────── 访问 ─────────────────────────
@@ -520,7 +506,7 @@ def fetch_detail(client, item: dict) -> dict:
     if code != 200 or needs_login(final, html):
         raise jwxt.LoginError("OA 需要登录后才能查看通知正文")
     d = parse_detail(html)
-    return {"title": d["title"], "time_dept": d["time_dept"], "text": d["text"],
+    return {"title": d["title"], "time_dept": d["time_dept"], "text": d["text"], "html": d["html"],
             "attachments": d["attachments"]}
 
 
@@ -545,6 +531,8 @@ def merge_detail(root: Path, notice_id: str, detail: dict) -> Optional[dict]:
             updated = dict(it)
             if detail.get("text"):
                 updated["text"] = detail["text"]
+            if detail.get("html"):
+                updated["html"] = detail["html"]
             atts = detail.get("attachments")
             if isinstance(atts, list):
                 updated["attachments"] = atts
