@@ -485,6 +485,16 @@ def pins_verified(data: dict, channel: str) -> bool:
     return isinstance(v, dict) and bool(v.get(str(channel)))
 
 
+def cached_items(data: dict, channel: str) -> list:
+    """读缓存给界面/MCP 用：修正旧时间、未确认的置顶不当置顶，按置顶→日期排序。"""
+    data = data if isinstance(data, dict) else {}
+    raw = [i for i in normalize_cached((data.get("channels_items") or {}).get(str(channel)) or [],
+                                       channel_fetched_at(data, channel)) if isinstance(i, dict)]
+    if not pins_verified(data, channel):
+        raw = [{**i, "top": False} for i in raw]
+    return sorted(raw, key=lambda i: (bool(i.get("top")), *sort_key(i)), reverse=True)
+
+
 def channel_fetched_at(data: dict, channel: str) -> Optional[str]:
     """当前栏目自己的刷新时间；旧缓存没有分栏目字段时回退到顶层 updated。"""
     data = data if isinstance(data, dict) else {}

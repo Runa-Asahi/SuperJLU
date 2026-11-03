@@ -369,3 +369,36 @@ def test_old_cache_pins_not_trusted_before_refresh(tmp_path):
     # 关键字搜索结果写入不影响已确认的置顶
     oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T11:00:00", "items": [], "channels": {}})
     assert sum(i["top"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"]) == 7
+
+
+def test_pins_verified_per_channel_and_zero_pins(tmp_path):
+    old = {"updated": "2026-11-02T20:00:00", "channels": {}, "channels_items": {
+        "179577": [{"id": "1", "title": "示例A", "dept": "", "time": "2026-10-01", "top": True, "url": ""}],
+        "179578": [{"id": "2", "title": "示例B", "dept": "", "time": "2026-10-01", "top": True, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    # 只刷新 179578，第 1 页没有置顶：该栏目标记已确认、置顶全部清掉；179577 仍未确认
+    new = [{"id": "3", "title": "示例C", "dept": "", "time": "2026-11-01", "top": False, "channel": "179578", "url": ""}]
+    oa.save(tmp_path, {"channel": "179578", "fetched_at": "2026-11-03T10:00:00", "items": new, "channels": {}, "page1": True})
+    d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert d["pins_verified"] == {"179578": True}
+    assert not any(i["top"] for i in d["channels_items"]["179578"])
+    assert d["channels_items"]["179577"][0]["top"] is True  # 原始数据保留
+    assert not any(i["top"] for i in oa.cached_items(d, "179577"))  # 但显示时不信任
+    assert oa.pins_verified(d, 179578)  # int 栏目号也能识别
+
+
+def test_subscribe_sync_marks_pins_verified(tmp_path):
+    from jlu_toolkit import oa_subscribe as osub
+    class C:
+        def _request(self, url, **kw):
+            return 200, LIVE, url, LIVE.encode()
+    osub.sync(C(), root=tmp_path)
+    d = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))
+    assert oa.pins_verified(d, "179577") and sum(i["top"] for i in oa.cached_items(d, "179577")) == 7
+
+
+def test_cached_items_used_by_mcp_path():
+    d = {"channels_items": {"179577": [
+        {"id": "1", "title": "示例旧置顶", "time": "今天 09:00", "top": True},
+        {"id": "2", "title": "示例新", "time": "2026-11-01", "top": False}]}}
+    assert [(i["id"], i["top"], i["time"]) for i in oa.cached_items(d, "179577")] == [("2", False, "2026-11-01"), ("1", False, "")]

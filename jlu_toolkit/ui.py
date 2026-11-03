@@ -908,10 +908,8 @@ def oa_notices_api(store: Store, q: dict) -> dict:
                  "source_url": college.list_url(ch)}
         d = {**d, "updated": st.get("at") or d.get("updated")}
     else:
-        raw = oa.normalize_cached((d.get("channels_items") or {}).get(ch) or [], oa.channel_fetched_at(d, ch))
-        items = [_oa_item(i) for i in raw if isinstance(i, dict)]
-        if not oa.pins_verified(d, ch):  # 旧版本缓存：置顶未经确认，按日期排，刷新后恢复
-            items = [{**i, "top": False} for i in items]
+        # 修正旧时间；旧版本缓存的置顶未经确认，不当置顶（刷新第 1 页后恢复）
+        items = [_oa_item(i) for i in oa.cached_items(d, ch)]
     if kw:
         items = [i for i in items if kw in i["title"] or kw in i["dept"]]
     items.sort(key=lambda i: (i["top"], *oa.sort_key(i)), reverse=True)
