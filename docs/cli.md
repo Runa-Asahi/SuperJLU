@@ -327,7 +327,7 @@ jlu-toolkit oa notices --category 179577 --keyword 放假 --limit 20 [--json]
 
 - 列表：`PortalInformation!jldxList.action?channelId=<栏目>&startPage=<页>`（179577 = 校内通知）
 - 详情：`PortalInformation!getInformation.action?id=<id>&channelId=<栏目>`
-- 存储：`data/oa_notices.json` → `{updated, channels_updated:{id:ts}, channels:{id:name}, channels_items:{id:[item]}}`（`channels_updated` 为各栏目自己的刷新时间；顶层 `updated` 仍为最近一次写入）
+- 存储：`data/oa_notices.json` → `{updated, channels_updated:{id:ts}, pins_verified:{id:true}, channels:{id:name}, channels_items:{id:[item]}}`（`channels_updated` 为各栏目自己的刷新时间；顶层 `updated` 仍为最近一次写入；`pins_verified` 表示该栏目的置顶由新版本读第 1 页时确认，没有该标记的旧缓存不显示置顶。`time` 统一为 `YYYY-MM-DD[ HH:MM]`，列表里的「今天/昨天」在抓取时换算；旧缓存残留的相对时间清空为未知、排在最后）
 - 关键字：默认用服务端搜索 `GET jldxList.action?searchId=<UTF-8 关键字>`（**不带 channelId**；PC 实测带 channelId 会忽略关键字，GBK 中文返回 0）。服务端检索跨全部栏目且可能命中正文，所以结果标题不一定含关键字。指定 `--category` 时按条目链接中的 channelId 本地筛选（`channel_filtered: true`），可能因此变少；不指定时结果可能来自任意栏目。`search` 字段为 `server`；若服务端搜索不可用（`oa._search_pref = ()`）则退回本地跨页过滤标题/单位（`search: local`）。
 - `oa --probe` 的 `search_variants`：每个变体给出 ascii/cjk/罕见词 `zzqx9` 的行数、与未过滤第 1 页的 id 重叠数、标题命中数；`filters` 判定 = 罕见词 0 行 且 ascii 命中率 ≥ 80% 且 ascii 重叠 < 行数。
 - MCP：`oa_notices(category, keyword, limit, refresh)`
