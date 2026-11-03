@@ -290,9 +290,9 @@ def test_relative_times_never_outrank_new_dates_after_days(tmp_path):
                      {"id": "99", "title": "示例旧", "dept": "示例处", "time": "昨天 10:00", "top": False, "url": ""},
                      {"id": "98", "title": "示例无日期", "dept": "示例处", "time": "未知", "top": False, "url": ""}]}}
     (tmp_path / "oa_notices.json").write_text(json.dumps(old_cache, ensure_ascii=False), encoding="utf-8")
-    # 读取时就迁移，无需刷新
+    # 读取时就迁移：旧版本留下的相对时间无法可靠还原，当作未知
     j = ui.oa_notices_api(ui.Store(tmp_path), {})
-    assert [(i["id"], i["time"]) for i in j["items"][:2]] == [("100", "2026-10-10 09:00"), ("99", "2026-10-09 10:00")]
+    assert [(i["id"], i["time"]) for i in j["items"]] == [("100", ""), ("99", ""), ("98", "")]
     # 刷新后新通知排在最上面，无法识别日期的排最后
     r = oa.parse_list(LIVE, NOW)
     oa.save(tmp_path, {"channel": "179577", "fetched_at": NOW.replace(tzinfo=None).isoformat(),
@@ -300,10 +300,32 @@ def test_relative_times_never_outrank_new_dates_after_days(tmp_path):
     ids = [i["id"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"] if not i["top"]]
     assert ids[0] == "71736581" and ids[-1] == "98" and ids.index("100") > ids.index("71645669")
     cached = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))["channels_items"]["179577"]
-    assert {i["id"]: i["time"] for i in cached}["100"] == "2026-10-10 09:00"
+    assert {i["id"]: i["time"] for i in cached}["100"] == ""
+    assert all(oa.is_dated(i["time"]) for i in cached if i["id"].startswith("71"))
 
 
 def test_undated_item_without_reference_sorts_last():
     items = [{"id": "1", "time": "今天 09:00"}, {"id": "2", "time": "2026-01-01"}]
-    assert oa.normalize_cached(items, None)[0]["time"] == "今天 09:00"
+    assert oa.normalize_cached(items, None)[0]["time"] == ""
     assert sorted(items, key=oa.sort_key, reverse=True)[0]["id"] == "2"
+
+
+def test_legacy_relative_time_not_dated_by_later_refresh():
+    """旧缓存：10 月 10 日存下「今天 09:00」，11 月 2 日的刷新不能把它算成 11 月 2 日。"""
+    items = [{"id": "1", "time": "今天 09:00"}, {"id": "2", "time": "10-30"}, {"id": "3", "time": "2026-11-01"}]
+    out = oa.normalize_cached(items, "2026-11-02T18:00:00")
+    assert [i["time"] for i in out] == ["", "2026-10-30", "2026-11-01"]
+    assert [i["id"] for i in sorted(out, key=oa.sort_key, reverse=True)] == ["3", "2", "1"]
+
+
+def test_midnight_and_keyword_paths():
+    late = _dt.datetime(2026, 11, 3, 0, 5, tzinfo=_dt.timezone(_dt.timedelta(hours=8)))
+    assert oa.parse_time("昨天 23:59", late) == "2026-11-02 23:59"
+    utc = _dt.datetime(2026, 11, 2, 16, 30, tzinfo=_dt.timezone.utc)  # = 北京时间 11-03 00:30
+    assert oa.parse_time("今天 00:10", utc) == "2026-11-03 00:10"
+    oa._search_pref = ()
+    try:
+        assert oa.fetch_notices(Fake(1), keyword="教务")["page1"] is False
+    finally:
+        oa._search_pref = None
+    assert oa.fetch_notices(Fake(1))["page1"] is True

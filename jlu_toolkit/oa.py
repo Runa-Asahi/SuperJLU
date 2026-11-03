@@ -196,15 +196,23 @@ def _parse_iso(s) -> Optional[dt.datetime]:
 
 
 def normalize_cached(items: list, fetched_at=None) -> list:
-    """旧缓存里原样存下的「今天 09:09」等：按该栏目上次取列表的时间换算；
-    换算不了的保留原文，但排序时不会排到有日期的条目前面。"""
+    """修正旧缓存里原样存下的时间（#161）。
+    新代码在取列表时就换算「今天/昨天」，缓存里残留的相对时间只可能来自旧版本；旧版本每次刷新都会改写
+    更新时间，而早已翻出第 1 页的条目保留着当初的「今天 09:00」，用栏目更新时间去换算会把它算成最近一天，
+    又排回最上面。所以相对时间一律当作未知（清空，排在有日期的条目之后）；只有不依赖「今天」的
+    无年份「MM-DD」才按 fetched_at 补年份。"""
     ref = _parse_iso(fetched_at)
     out = []
     for i in items or []:
-        if isinstance(i, dict) and i.get("time") and not is_dated(i["time"]) and ref is not None:
-            fixed = parse_time(i["time"], ref)
-            if is_dated(fixed):
-                i = {**i, "time": fixed}
+        if isinstance(i, dict) and i.get("time") and not is_dated(i["time"]):
+            raw = re.sub(r"\s+", " ", str(i["time"]).replace("\xa0", " ")).strip()
+            if raw[:2] in _REL_DAYS:
+                i = {**i, "time": ""}
+            elif ref is not None:
+                fixed = parse_time(raw, ref)
+                i = {**i, "time": fixed if is_dated(fixed) else ""}
+            else:
+                i = {**i, "time": ""}
         out.append(i)
     return out
 
