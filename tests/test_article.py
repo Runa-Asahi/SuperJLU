@@ -90,3 +90,75 @@ def test_poster_only_body_kept():
     h = '<div class="v_news_content"><p><br></p><p><img src="/__local/a.jpg" class="img_vsb_content"></p></div>'
     r = article.extract(h, "https://ciee.jlu.edu.cn/info/1/2.htm")
     assert r["html"] == '<p><img src="https://ciee.jlu.edu.cn/__local/a.jpg" alt="" loading="lazy"></p>'
+
+
+def test_oa_malformed_body_falls_back_to_loose_cut():
+    # Word 粘贴常见：正文里多一个 </div>，按深度配对会提前结束
+    h = ('<div class="content_t">T</div><div class="content_font"></div><p>第一段</p><p>第二段</p>'
+         '<div class="fujian"><a href="rd/download/attachdownload.jsp?res=1">附件.docx</a></div></body>')
+    d = oa.parse_detail(h)
+    assert "第一段" in d["text"] and "第二段" in d["html"] and len(d["attachments"]) == 1
+
+
+def test_college_on_android_falls_back_to_system_tls(monkeypatch):
+    import io
+    import urllib.response
+    from email.message import Message
+    from jlu_toolkit import network
+    monkeypatch.setenv("ANDROID_ROOT", "/system")
+    seen = []
+
+    def fake_native(req, timeout):
+        seen.append(req.full_url)
+        r = urllib.response.addinfourl(io.BytesIO("<p>ok</p>".encode()), Message(), req.full_url, 200)
+        r.msg = "OK"
+        return r
+    import ssl
+    import urllib.request
+
+    def py_fail(self, req):
+        raise urllib.error.URLError(ssl.SSLCertVerificationError("unable to get local issuer certificate"))
+    monkeypatch.setattr(urllib.request.HTTPSHandler, "https_open", py_fail)
+    monkeypatch.setattr(network, "native_open", fake_native)
+    monkeypatch.setattr(college, "_NATIVE_HOSTS", set())
+    assert college._get(BASE) == "<p>ok</p>" and seen == [BASE]
+    assert college._get(BASE) == "<p>ok</p>" and seen == [BASE, BASE]  # 之后直接走系统 HTTPS
+    monkeypatch.delenv("ANDROID_ROOT")
+    monkeypatch.setattr(college, "_NATIVE_HOSTS", set())
+    import pytest
+    with pytest.raises(Exception):
+        college._get(BASE)  # 电脑端不改走系统通道，仍按原样报错
+
+
+def test_detail_failure_logged_not_shown(tmp_path, monkeypatch):
+    _college_cache(tmp_path, ITEM)
+
+    def boom(url, timeout=10):
+        raise ConnectionResetError("reset")
+    monkeypatch.setattr(college, "_get", boom)
+    st = ui.Store(tmp_path)
+    it = ui.oa_notice_api(st, ITEM["id"])["item"]
+    assert "reset" not in json.dumps(it, ensure_ascii=False)
+    log = st.p("notice_detail.log").read_text(encoding="utf-8")
+    assert "college" in log and "ConnectionResetError" in log
+
+
+def test_college_existing_text_kept_when_fetch_fails(tmp_path, monkeypatch):
+    _college_cache(tmp_path, {**ITEM, "text": "旧正文"})
+    monkeypatch.setattr(college, "_get", lambda url, timeout=10: (_ for _ in ()).throw(OSError("x")))
+    it = ui.oa_notice_api(ui.Store(tmp_path), ITEM["id"])["item"]
+    assert it["text"] == "旧正文" and "detail_error" not in it
+
+
+def test_oa_detail_uses_vpn_cookies_without_session(monkeypatch):
+    from jlu_toolkit import jwxt
+    monkeypatch.setattr(jwxt.JwxtClient, "load_session", lambda self, path=None: False)
+    sentinel = object()
+    monkeypatch.setattr(ui, "_client", lambda: sentinel)
+    assert ui._oa_detail_client() == (sentinel, False)
+
+    def no_login():
+        raise jwxt.LoginError("x")
+    monkeypatch.setattr(ui, "_client", no_login)
+    c, has = ui._oa_detail_client()
+    assert isinstance(c, jwxt.JwxtClient) and has is False

@@ -22,6 +22,7 @@ from typing import Optional
 CACHE = "college_news.json"
 PREFS = "oa_source_prefs.json"
 TIMEOUT = 10
+DETAIL_TIMEOUT = 15
 UA = "Mozilla/5.0 (SuperJLU read-only)"
 CATALOG_PATH = Path(__file__).parent / "data" / "college_catalog.json"
 OA_CAMPUS_ID = "179577"
@@ -378,11 +379,40 @@ def parse_list(html: str, ch: str) -> list:
     return _parse_boda(html, ch, src, base, dept)
 
 
-def _get(url: str, timeout: int = TIMEOUT) -> str:
+_NATIVE_HOSTS: set = set()
+
+
+def _opener(native: bool):
+    import ssl
     import urllib.request
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 — 固定 https 主机
-        raw = r.read(2_000_000)
+    from . import network
+    hosts = tuple(s["host"] for s in SOURCES.values()) if native else ()
+    return urllib.request.build_opener(network.SchoolHTTPSHandler(ssl.create_default_context(), _NATIVE_HOSTS,
+                                                                  None, hosts))
+
+
+def _get(url: str, timeout: int = TIMEOUT) -> str:
+    """先用 Python 自带 HTTPS；安卓上失败（证书库/TLS 与系统不同）时改走系统 HTTPS 再试一次。"""
+    import os
+    import urllib.request
+
+    def once(native):
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,*/*",
+                                                   "Accept-Language": "zh-CN,zh;q=0.9"})
+        with _opener(native).open(req, timeout=timeout) as r:  # noqa: S310 — 固定 https 主机
+            return r.read(2_000_000)
+    host = urllib.parse.urlparse(url).hostname or ""
+    android = "ANDROID_ROOT" in os.environ
+    if android and host in _NATIVE_HOSTS:
+        raw = once(True)
+    else:
+        try:
+            raw = once(False)
+        except Exception:  # noqa: BLE001
+            if not android:
+                raise
+            raw = once(True)
+            _NATIVE_HOSTS.add(host)
     for enc in ("utf-8", "gb18030"):
         try:
             return raw.decode(enc)
@@ -446,7 +476,15 @@ def fetch_detail(item: dict, getter=None) -> dict:
     url = safe_url(item.get("url"), src["host"])
     if not url:
         raise ValueError("缺少原文链接")
-    return article.extract((getter or _get)(url), url)
+    if getter:
+        return article.extract(getter(url), url)
+    try:
+        page = _get(url, DETAIL_TIMEOUT)
+    except Exception as e:  # noqa: BLE001 — 连接被重置等偶发错误再试一次；超时不再重试
+        if isinstance(getattr(e, "reason", e), TimeoutError) or isinstance(e, TimeoutError):
+            raise
+        page = _get(url, DETAIL_TIMEOUT)
+    return article.extract(page, url)
 
 
 def merge_detail(root: Path, nid: str, detail: dict) -> Optional[dict]:

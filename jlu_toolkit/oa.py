@@ -224,7 +224,16 @@ def parse_detail(html: str) -> dict:
     def cls(name):
         m = re.search(rf'class="[^"]*\b{name}\b[^"]*"[^>]*>(.*?)</(?:div|h\d|p|span)>', html or "", re.S)
         return re.sub(r"<[^>]+>", "", m.group(1)).strip() if m else ""
-    a = article.extract(html, BASE + "/", [article.by_class("content_font")] + article.BODY_MATCHERS)
+    a = article.extract(html, BASE + "/", [article.by_class("content_font")])
+    if not a["html"]:
+        # 结构不规整（多余的 </div> 等）时退回旧的宽松截取：从 content_font 到附件区/页尾
+        m = re.search(r'class="[^"]*\bcontent_font\b[^"]*"[^>]*>(.*?)(?:<div class="[^"]*(?:fujian|attach|bottom)'
+                      r'|<a [^>]*attachdownload|</body>|$)', html or "", re.S)
+        if m:
+            body = article.clean_html(m.group(1), BASE + "/")
+            a = {**a, "html": body, "text": article.html_to_text(body)}
+    if not a["html"]:
+        a = {**article.extract(html, BASE + "/"), "attachments": a["attachments"]}
     atts = a["attachments"] + [x for x in article.attachments(html, BASE + "/")
                                if x["url"] not in {y["url"] for y in a["attachments"]}]
     return {"title": cls("content_t"), "time_dept": cls("content_time"),

@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -926,6 +927,32 @@ def oa_notices_api(store: Store, q: dict) -> dict:
             "count": len(items), "fetched_at": fetched, "items": items, **extra}
 
 
+def _notice_log(store: Store, source: str, nid: str, reason) -> None:
+    """正文读取失败只写本地日志（不进界面）；单文件约 64KB 封顶。"""
+    try:
+        f = store.p("notice_detail.log")
+        if f.exists() and f.stat().st_size > 64_000:
+            f.write_text("", encoding="utf-8")
+        r = reason if isinstance(reason, str) else f"{type(reason).__name__}: {reason}"
+        line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} {source} {nid} {r}".replace("\n", " ")[:500]
+        with f.open("a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _oa_detail_client() -> tuple:
+    """(client, 是否来自已保存会话)。没有教务会话时，校外 WebVPN 模式下用已保存的 VPN/统一认证 Cookie，
+    与刷新列表走同一条线路；都没有就直连（校园网内 OA 公开通知可直接读）。"""
+    c = jwxt.JwxtClient()
+    if c.load_session():
+        return c, True
+    try:
+        return _client(), False
+    except jwxt.LoginError:
+        return jwxt.JwxtClient(), False
+
+
 def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optional[dict]:
     """GET /api/oa/notice?id= —— 单条；OA 条目若本地无正文则联网拉取并写入缓存。"""
     from . import oa
@@ -944,8 +971,7 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
         need = fetch_body and not item.get("html")
         if need and _oa_url(raw.get("url")):
             try:
-                client = jwxt.JwxtClient()
-                has = bool(client.load_session())
+                client, has = _oa_detail_client()
                 detail = oa.fetch_detail(client, raw)
                 if has:
                     try:
@@ -958,15 +984,19 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
                 }}
                 item = _oa_item(merged, full=True)
                 item["top"] = bool(raw.get("top"))
-                if not (item.get("text") or "").strip():
+                if not (item.get("text") or "").strip() and not item.get("html"):
+                    _notice_log(store, "oa", nid, "empty body")
                     item["detail_error"] = "这篇通知没有正文，可点上方打开原文查看。"
-            except jwxt.LoginError:
+            except jwxt.LoginError as e:
+                _notice_log(store, "oa", nid, e)
                 if not item.get("text"):
                     item["detail_error"] = "登录状态已失效，请重新登录后再查看正文。"
-            except jwxt.NetworkError:
+            except jwxt.NetworkError as e:
+                _notice_log(store, "oa", nid, e)
                 if not item.get("text"):
                     item["detail_error"] = "通知正文暂时打不开，请稍后再试。"
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
+                _notice_log(store, "oa", nid, e)
                 if not item.get("text"):
                     item["detail_error"] = "通知正文读取出错，请稍后再试。"
         return {"ok": True, "item": item}
@@ -980,8 +1010,10 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
                 detail = college.fetch_detail(i)
                 if detail.get("html"):
                     i = college.merge_detail(store.root, nid, detail) or {**i, **detail}
-            except Exception:  # noqa: BLE001 — 官网打不开时保留「打开原文」
-                pass
+                else:
+                    _notice_log(store, "college", nid, "body container not found")
+            except Exception as e:  # noqa: BLE001 — 官网打不开时保留「打开原文」，原因只记日志
+                _notice_log(store, "college", nid, e)
         item = {**_oa_item(i, full=True, link=link), "source": "college"}
         if not item["html"] and not item["text"]:
             item["detail_error"] = "暂时读不到正文，可点上方打开原文查看。"
