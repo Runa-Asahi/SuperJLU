@@ -22,6 +22,9 @@ from typing import Optional
 CACHE = "college_news.json"
 PREFS = "oa_source_prefs.json"
 TIMEOUT = 10
+DETAIL_TIMEOUT = 15
+# 正文解析版本：规则变化（如医院官网正文容器）后旧缓存重新拉取
+DETAIL_VERSION = 2
 UA = "Mozilla/5.0 (SuperJLU read-only)"
 CATALOG_PATH = Path(__file__).parent / "data" / "college_catalog.json"
 OA_CAMPUS_ID = "179577"
@@ -378,11 +381,45 @@ def parse_list(html: str, ch: str) -> list:
     return _parse_boda(html, ch, src, base, dept)
 
 
-def _get(url: str, timeout: int = TIMEOUT) -> str:
+_NATIVE_HOSTS: set = set()
+
+
+def _opener(native: bool):
+    import ssl
     import urllib.request
-    req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 — 固定 https 主机
-        raw = r.read(2_000_000)
+    from . import network
+    hosts = tuple(s["host"] for s in SOURCES.values()) if native else ()
+    return urllib.request.build_opener(network.SchoolHTTPSHandler(ssl.create_default_context(), _NATIVE_HOSTS,
+                                                                  None, hosts))
+
+
+def get_bytes(url: str, timeout: int = TIMEOUT, limit: int = 2_000_000) -> bytes:
+    """先用 Python 自带 HTTPS；安卓上失败（证书库/TLS 与系统不同）时改走系统 HTTPS 再试一次。"""
+    import os
+    import urllib.request
+
+    def once(native):
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,image/*,*/*",
+                                                   "Accept-Language": "zh-CN,zh;q=0.9"})
+        with _opener(native).open(req, timeout=timeout) as r:  # noqa: S310 — 固定 https 主机
+            return r.read(limit)
+    host = urllib.parse.urlparse(url).hostname or ""
+    android = "ANDROID_ROOT" in os.environ
+    if android and host in _NATIVE_HOSTS:
+        raw = once(True)
+    else:
+        try:
+            raw = once(False)
+        except Exception:  # noqa: BLE001
+            if not android:
+                raise
+            raw = once(True)
+            _NATIVE_HOSTS.add(host)
+    return raw
+
+
+def _get(url: str, timeout: int = TIMEOUT) -> str:
+    raw = get_bytes(url, timeout)
     for enc in ("utf-8", "gb18030"):
         try:
             return raw.decode(enc)
@@ -437,6 +474,59 @@ def save(root: Path, res: dict) -> Path:
     tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(f)
     return f
+
+
+_SITE_START = {"www.zrlyyy.com": "article_details1"}
+
+
+def _site_matchers(host: str) -> list:
+    """附属医院官网不是博达站群，正文容器各不相同（按真实页面核对）。"""
+    from . import article
+    return {"www.jdyy.cn": [article.by_id("articlecontent")],
+            "www.jdey.com.cn": [article.by_class("contxt")],
+            "www.zrlyyy.com": [lambda tag, a: tag == "div" and (a.get("class") or "").split() == ["text"]],
+            }.get(host, [])
+
+
+def fetch_detail(item: dict, getter=None) -> dict:
+    """学院文章页：清洗后的正文与附件（公开页面，免登录）。没解析到正文时 html 为空。"""
+    from . import article
+    src, _ = _split(str(item.get("channel") or ""))
+    url = safe_url(item.get("url"), src["host"])
+    if not url:
+        raise ValueError("缺少原文链接")
+    matchers = _site_matchers(src["host"]) + article.BODY_MATCHERS
+
+    def run(page: str) -> dict:
+        # 中日联谊：页头搜索框也叫 div.text，从正文区开始找
+        mark = _SITE_START.get(src["host"])
+        if mark and mark in page:
+            page = page[page.index(mark):]
+        return article.extract(page, url, matchers)
+    if getter:
+        return run(getter(url))
+    try:
+        page = _get(url, DETAIL_TIMEOUT)
+    except Exception as e:  # noqa: BLE001 — 连接被重置等偶发错误再试一次；超时不再重试
+        if isinstance(getattr(e, "reason", e), TimeoutError) or isinstance(e, TimeoutError):
+            raise
+        page = _get(url, DETAIL_TIMEOUT)
+    return run(page)
+
+
+def merge_detail(root: Path, nid: str, detail: dict) -> Optional[dict]:
+    d = load(root)
+    for ch, lst in (d.get("channels_items") or {}).items():
+        for k, i in enumerate(lst or []):
+            if isinstance(i, dict) and i.get("id") == nid:
+                lst[k] = {**i, "html": detail.get("html") or "", "text": detail.get("text") or "",
+                          "attachments": detail.get("attachments") or [], "dv": DETAIL_VERSION}
+                f = root / CACHE
+                tmp = f.with_suffix(".tmp")
+                tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+                tmp.replace(f)
+                return lst[k]
+    return None
 
 
 def find(root: Path, nid: str) -> Optional[dict]:

@@ -1,0 +1,898 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+<html xmlns="http://www.w3.org/1999/xhtml" style=" background: #c8e2fb; ">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>吉林大学电子校务平台</title>
+<link type="text/css" rel="stylesheet" href="css/main.css" />
+<link href="/defaultroot/themes/portal/default/css/style.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="js/main.js"></script>
+<script type="text/javascript" src="/defaultroot/js/jldx_left.js"></script>
+<script type="text/javascript">
+	var whirRootPath = "/defaultroot";
+	var preUrl = "/defaultroot"; 
+	var whir_browser = ""; 
+	var whir_agent = "Mozilla/5.0"; 
+	var whir_locale = "zh_cn"; 
+</script>
+
+
+<script src="/defaultroot/scripts/jquery-1.12.4.min.js" type="text/javascript"></script>
+<script src="/defaultroot/scripts/jquery-migrate-1.4.1.js" type="text/javascript"></script>
+<script src="/defaultroot/scripts/i18n/zh_CN/CommonResource.js" type="text/javascript"></script>
+<link   href="/defaultroot/themes/common/common.css" rel="stylesheet" type="text/css"/>
+<link   href="/defaultroot/themes/2015/color1/style.css" rel="stylesheet" type="text/css"/>
+
+<script src="/defaultroot/scripts/plugins/lhgdialog/lhgdialog.js?skin=idialog" type="text/javascript"></script>
+
+<script src="/defaultroot/scripts/main/whir.validation.js" type="text/javascript"></script>
+<script src="/defaultroot/scripts/main/whir.application.js" type="text/javascript"></script>
+<script src="/defaultroot/scripts/main/whir.util.js" type="text/javascript"></script>
+<!--[if IE 6]>
+<script src="/defaultroot/scripts/desktop/iepng.js" type="text/javascript"></script>
+<script type="text/javascript">
+EvPNG.fix('img,.scrollArrowLeft,.scrollArrowLeftDisabled,.scrollArrowRight,.scrollArrowRightDisabled,.face_box,.top_boxbg,.bg_01,.bg_02,.topread_box,.skin_btn,.f_person,.hint_area,.facebg,.logo_img,.bg_png,.main_box,.bg_png');
+</script>
+<![endif]-->
+<script type="text/javascript">
+/********公共初始化操作**********************/
+</script>
+
+
+<script type="text/javascript" src="scripts/util/cookie.js"></script>
+<script type="text/javascript" src="scripts/plugins/security/security.js"></script>
+<!-- add by qr-->
+<script type="text/javascript" src="/defaultroot/scripts/util/login.js"></script>
+<STYLE type="text/css">
+/*jiangchao20161115增加OA发布的信息图片设置为固定的大小*/
+/*.immmge img{
+	width: 200px; 
+	height: 150px;
+}*/
+.content_font tt{border:0px #ff0000 solid; margin-left:32px;}/*gulh20170105*/
+.search1{ height:90px; background:url(images/search.png) no-repeat top center;}
+
+.search1_input{ padding:5px; height:18px; border:0; background:none; width:145px; margin-left:3px; padding-right:0; float:left; display:block;}
+</STYLE>
+</head>
+<body onload="WebOfficeLoad();" style="overflow-x:hidden;background: #c8e2fb; ">
+<!-- 头部start -->
+<div class="top">
+<div class="box clear">
+	<div class="logo"><a href="login.jsp" title="吉林大学"><img src="images/logo.png" /></a></div>
+    <div class="link_r">
+    
+    	
+    	<!-- <p>今天是 <span id="time"></span></p> -->
+    	  <!-- <p><a href="/defaultroot/teachTime!getTeachTime.action">今天是 <span>2026年11月03日 星期二</span></a></p> -->
+    	<!-- <p><a href="/servlet/TeachTimeServlet">今天是 <span>2026年11月03日 星期二</span></a></p> -->
+    	<p><a href="http://jwc.jlu.edu.cn/jxrl.htm" target="_Blank">今天是 <span>2026年11月03日 星期二</span></a></p>
+		<img src="" class="user" id ="empLivingPhoto" style="display:none;"  />
+        <ul class="menu clear">
+        	<li><a href="/login.jsp">首页</a></li>
+            <li onmouseover="showGrbgA();" onmouseout="hideGRbgA();">
+            	<a href="#" onclick="showtip();">个人办公</a>
+            	<div onmouseover="showGrbgA();" onmouseout="hideGRbgA();" style="">
+					<!--a id="grbgA" style="background:blue; color: #FFF;font-size: 14px; text-align: center;display:none;" class="menuOne" href="#" onclick="window.open('help/h1311.html');" >操作说明</a-->
+					<script>
+						function showGrbgA(){
+							$("#grbgA").show();
+						}
+						function hideGRbgA(d){
+							$("#grbgA").hide();//gulh20151114
+						////setTimeout(function(){
+							////$("#grbgA").css("display","none");},1000);
+						}
+					</script>
+			  	</div>
+            </li>
+            <li onmouseover="showgwglA();" onmouseout="hidegwglA();"><a href="#" onclick="showtip();">公文管理</a>
+            	<!--a id="gwglA" class="menuOne" style="background:blue;padding: 0px 16px;color: #FFF;font-size: 14px;display: none;word-break: keep-all;white-space: nowrap;min-width: 44px;width: auto !important;text-align: center;"
+			  	href="#" onclick="window.open('help/h83.html');"><span>操作说明</span></a-->
+            	<script>
+			  		function showgwglA(){
+			  			$("#gwglA").css("display","block");
+				  	}
+				  	function hidegwglA(){
+					    $("#gwglA").hide();//gulh20151114
+				  	////setTimeout(function(){
+				  		////$("#gwglA").css("display","none");},1000);
+				  	}
+			  	</script>
+            
+            </li>
+            <li onmouseover="showgzlcA();" onmouseout="hidegzlcA();"><a href="#" onclick="showtip();">工作流程</a>
+            	<!--a id="gzlcA" class="menuOne" style="background:blue;padding: 0px 16px;color: #FFF;font-size: 14px;display: none;word-break: keep-all;white-space: nowrap;min-width: 44px;width: auto !important;text-align: center;"
+			  	href="#" onclick="window.open('help/h61.html');" onmouseover="showgzlcA();" onmouseout="hidegzlcA();"><span>操作说明</span></a-->
+           		<script>
+			  		function showgzlcA(){
+			  			$("#gzlcA").css("display","block");
+				  	}
+				  	function hidegzlcA(){
+					    $("#gzlcA").hide();//gulh20151114
+				  	////setTimeout(function(){
+				  		////$("#gzlcA").css("display","none");},1000);
+				  	}
+			  	</script>
+            
+            </li>
+            <li onmouseover="showzhbgA();" onmouseout="hidezhbgA();"><a href="#" onclick="showtip();">综合办公</a>
+            	<!--a id="zhbgA" class="menuOne" style="background:blue;padding: 0px 16px;color: #FFF;font-size: 14px;display: none;word-break: keep-all;white-space: nowrap;min-width: 44px;width: auto !important;text-align: center;"
+			  	href="#" onclick="window.open('help/h142.html');"  onmouseover="showzhbgA();" onmouseout="hidezhbgA();"><span>操作说明</span></a-->
+            	<script>
+			  		function showzhbgA(){
+			  			$("#zhbgA").css("display","block");
+				  	}
+				  	function hidezhbgA(){
+					    $("#zhbgA").hide();//gulh20151114
+				  	////setTimeout(function(){
+				  		////$("#zhbgA").css("display","none");},1000);
+				  	}
+			  	</script>
+            
+            </li>
+            <li onmouseover="showxxglA();" onmouseout="hidexxglA();"><a href="#" onclick="showtip();">信息管理</a>
+            	<!--a id="xxglA" class="menuOne" style="background:blue;padding: 0px 16px;color: #FFF;font-size: 14px;display: none;word-break: keep-all;white-space: nowrap;min-width: 44px;width: auto !important;text-align: center;"
+			  	href="#" onclick="window.open('help/h32.html');" onmouseover="showxxglA();" onmouseout="hidexxglA();"><span>操作说明</span></a-->
+            	<script>
+			  		function showxxglA(){
+			  			$("#xxglA").css("display","block");
+				  	}
+				  	function hidexxglA(){
+					    $("#xxglA").hide();//gulh20151114
+				  	////setTimeout(function(){
+				  		////$("#xxglA").css("display","none");},1000);
+				  	}
+			  	</script>
+            </li>
+            <li onmouseover="showxwjlA();" onmouseout="hidexwjlA();"><a href="#" onclick="showtip();">校务交流</a>
+            	<!--a id="xwjlA" class="menuOne" style="background:blue;padding: 0px 16px;color: #FFF;font-size: 14px;display: none;word-break: keep-all;white-space: nowrap;min-width: 44px;width: auto !important;text-align: center;"
+			  	href="#" onclick="window.open('help/h122.html');"><span>操作说明</span></a-->
+            	<script>
+			  		function showxwjlA(){
+			  			$("#xwjlA").css("display","block");
+				  	}
+				  	function hidexwjlA(){
+					    $("#xwjlA").hide();//gulh20151114
+				  		////setTimeout(function(){
+				  		////$("#xwjlA").css("display","none");},1000);
+				  	}
+			  	</script>
+            </li>
+            <li onmouseover="showznxA();" onmouseout="hideznxA();"><a href="#" onclick="showtip();">站内信</a>
+            	<!--a id="znxA" class="menuOne" style="background:blue;padding: 0px 16px;color: #FFF;font-size: 14px;display: none;word-break: keep-all;white-space: nowrap;min-width: 44px;width: auto !important;text-align: center;"
+			  	href="#" onclick="window.open('help/h102.html');" onmouseover="showznxA();" onmouseout="hideznxA();"><span>操作说明</span></a-->
+            	<script>
+			  		function showznxA(){
+			  			$("#znxA").css("display","block");
+				  	}
+				  	function hideznxA(){
+					    $("#znxA").hide();//gulh20151114
+				  		////setTimeout(function(){
+				  			////$("#znxA").css("display","none");},1000);				  	
+					}
+			  	</script>
+            </li>
+        </ul>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript">
+function showtip(){
+	whir_alert("操作此功能需要登录系统！");
+}
+</script>
+<!-- 头部end -->
+<br />
+<div class="box clear rel">
+  <div class="rel main_c clear">
+    <div class="fl m_l">
+    	<div class="sublogin" id="denglu" style="cursor:pointer;margin-top:10px;">
+		<!-- 统一身份认证登录图片超链接 -->
+		<img src="/defaultroot/rd/yhdl.jpg" style="width: 231px;height:62px; object-fit:cover; border:none;"onclick="window.open('https://oa.jlu.edu.cn/defaultroot/CasLogin!login.action')" >
+		</div>
+		<!-- 登录end -->
+        <div class="sub search1 rel">
+        	<form action="PortalInformation!jldxList.action?bs=1" method="get" name="gjzForm" id="gjzForm" >
+            	<div class="s_div abs">				
+                <input type="text" class="search1_input" placeholder="请输入关键字 " id="search" />
+				<input type="hidden" id="searchId" name="searchId" value="" />
+                <button type="button" class="s_but" onclick="searchList()"></button>
+               </div>
+         </form>
+        </div>
+		<!-- 融合门户 -->
+		<div class="0" style="cursor:pointer;margin-top:7px;" >
+        	<img  src="/defaultroot/rd/rhmh.jpg" style="width: 231px;height:62px;" onclick="window.open('https://i.jlu.edu.cn')" />
+        </div>
+		<!-- 办事大厅 -->
+		<div class="1" style="cursor:pointer;margin-top:7px;" >
+        	<img  src="/defaultroot/rd/bsdt.jpg" style="width: 231px;height:62px;" onclick="window.open('https://ehall.jlu.edu.cn/jlu_portal')" />
+        </div>
+		<div class="2" style="display: flex;cursor:pointer;margin-top:7px;" >
+			<div style="flex: 1;"><img src="/defaultroot/rd/zdqd.jpg" style="width: 115px;height:62px;" onclick="window.open('https://ehall.jlu.edu.cn/jlu_list/systemList.do')" /></div>
+			<div style="flex: 1;"><img src="/defaultroot/rd/spfwqd.jpg" style="width: 115px;height:62px;" onclick="window.open('https://ehall.jlu.edu.cn/jlu_list/inventory.do')" /></div>
+		</div>
+	<SCRIPT LANGUAGE="JavaScript">
+		function searchList(){
+		  var title=$("#search").val();
+		  //jiangchao20161207
+		  document.getElementById("gjzForm").action="PortalInformation!jldxList.action";
+		  $("#searchId").val(title);
+		  $("#gjzForm").submit();
+		}
+		//为什么在这写 因为好多人清除浏览器缓存不生效
+		function submitForm(){
+			//var userAccount5 = document.LogonForm.userAccount.value;
+			//if(userAccount5!=null && userAccount5!="" && userAccount5!="undefined"){
+			//	userAccount5=userAccount5.toLowerCase();
+			//}
+			
+			if(checkForm()){
+				$.ajax({
+					url: "/defaultroot/Logon!getSysTime.action",
+					cache: false,
+					async: false,
+					timeout : 5000, //超时时间设置，单位毫秒
+					success: function(dataForm) {
+						var data = eval('('+dataForm+')');
+						if(data.result=="true"){
+							var pwd = document.LogonForm.userPassword.value;
+							var time =data.data.time; 
+							//alert(time+pwd);
+							pwd = pwd+"#!#@!@"+time;
+							//alert(pwd);
+							//document.LogonForm.userPassword.value=Base64.encode(document.LogonForm.userPassword.value);
+							//alert($('#userPassword').attr("security"));
+							var securityFlag = '' + $('#userPassword').attr("security");
+							
+							if(securityFlag != '1'){//记住密码为选中状态
+								//var p = encodeURIComponent(document.LogonForm.userPassword.value);
+								var p = pwd;
+								var key = RSAUtils.getKeyPair("010001", "", "0086dd23d3e1fb5660e83468945e851c666d63512b799c4e29694bf54dc7877f1e9787531161c5bad76a16e497f8273136b6336d4919f8d7786e023b4a8b23d1f80a9a524210acfd2b504b4a02043c9d68f51a22ec4c111e2890f185955197301e8089f9bfe047e0e1a84d81d3b1c3f19cf43633264681a0cc60d2812bcd441001");
+								if(document.LogonForm.userPasswordTemp){
+									document.LogonForm.userPasswordTemp.value=RSAUtils.encryptedString(key, document.LogonForm.userPassword.value);
+								}
+								
+								document.LogonForm.userPassword.value=RSAUtils.encryptedString(key, p);
+								
+							}else{//记住密码不选中状态
+								var key = RSAUtils.getKeyPair("010001", "", "0086dd23d3e1fb5660e83468945e851c666d63512b799c4e29694bf54dc7877f1e9787531161c5bad76a16e497f8273136b6336d4919f8d7786e023b4a8b23d1f80a9a524210acfd2b504b4a02043c9d68f51a22ec4c111e2890f185955197301e8089f9bfe047e0e1a84d81d3b1c3f19cf43633264681a0cc60d2812bcd441001");
+								document.LogonForm.time.value=RSAUtils.encryptedString(key, time);
+							}
+							document.LogonForm.userPassword.blur();
+							document.LogonForm.submit();
+						}
+					},
+					complete : function(XMLHttpRequest,status){ //请求完成后最终执行参数
+					if(status=='timeout'){//超时,status还有success,error等值的情况
+						whir_alert("请求超时!",null);
+				   }
+				}
+				});
+				
+				/**var userAccount = document.LogonForm.userAccount.value;
+				var userPassword = document.LogonForm.userPassword.value;
+				$.ajax({
+					type: 'GET',
+					url: "/defaultroot/rd/portal/check_ajax.jsp?userAccount="+userAccount+"&userPassword="+userPassword,
+					async: false,		
+					dataType:'json',
+					
+					error: function(){
+					},
+					success:function(data){
+						var res = data.res;
+						var userName = data.userName;
+						var psw = data.password;
+						var str = data.str;
+						//var sycs = data.sycs;
+						var ismana=true;
+						$.ajax({
+							type: 'GET',
+							url: "/defaultroot/rd/portal/checkuserajax.jsp?userAccount="+userName,
+							async: false,		
+							dataType:'json',
+							error: function(){
+							},
+							success:function(data){
+								var res = data.res;
+								if(res=="1"){
+									whir_alert("您输入的账号或密码有误，请重新输入！");
+									document.LogonForm.userPassword.value="";
+									$("#userPassword").focus();
+									ismana= false;
+								}
+							}
+						});
+						if(userAccount!="jiangzhy" && ismana){//20200713zhengming,他在人事系统中有2个账号-->对应oa一个账号。其中这个账号不让他登录系统，待办照常看。
+							if(res=='1'){//邮箱验证成功，直接登陆OA
+							$("#userAccount").val(userName);
+							$("#userPassword").val(psw);
+							$("#pkexit").val("1");
+							document.LogonForm.submit();
+							//window.location.href="/defaultroot/Logon!logon.action?domainAccount=whir&localeCode=zh_cn&pkexit=1&userAccount="+userName+"&userPassword="+psw;
+							}else if(res=='2'){//不需要邮箱验证的直接登陆OA
+								document.LogonForm.submit();
+							}else if(res=='3'){//邮箱验证失败 给出提示
+								$("#userAccount").val(userName);
+								$("#userPassword").val(psw);
+								//jiangchao20190604给出温馨的提示
+								if(str.indexOf("密码错误")>-1){
+									//whir_alert("您所填写的邮箱账号或密码不正确，还有"+sycs+"次机会！");
+									document.LogonForm.submit();//主要是验证码的
+								}else{
+									whir_alert(str+"，请联系系统管理员！");
+								}
+								document.LogonForm.userPassword.value="";
+								$("#userPassword").focus();
+							}else if(res=='4'){//账号不存在
+								whir_alert(str);
+								document.LogonForm.userPassword.value="";
+								$("#userPassword").focus();
+							}
+						}
+					}
+				});**/
+			}
+		}
+	</script>
+        <!-- 搜索end -->
+        
+      
+         <div class="sub jbqk sub_bg">
+		
+        	<h3>基本情况</h3>
+            <dl class="sub_menu clear">
+			   
+            	<dd><a target="_blank" href="http://www.jlu.edu.cn/">学校主页</a></dd>
+                
+            	<dd><a target="_blank" href="http://www.jlu.edu.cn/xxgk.htm">学校概况</a></dd>
+                
+            	<dd><a target="_blank" href="http://www.jlu.edu.cn/xxgk/xxbs.htm">学校标志</a></dd>
+                
+            	<dd><a target="_blank" href="http://www.jlu.edu.cn/xxgk/ldjg.htm">领导机构</a></dd>
+                
+            	<dd><a target="_blank" href=" https://www.jlu.edu.cn/xxgk/xrld.htm">现任领导</a></dd>
+                
+            	<dd><a target="_blank" href="http://www.jlu.edu.cn/xxgk/lrld.htm">历任领导</a></dd>
+                
+            </dl>
+        </div>
+        <!-- 基本情况end -->
+        
+        <div class="sub ggfw sub_bg">
+        	<h3>公共服务</h3>
+            <dl class="sub_menu clear">
+			<dd><a  href="/defaultroot/list_txml.jsp">通讯名录</a></dd>
+            	
+            	<dd><a target="_blank" href="http://cw.jlu.edu.cn">财务平台</a></dd>
+                
+            	<dd><a target="_blank" href="http://jwc.jlu.edu.cn/?file=info&act=list&id=22">教学日历</a></dd>
+                
+            	<dd><a target="_blank" href="http://bwc.jlu.edu.cn/">平安吉大</a></dd>
+                
+            	<dd><a target="_blank" href="https://nic.jlu.edu.cn">网络服务</a></dd>
+                
+            	<dd><a target="_blank" href="https://zd.jlu.edu.cn">制度管理</a></dd>
+                
+            	<dd><a target="_blank" href="https://zc.jlu.edu.cn">资产平台</a></dd>
+                
+            	<dd><a target="_blank" href="https://hrss.jlu.edu.cn">人事系统</a></dd>
+                
+            	<dd><a target="_blank" href="https://map.jlu.edu.cn/">三维校园</a></dd>
+                
+            	<dd><a target="_blank" href="https://ehall.jlu.edu.cn/jlu_list/systemList.do">制度清单</a></dd>
+                
+            	<dd><a target="_blank" href="https://ehall.jlu.edu.cn/jlu_list/inventory.do">审批服务清单</a></dd>
+                
+            	<dd><a target="_blank" href="https://htgl.jlu.edu.cn">合同管理</a></dd>
+                
+            </dl>
+        </div>
+        <!-- 公共服务end -->
+        
+        <div class="sub xxfw sub_bg">
+        	<h3>信息服务</h3>     
+            <dl class="sub_menu clear">
+            	
+            	<dd><a target="_blank" href="http://news.jlu.edu.cn">吉大新闻</a></dd>
+                
+            	<dd><a target="_blank" href="http://tv.jlu.edu.cn/">吉大电视</a></dd>
+                
+            	<dd><a target="_blank" href="https://jdb.ihwrm.com/">吉大校报</a></dd>
+                
+            	<dd><a target="_blank" href="http://gjxx.jlu.edu.cn/">高教信息</a></dd>
+                
+            	<dd><a target="_blank" href="http://xuebao.jlu.edu.cn">吉大学报</a></dd>
+                
+            	<dd><a target="_blank" href="http://jldb.cbpt.cnki.net ">社科学报</a></dd>
+                
+            	<dd><a target="_blank" href="http://www.cjcu.jlu.edu.cn/">化学学报</a></dd>
+                
+            	<dd><a target="_blank" href="http://nic.jlu.edu.cn/video.html">网上直播</a></dd>
+                
+            </dl>
+        </div>
+        <!-- 信息服务end -->
+        
+        <!-- 生活服务end -->
+        
+        <div class="sub wljl sub_bg">
+        	<h3>网络交流</h3>
+            <dl class="sub_menu clear">
+            	
+            	<dd><a target="_blank" href="https://mail.jlu.edu.cn">教工邮件</a></dd>
+                
+            	<dd><a target="_blank" href="https://mails.jlu.edu.cn">学生邮件</a></dd>
+                
+            	<dd><a target="_blank" href="mailto:sjxx@jlu.edu.cn">书记信箱</a></dd>
+                
+            	<dd><a target="_blank" href="http://presidentmail.jlu.edu.cn/">校长信箱</a></dd>
+                
+            	<dd><a target="_blank" href="http://pic.jlu.edu.cn/">吉大图库</a></dd>
+                
+            	<dd><a target="_blank" href="http://bbs.jlu.edu.cn/newindex/">牡 丹 园</a></dd>
+                
+            	<dd><a target="_blank" href="https://zbhrj1.jlu.edu.cn/">正版化软件</a></dd>
+                
+            	<dd><a target="_blank" href="https://oge.jlu.edu.cn">国际交流合作</a></dd>
+                
+            </dl>
+        </div>
+        <!-- 网络交流end -->
+        
+        <div class="sub ztzl sub_bg" > 
+		
+        	<h3>专题专栏</h3>
+            <dl class="sub_menu clear" >
+            	
+				
+            	<dd style="height:35px;"><a target="_blank" style="font-size:13px;" href="https://gx70.jlu.edu.cn/">吉林大学工学学科创建70周年网站</a></dd>
+                
+				
+            	<dd style="height:35px;"><a target="_blank" style="font-size:13px;" href="http://djxxjy.jlu.edu.cn/">吉林大学党纪学习教育专题网</a></dd>
+                
+				
+            	<dd style="height:35px;"><a target="_blank" style="font-size:13px;" href="http://ztjy.jlu.edu.cn/">学习贯彻习近平新时代中国特色社会主义思想主题教育专栏</a></dd>
+                
+				
+            	<dd style="height:35px;"><a target="_blank" style="font-size:13px;" href="https://ddh.jlu.edu.cn/">中国共产党吉林大学第十五次代表大会</a></dd>
+                
+				
+            	<dd style="height:18px;"><a target="_blank" style="font-size:13px;" href="http://jluxfjs.jlu.edu.cn/">学风建设专题网站</a></dd>
+                
+				
+            	<dd style="height:18px;"><a target="_blank" style="font-size:13px;" href=" http://sswgh.jlu.edu.cn">十五五规划专题网站</a></dd>
+                
+            </dl>
+        </div>
+        <!-- 专题专栏end -->
+        
+        <div class="homepage clear sub">
+		
+            	<a target="_blank" href="https://www.jlu.edu.cn/jgsz/gl_fwyywjg.htm" style="display:block; float:left; margin-right:2px; margin-bottom:2px; width:228px; height:35px; text-align:center; line-height:35px; color:#fff; font-size:13px; background:#4179b6;">管理、服务及业务机构</a>
+                
+        
+		       <a target="_blank" href="https://www.jlu.edu.cn/jgsz/yxsz.htm" >院系设置</a>
+		       
+		
+				<a target="_blank" href="https://www.jlu.edu.cn/jgsz/yjjg.htm">研究机构</a>
+				
+		
+        	
+        </div>
+        <!-- 主页end -->
+		
+        
+    </div>
+
+    
+    <div class="fr m_r">
+      <div class="sub xntz rel">
+        <div class="tz_bg rel"> <span class="tz_new">
+          <marquee scrollAmount=2 onmouseover="this.stop();" width=300 onmouseout="this.start();">
+          
+          </marquee>
+          </span>
+          
+          <span class="tz_tit" id="">
+          
+          校内通知
+          
+          </span>
+          
+          <!-- <a class="tz_more" href="/defaultroot/PortalInformation!jldxList.action?channelId=179577"">
+				更多&gt;
+				</a> -->
+        </div>
+      </div>
+      
+      <style>
+			 .alianjie {cursor: pointer;text-decoration: underline;}
+			 </style>
+      <div class="mainbox" style="background-image:none;overflow-y: auto;overflow-x:hidden;width:758px;">
+        <div class="main_nr"  style="padding:0px; background-image:none;">
+          <div  style="height:30px; line-height:30px; text-align:right"><a href="#" style="color:#BA022D;"></a></div>
+          <div class="title02" style="height:auto;width:730px"><a href="/defaultroot/login.jsp" class="alianjie">首页</a>》
+            
+            <a href="/defaultroot/PortalInformation!jldxList.action?channelId=179577" class="alianjie">校内通知</a>》
+            
+            正文
+			<!--add by qr-->
+			<a href="" onclick="history.back();return false;" class="alianjie" style="float:right">返回上一页</a>
+			
+			</div>
+          
+          <div class="content_box" style="width:755px" >
+            <div class="content" style="height:auto!important;width:640px;  ">
+              <div class="content_t" style="width:625px">关于开展2026年度“2+3”辅导员专项考核工作的通知</div>
+              <div class="content_time" style="width:625px">2026年11月03日 09:09&nbsp;&nbsp;<span>党委学生工作部、党委武装部</span></div>
+             
+              
+					 <div class="content_font fontsize immmge" style="word-wrap: break-word; word-break: break-all;">
+						 <br><p style="font-size: 14px;"><span style="font-size: 14pt;">&nbsp;</span></p><p class="MsoNormal" style="line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">各学院：</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">根据《吉林大学“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员专项考核工作实施办法》（附件</span><span lang="EN-US" style="font-size: 14pt;">1</span><span style="font-size: 14pt;">）的有关要求，学校计划于近期开展</span><span lang="EN-US" style="font-size: 14pt;">2026</span><span style="font-size: 14pt;">年度“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员专项考核工作，现将有关事宜通知如下。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">一、考核对象及内容</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span lang="EN-US" style="font-size: 14pt;">1.</span><span style="font-size: 16pt;"><span style="font-size: 14pt;">专职聘期综合考核</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">考核对象：</span><span lang="EN-US" style="font-size: 14pt;">2024</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">7</span><span style="font-size: 14pt;">月至</span><span lang="EN-US" style="font-size: 14pt;">2026</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">7</span><span style="font-size: 14pt;">月期间担任“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员（附件</span><span lang="EN-US" style="font-size: 14pt;">2</span><span style="font-size: 14pt;">）。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">考核内容：分为评优主要工作指标考核和现场述职两部分。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><a name="OLE_LINK1"><span lang="EN-US" style="font-size: 14pt;">2.</span></a><span style="mso-bookmark:OLE_LINK1"><span style="font-size: 16pt;"><span style="font-size: 14pt;">兼职聘期综合考核</span><span lang="EN-US"><o:p></o:p></span></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="mso-bookmark:OLE_LINK1"><span style="font-size: 16pt;"><span style="font-size: 14pt;">考核对象：</span><span lang="EN-US" style="font-size: 14pt;">2024</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">9</span><span style="font-size: 14pt;">月至</span><span lang="EN-US" style="font-size: 14pt;">2027</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">7</span><span style="font-size: 14pt;">月攻读研究生的“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员（两年制研究生为</span><span lang="EN-US" style="font-size: 14pt;">2025</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">9</span><span style="font-size: 14pt;">月至</span><span lang="EN-US" style="font-size: 14pt;">2027</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">7</span><span style="font-size: 14pt;">月），且研究生期间一直从事兼职辅导员工作（担任本科生就业兼职辅导员、本科生心理兼职辅导员、党委研究生工作部聘任研究生兼职辅导员也可申报）（附件</span><span lang="EN-US" style="font-size: 14pt;">3</span><span style="font-size: 14pt;">）。需提供《兼职辅导员工作经历证明》（附件</span><span lang="EN-US" style="font-size: 14pt;">4</span><span style="font-size: 14pt;">）。</span><span lang="EN-US"><o:p></o:p></span></span></span></p><span style="font-size: 14pt;"></span><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 14pt;">考核内容：分为聘任单位考评和现场述职两部分。</span><span lang="EN-US" style="font-size: 16pt;"><o:p></o:p></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">二、考核时间</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">具体时间、地点另行通知。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">三、具体安排</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">（一）评优主要工作指标考核</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">着重考察专职聘期内在师德师风、育人育才、防范化解重大危机、理论与实践研究等领域取得的标志性成果。请“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员对照《吉林大学“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员专项考核评优主要工作指标》（附件</span><span lang="EN-US" style="font-size: 14pt;">5</span><span style="font-size: 14pt;">）中的指标内容，填写在专职聘期内的完成情况并同时准备佐证材料。本人签字后，报送至党委学生工作部。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">（二）聘任单位考评</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">须由聘任单位党委出具考评意见。围绕兼职辅导员的政治素质、道德品质、工作态度、育人成效和学生满意度等对其进行定性考评，提出综合考评等次。经学院党委会会议审议通过后，填写《吉林大学兼职辅导员聘任单位考评表》（附件</span><span lang="EN-US" style="font-size: 14pt;">6</span><span style="font-size: 14pt;">），并加盖学院党委公章，报送至党委学生工作部。综合考评等次分为优秀、合格、基本合格、不合格</span><span lang="EN-US" style="font-size: 14pt;">4</span><span style="font-size: 14pt;">个等次。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">（三）现场述职</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">党委学生工作部组织现场述职，听取“</span><span lang="EN-US" style="font-size: 14pt;">2+3</span><span style="font-size: 14pt;">”辅导员</span></span><span style="font-size: 14pt;">专职聘期或兼职聘期工作开展情况。</span><span lang="EN-US" style="font-size: 16pt;"><o:p></o:p></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">四、有关说明</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">请于</span><span lang="EN-US" style="font-size: 14pt;">2026</span><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">11</span><span style="font-size: 14pt;">月</span><span lang="EN-US" style="font-size: 14pt;">6</span><span style="font-size: 14pt;">日（星期五）</span><span lang="EN-US" style="font-size: 14pt;">12:00</span><span style="font-size: 14pt;">前，将《兼职辅导员工作经历证明》</span><span lang="EN-US" style="font-size: 14pt;">(</span><span style="font-size: 14pt;">附件</span><span lang="EN-US" style="font-size: 14pt;">4)</span><span style="font-size: 14pt;">、《评优主要工作指标》（附件</span><span lang="EN-US" style="font-size: 14pt;">5</span><span style="font-size: 14pt;">）、《聘任单位考评表》（附件</span><span lang="EN-US" style="font-size: 14pt;">6</span><span style="font-size: 14pt;">）及相关佐证材料报送至鼎新楼</span><span lang="EN-US" style="font-size: 14pt;">C248</span><span style="font-size: 14pt;">学生思想教育科。</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">联系人：安青显 李一聪 </span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">联系电话：</span><span lang="EN-US"><span style="font-size: 14pt;">85168009</span><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">电子邮箱</span><span lang="EN-US"><span style="font-size: 14pt;">:sxjy@jlu.edu.cn </span><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" style="text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span lang="EN-US" style="font-size: 16pt;"><o:p><span style="font-size: 14pt;">&nbsp;</span></o:p></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" align="right" style="text-align:right;text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span style="font-size: 16pt;"><span style="font-size: 14pt;">党委学生工作部</span><span lang="EN-US"><o:p></o:p></span></span></p><span style="font-size: 14pt;"></span><p class="MsoNormal" align="right" style="text-align:right;text-indent:32.0pt;mso-char-indent-count:2.0;line-height:28.0pt;mso-line-height-rule:exactly"><span lang="EN-US" style="font-size: 14pt;">2026</span><span style="font-size: 16pt;"><span style="font-size: 14pt;">年</span><span lang="EN-US" style="font-size: 14pt;">11</span><span style="font-size: 14pt;">月</span><span lang="EN-US" style="font-size: 14pt;">3</span><span style="font-size: 14pt;">日</span><span lang="EN-US" style="font-family: 仿宋_GB2312;"><o:p></o:p></span></span></p>
+						
+					 </div>
+					
+              
+              
+              <br>
+              <br>
+			   
+			   <p style="height: 10px;"><strong>相关图片：</strong></p>
+			  <br>
+              <div class="immmges">
+			  
+                
+              </div>
+              
+              <div class="news_aboutFile" style="">
+                <table width="98%" border="0" align="center" cellpadding="1" cellspacing="1">
+                  <tr>
+					 
+								     
+									<td width="7%" align="left" valign="top">附件： </td>   
+								 
+ 
+                    <td width="93%" align="left">    
+						
+							 
+								<span style="color: blue;cursor: pointer;" id="2026110309101223920408755.pdf" title="附件1：吉林大学“2+3”辅导员专项考核工作实施办法.pdf" onclick="downloadthis(this)">附件1：吉林大学“2+3”辅导员专项考核工作实施办法.pdf</span><br>
+							 
+								<span style="color: blue;cursor: pointer;" id="2026110309101772172349543.xlsx" title="附件2：专职聘期综合考核名单.xlsx" onclick="downloadthis(this)">附件2：专职聘期综合考核名单.xlsx</span><br>
+							 
+								<span style="color: blue;cursor: pointer;" id="2026110309102261435925388.xlsx" title="附件3：兼职聘期综合考核名单.xlsx" onclick="downloadthis(this)">附件3：兼职聘期综合考核名单.xlsx</span><br>
+							 
+								<span style="color: blue;cursor: pointer;" id="2026110309102774030115098.doc" title="附件4：兼职辅导员工作经历证明模板.doc" onclick="downloadthis(this)">附件4：兼职辅导员工作经历证明模板.doc</span><br>
+							 
+								<span style="color: blue;cursor: pointer;" id="2026110309103225678970852.doc" title="附件5：吉林大学“2+3”辅导员考核评优主要工作指标.doc" onclick="downloadthis(this)">附件5：吉林大学“2+3”辅导员考核评优主要工作指标.doc</span><br>
+							 
+								<span style="color: blue;cursor: pointer;" id="2026110309103716438645508.docx" title="附件6：吉林大学兼职辅导员用人单位考评表.docx" onclick="downloadthis(this)">附件6：吉林大学兼职辅导员用人单位考评表.docx</span><br>
+							
+						
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              <!-- <div align="center" style="padding-top:20px;"><input name="" type="button" value="关闭"  onclick="javascript:window.close();"  class="but_04"/></div> -->
+            </div>
+          </div>
+          <!-- <div class="clear_1"></div> -->
+        </div>
+      </div>
+    </div>
+    <div class="clearfix"></div>
+  </div>
+  <!-- 友链start -->
+  
+<style>
+.f_li p{
+	height:15px;
+}
+</style>
+<div class="flink sub clear">
+	<div class="f_li f_img"></div>
+    <div class="f_li jx">
+    	<h3>教学工作</h3>
+
+		
+            	<p style="padding-right:0px"><a href="http://jwc.jlu.edu.cn/">本科生教育</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://yjsy.jlu.edu.cn">研究生教育</a><p>
+            
+            	<p style="padding-right:0px"><a href="http://cie.jlu.edu.cn/">留学生教育</a><p>
+            
+            	<p style="padding-right:0px"><a href="http://dec.jlu.edu.cn/">继续教育</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://kszx.jlu.edu.cn">考试中心</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://ctld.jlu.edu.cn">教师发展</a><p>
+                    
+    </div>
+    <div class="f_li ky">
+    	<h3>科研工作</h3>
+        
+            	<p><a href="https://hssra.jlu.edu.cn">社科科研</a><p>
+            
+            	<p><a href="http://kjc.jlu.edu.cn">科研管理</a><p>
+            
+            	<p><a href="http://kjkfzx.jlu.edu.cn">成果转化</a><p>
+            
+    </div>
+    <div class="f_li rscw">
+    	<h3>人事财务</h3>
+        
+            	<p><a href="https://cw.jlu.edu.cn">财务服务平台 </a><p>
+            
+            	<p><a href="http://rsgl.jlu.edu.cn/">人事与师资</a><p>
+            
+    </div>
+    <div class="f_li hq">
+    	<h3>后勤采购</h3>
+        
+            	<p><a href="https://zcgl.jlu.edu.cn">资产管理</a><p>
+            
+            	<p><a href="https://hqc.jlu.edu.cn">后勤管理</a><p>
+            
+            	<p><a href="https://cgglzx.jlu.edu.cn/">采购管理</a><p>
+            
+            	<p><a href="https://hqserver.jlu.edu.cn/">后勤服务</a><p>
+            
+    </div>
+    <div class="f_li ts">
+    	<h3>综合服务</h3>
+        
+            	<p><a href="http://xyy.jlu.edu.cn">医疗服务</a><p>
+            
+            	<p><a href="http://ywc.jlu.edu.cn">医院管理处</a><p>
+            
+            	<p><a href="https://gongkai.jlu.edu.cn">信息公开</a><p>
+            
+            	<p><a href="https://nic.jlu.edu.cn/">网络服务</a><p>
+            
+    </div>
+    <div class="f_li wl">
+    	<h3>共享平台</h3>
+        
+            	<p><a href="https://syweb.jlu.edu.cn">仪器共享</a><p>
+            
+            	<p><a href="http://cszx.jlu.edu.cn/">测试服务</a><p>
+            
+            	<p><a href="http://hpcc.jlu.edu.cn/">超算服务</a><p>
+            
+            	<p><a href="https://sydw.jlu.edu.cn/"> 实验动物平台</a><p>
+            
+            	<p><a href="https://syweb.jlu.edu.cn/">实验室管理</a><p>
+            
+    </div>
+    <div class="f_li zcxt">
+    	<h3>支撑系统</h3>
+        
+            	<p style="padding-right:0px"><a href="http://xyk.jlu.edu.cn">校园一卡通</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://mail.jlu.edu.cn">吉大邮箱</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://lib.jlu.edu.cn">图书馆</a><p>
+            
+            	<p style="padding-right:0px"><a href="http://dag.jlu.edu.cn/">档案馆</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://aamuseum.jlu.edu.cn/">考古与艺术博物馆</a><p>
+            
+            	<p style="padding-right:0px"><a href="https://gmuseum.jlu.edu.cn/">地质博物馆</a><p>
+            
+    </div>
+</div>
+
+  <!-- 友链end -->
+  <!-- 底部start -->
+  <div class="main_b sub">
+	<div class="b_info">电子校务平台由大数据和网络管理中心负责维护和管理</div>
+ <div class="b_bot"><a href="mailto:xxgzb@jlu.edu.cn">电子邮件xxgzb@jlu.edu.cn</a>    联系我们     
+ <a href="PortalInformation!getInformation.action?title=关于电子校务平台&id=307880&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">关于电子校务平台</a>
+ |<a href="/defaultroot/help/index.html" target="_blank">使用帮助</a>
+ |<a href="PortalInformation!getInformation.action?title=页面纠错&id=50041271&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">页面纠错</a>
+ |<a href="PortalInformation!getInformation.action?title=建议与反馈&id=50041441&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">建议与反馈</a>
+ |<a href="PortalInformation!getInformation.action?title=电子校务平台申明&id=307883&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">声明</a>
+ |<a href="PortalInformation!getInformation.action?title=电子校务平台手机版下载安装说明&id=307868&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">手机版</a>
+  <!--| <a href="PortalInformation!getInformation.action?title=即时通讯工具配置说明&id=2190175&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">即时通讯</a></div> 
+<a href="PortalInformation!getInformation.action?title=即时通讯工具配置说明&id=47921&categoryName=电子校务平台应用专区&channelName=关键字数据查询&fromflag=login&display=no">即时通讯</a></div>-->
+ </div>
+ 
+  <!-- 底部end -->
+  <SCRIPT LANGUAGE="JavaScript">
+	function rd_open(str){
+		//alert("str="+str);
+		window.open(str);
+	}
+	//--------------------wkc end
+function downloadthis(obj){
+	var attsave = obj.id;
+	var attname = obj.title;
+	var dateTemp = new Date()+"";
+	var informationId= '71736581';
+	$.ajax({
+		url:"/defaultroot/rd/download/CheckExist.jsp",
+		data:{"attsave":attsave,dateTemp:dateTemp},
+		dataType:"json",
+		type:"post",
+		success:function(json){
+			if(json.exist == "no"){
+				whir_alert("文件不存在");
+			}else if(json.exist == "yes"){
+				var res=attsave+"@"+attname+"@"+informationId;
+				$.ajax({
+					url:"/defaultroot/rd/download/BASEEncoderAjax.jsp",
+					data:{"res":res},
+					type:"post",
+					success:function(succ){
+						res=$.trim(succ);
+						window.location.href="/defaultroot/rd/download/attachdownload.jsp?res="+res;
+					}
+				});	
+			}
+		}
+	});
+}
+
+</script>
+  <span class="yunBg yun_l"></span> <span class="yunBg yun_r"></span> </div>
+</body>
+<SCRIPT LANGUAGE="JavaScript">
+
+function WebOfficeLoad(){
+	
+}
+
+////document.onkeydown=function(e){ 
+////	var theEvent = window.event || e; 
+////	var code = theEvent.keyCode || theEvent.which; 
+////	if (code == 13) { 
+////		submitForm();
+////	} 
+////} 
+
+$(document).ready(function(){
+	$(".fontsize p").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize").find("p").find("span").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize").find("p").find("font").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize").find("p").find("a").find("font").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize p").css("font-family", "宋体");//jiangchao20161122
+	$(".fontsize").find("p").find("span").css("font-family", "宋体");//jiangchao20161122
+	$(".fontsize").css("font-family", "宋体");//jiangchao20161122
+	$(".fontsize").find("p").find("font").css("font-family", "宋体");//jiangchao20161122
+	$(".fontsize").find("p").find("a").find("font").css("font-family", "宋体");//jiangchao20161122
+	$(".fontsize").find("span").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize").find("span").css("font-family", "宋体");//jiangchao20161122
+	$(".fontsize").find("div").find("span").css("font-size", "12pt");//jiangchao20161122
+	$(".fontsize").find("div").find("span").css("font-family", "宋体");//jiangchao20161122
+});
+
+window.onload = function (e) {
+
+    /*bodyclick = document.getElementsByTagName('body').item(0);
+    rSelects();
+    bodyclick.onclick = function () {
+        for (i = 0; i < selects.length; i++) {
+            _$('select_info_' + selects[i].name).className = 'tag_select';
+            _$('options_' + selects[i].name).style.display = 'none';
+        }
+    }*/
+	
+    load();
+    checkBrowser();
+	
+	//jiangchao20161121增加显示图片的比例
+	 $(".immmges img").each(function () {
+         DrawImage(this, 170, 250);
+    });
+}
+function DrawImage(ImgD, FitWidth, FitHeight) {
+	var image = new Image();
+	image.src = ImgD.src;
+	if (image.width > 0 && image.height > 0) {
+		if (image.width / image.height >= FitWidth / FitHeight) {
+			if (image.width > FitWidth) {
+				ImgD.width = FitWidth;
+				ImgD.height = (image.height * FitWidth) / image.width;
+			} else {
+				ImgD.width = image.width;
+				ImgD.height = image.height;
+			}
+		} else {
+			if (image.height > FitHeight) {
+				ImgD.height = FitHeight;
+				ImgD.width = (image.width * FitHeight) / image.height;
+			} else {
+				ImgD.width = image.width;
+				ImgD.height = image.height;
+			}
+		}
+	}
+}
+function load(){
+    var selects=$('select');//获取select
+    for(var i=0;i<selects.length;i++){
+	    createSelect(selects[i],i);
+    }
+    loadCookie();
+	
+		document.LogonForm.userPassword.focus();
+	
+}
+
+function checkForm(){
+     if(document.LogonForm.userAccount.value==""){
+        whir_alert("请输入正确的账号！", function(){
+            document.LogonForm.userAccount.focus();
+            return false;
+        }); 
+
+        document.LogonForm.userAccount.focus();
+        
+        return false;
+    }else if( document.LogonForm.userPassword.value==""){
+        whir_alert("请输入正确的密码！", function(){
+            document.LogonForm.userPassword.focus();
+            return false;
+        });
+
+        document.LogonForm.userPassword.focus();
+        
+        return false;
+    }
+    return true;
+}
+window.onload=function(){
+	var selectType = '';
+	if(selectType=='1'){
+		$("#denglu").parent().attr("style","display:none");
+		$("div[class='top']").attr("style","display:none");
+		$("div[class='flink sub clear']").attr("style","display:none");
+		$("div[class='main_b sub']").attr("style","display:none");
+		$("div[class='box clear rel']").attr("style","width:760px");
+	}
+}
+</script>
+</html>
