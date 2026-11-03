@@ -329,3 +329,22 @@ def test_midnight_and_keyword_paths():
     finally:
         oa._search_pref = None
     assert oa.fetch_notices(Fake(1))["page1"] is True
+
+
+def test_e2e_old_version_cache_then_live_refresh(tmp_path):
+    from jlu_toolkit import ui
+    old = {"updated": "2026-11-02T20:00:00", "channels": {}, "channels_items": {"179577": [
+        {"id": "70100001", "title": "示例小米奖学金", "dept": "示例处", "time": "今天 09:00", "top": True, "url": ""},
+        {"id": "70100000", "title": "示例旧通知", "dept": "示例处", "time": "昨天 10:00", "top": False, "url": ""},
+        {"id": "70090000", "title": "示例旧置顶", "dept": "示例处", "time": "2026-10-08", "top": True, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    r = oa.parse_list(LIVE, NOW)
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": r["items"],
+                       "channels": {}, "page1": True})
+    j = ui.oa_notices_api(ui.Store(tmp_path), {})["items"]
+    assert sum(i["top"] for i in j) == 7 and not any(i["id"].startswith("700") and i["top"] for i in j)
+    plain = [i for i in j if not i["top"]]
+    assert plain[0]["id"] == "71736581" and [i["id"] for i in plain[-3:]] == ["70090000", "70100001", "70100000"]
+    before = (tmp_path / "oa_notices.json").read_text(encoding="utf-8")
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": "2026-11-03T10:00:00", "items": [], "channels": {}})
+    assert json.loads(before)["channels_items"] == json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))["channels_items"]

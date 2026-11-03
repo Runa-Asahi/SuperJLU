@@ -261,3 +261,8 @@ def test_notice_detail_keeps_cache_on_network_error(srv, monkeypatch):
     assert code == 200 and j["ok"] and j["item"]["text"] == ""
     assert "暂时打不开" in j["item"]["detail_error"]
 
+
+
+def test_empty_time_has_no_dangling_separator():
+    from jlu_toolkit.ui_page import PAGE
+    assert '${esc(i.time||"")}' not in PAGE and PAGE.count('${i.time?" · "+esc(i.time):""}') == 2
