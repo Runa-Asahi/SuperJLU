@@ -1145,7 +1145,7 @@ async function openOA(id){const v=$("#oa-detail-v");$("#oa-list-v").hidden=true;
  v.innerHTML=`<div class="card oad"><div class="row" style="margin-bottom:10px"><button class="btn ghost" id="oa-back">‹ 返回</button><span class="sp"></span>${oaLink(i.url,i.source==="college"?"打开原文 ↗":"在 OA 中打开 ↗")}</div><h2>${i.top?'<span class="pin">置顶</span>':""}${esc(i.title)}</h2><div class="sub">${esc(i.dept||"未知单位")}${i.time?" · "+esc(i.time):""}</div>`+
   (i.html?`<div class="body rich">${i.html}</div>`:i.text?`<div class="body">${esc(i.text)}</div>`:`<div class="state" style="padding:28px 8px"><b>${esc(i.detail_error||"暂时没有正文")}</b>${i.detail_error&&/打开原文/.test(i.detail_error)?"":" 可点上方打开原文查看。"}</div>`)+
   (atts.length?`<h2 style="font-size:15px;margin-top:6px">附件 <span class="sub">${atts.length}</span></h2><div class="att">${atts.map(a=>`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">📎 ${esc(a.name)}</a>`).join("")}</div>`:"")+`</div>`;
- $("#oa-back").onclick=oaBack}
+ v.querySelectorAll(".rich img").forEach(im=>im.addEventListener("error",()=>im.remove(),{once:true}));$("#oa-back").onclick=oaBack}
 $("#oa-kw").oninput=e=>{OAQ.kw=e.target.value;renderOA()};$("#oa-dept").onchange=e=>{OAQ.dept=e.target.value;renderOA()};
 $("#oa-ref").onclick=async()=>{const b=$("#oa-ref");b.disabled=true;b.textContent="更新中…";try{OA=await api("/api/oa/refresh",{category:OACH});OAERR="";renderOA();const bad=["network_error","need_campus"].includes(OA.status);toast(OA.status==="link_only"?"请打开学院官网查看":bad?"学院官网暂未连通，已保留本地通知":"已更新通知",bad)}catch(e){toast(e.message)}finally{b.disabled=false;b.textContent="⟳ 更新"}};
 document.querySelector('nav button[data-t="oa"]').addEventListener("click",()=>{(OA?Promise.resolve():loadOA()).then(loadSubs)});

@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import html as _html
 import json
 import re
 import urllib.parse
@@ -217,6 +218,40 @@ def normalize_cached(items: list, fetched_at=None) -> list:
     return out
 
 
+def _whir_b64(b: bytes) -> str:
+    """与 OA 服务端 BASEEncoderAjax.jsp 一致：Java BASE64Encoder 风格，每 76 字符换行。"""
+    import base64
+    x = base64.b64encode(b).decode("ascii")
+    return "\n".join(x[i:i + 76] for i in range(0, len(x), 76))
+
+
+def attach_url(save_name: str, title: str, info_id: str) -> str:
+    """OA 附件下载链接。页面上的附件是 <span onclick="downloadthis(this)">，浏览器里由两次 AJAX
+    算出 res 再跳转；这里按同样的编码直接生成（已用真实页面核对与服务端输出一致）。"""
+    res = f"{save_name}@{title}@{info_id}".encode("utf-8")
+    enc = _whir_b64(_whir_b64(_whir_b64(res).encode("ascii") + b"whir").encode("ascii")).replace("\n", "")
+    return BASE + "/rd/download/attachdownload.jsp?res=" + urllib.parse.quote(enc, safe="")
+
+
+_ATT_SPAN = re.compile(r"<span\b(?=[^>]*downloadthis\(this\))[^>]*>", re.I)
+
+
+def page_attachments(html: str) -> list:
+    m = re.search(r"var\s+informationId\s*=\s*['\"](\d+)['\"]", html or "")
+    if not m:
+        return []
+    out, seen = [], set()
+    for tag in _ATT_SPAN.findall(html or ""):
+        sid = re.search(r'\bid="([^"]+)"', tag)
+        tit = re.search(r'\btitle="([^"]*)"', tag)
+        if not sid or sid.group(1) in seen:
+            continue
+        seen.add(sid.group(1))
+        name = _html.unescape(tit.group(1)).strip() if tit else ""
+        out.append({"name": name or "附件", "url": attach_url(_html.unescape(sid.group(1)), name, m.group(1))})
+    return out
+
+
 def parse_detail(html: str) -> dict:
     """详情页：标题、时间单位、清洗后的正文 HTML/纯文本、附件。"""
     from . import article
@@ -234,7 +269,7 @@ def parse_detail(html: str) -> dict:
             a = {**a, "html": body, "text": article.html_to_text(body)}
     if not a["html"]:
         a = {**article.extract(html, BASE + "/"), "attachments": a["attachments"]}
-    atts = a["attachments"] + [x for x in article.attachments(html, BASE + "/")
+    atts = a["attachments"] + [x for x in article.attachments(html, BASE + "/") + page_attachments(html)
                                if x["url"] not in {y["url"] for y in a["attachments"]}]
     return {"title": cls("content_t"), "time_dept": cls("content_time"),
             "html": a["html"], "text": a["text"], "attachments": atts}
@@ -519,6 +554,10 @@ def fetch_detail(client, item: dict) -> dict:
             "attachments": d["attachments"]}
 
 
+# 正文解析版本：解析规则变化（例如补上附件）后，旧缓存打开时重新拉一次
+DETAIL_VERSION = 2
+
+
 def merge_detail(root: Path, notice_id: str, detail: dict) -> Optional[dict]:
     """把正文/附件写回本地缓存中对应通知，返回更新后的条目。"""
     root = Path(root)
@@ -542,6 +581,7 @@ def merge_detail(root: Path, notice_id: str, detail: dict) -> Optional[dict]:
                 updated["text"] = detail["text"]
             if detail.get("html"):
                 updated["html"] = detail["html"]
+                updated["dv"] = DETAIL_VERSION
             atts = detail.get("attachments")
             if isinstance(atts, list):
                 updated["attachments"] = atts

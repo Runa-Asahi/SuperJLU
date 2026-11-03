@@ -799,6 +799,54 @@ def _oa_url(u) -> str:
     return full if pr.scheme in ("http", "https") and pr.hostname == "oa.jlu.edu.cn" else ""
 
 
+_IMG_MAGIC = ((b"\x89PNG", "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"GIF8", "image/gif"),
+              (b"BM", "image/bmp"))
+_img_cache: dict = {}
+
+
+def _img_host_ok(host: str) -> bool:
+    from . import college
+    host = (host or "").lower()
+    return host == "jlu.edu.cn" or host.endswith(".jlu.edu.cn") or host in {
+        s["host"] for s in college.SOURCES.values()}
+
+
+def notice_img(u: str) -> tuple:
+    """GET /api/oa/img?u= —— 通知正文里的图片由本机代取：页面 CSP 只允许同源，
+    校外时 OA 图片也能走与正文相同的线路（教务会话 / WebVPN）。只认图片字节，最大 5MB。"""
+    import urllib.parse
+    p = urllib.parse.urlparse(u or "")
+    if p.scheme not in ("http", "https") or p.username or not _img_host_ok(p.hostname or ""):
+        raise ValueError("不支持的图片地址")
+    if u in _img_cache:
+        return _img_cache[u]
+    if p.hostname == "oa.jlu.edu.cn":
+        from . import oa
+        client, _ = _oa_detail_client()
+        code, _t, _f, raw = client._request(u, headers={"Referer": oa.BASE + "/"})
+        raw = raw or b""
+    else:
+        from . import college
+        raw = college.get_bytes(u, college.DETAIL_TIMEOUT, 5_000_000)
+    ctype = next((c for m, c in _IMG_MAGIC if raw.startswith(m)), "")
+    if not ctype and raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        ctype = "image/webp"
+    if not ctype:
+        raise ValueError("不是图片")
+    if len(_img_cache) > 48:
+        _img_cache.clear()
+    _img_cache[u] = (raw, ctype)
+    return raw, ctype
+
+
+def _proxy_imgs(h: str) -> str:
+    import html as _h
+    import urllib.parse
+    return re.sub(r'<img src="([^"]+)"',
+                  lambda m: '<img src="/api/oa/img?u=' + _h.escape(urllib.parse.quote(_h.unescape(m.group(1)), safe=""),
+                                                                    quote=True) + '"', h or "")
+
+
 def _oa_item(i: dict, full: bool = False, link=None) -> dict:
     link = link or _oa_url
     out = {"id": str(i.get("id") or ""), "title": str(i.get("title") or ""), "time": str(i.get("time") or ""),
@@ -808,7 +856,7 @@ def _oa_item(i: dict, full: bool = False, link=None) -> dict:
         atts = i.get("attachments")
         out["text"] = str(i.get("text") or "")
         # 缓存里的正文再清洗一遍：只放行基础排版标签，防止旧数据或异常页面带进脚本/样式
-        out["html"] = article.clean_html(str(i.get("html") or ""), out["url"]) if i.get("html") else ""
+        out["html"] = _proxy_imgs(article.clean_html(str(i.get("html") or ""), out["url"])) if i.get("html") else ""
         out["attachments"] = [{"name": str(a.get("name") or "附件"), "url": link(a.get("url"))}
                               for a in (atts if isinstance(atts, list) else []) if isinstance(a, dict) and link(a.get("url"))]
     return out
@@ -968,7 +1016,7 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
             break
     if raw is not None:
         item = _oa_item(raw, full=True)
-        need = fetch_body and not item.get("html")
+        need = fetch_body and (not item.get("html") or (raw.get("dv") or 0) < oa.DETAIL_VERSION)
         if need and _oa_url(raw.get("url")):
             try:
                 client, has = _oa_detail_client()
@@ -1005,7 +1053,7 @@ def oa_notice_api(store: Store, nid: str, *, fetch_body: bool = True) -> Optiona
     if i:
         src, _ = college._split(i.get("channel", ""))
         link = lambda u: college.safe_url(u, src["host"])  # noqa: E731
-        if fetch_body and not i.get("html") and link(i.get("url")):
+        if fetch_body and (not i.get("html") or (i.get("dv") or 0) < college.DETAIL_VERSION) and link(i.get("url")):
             try:
                 detail = college.fetch_detail(i)
                 if detail.get("html"):
@@ -1349,6 +1397,15 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
                         return self._json(oa_catalog_api())
                     if path == "/api/oa/prefs":
                         return self._json(oa_prefs_api(store))
+                    if path == "/api/oa/img":
+                        try:
+                            data, ctype = notice_img(q.get("u", ""))
+                        except ValueError:
+                            raise
+                        except Exception as e:  # noqa: BLE001 — 图片取不到时前端隐藏该图
+                            _notice_log(store, "img", q.get("u", "")[:120], e)
+                            return self._send(502, b"", "text/plain")
+                        return self._send(200, data, ctype)
                     if path == "/api/oa/notice":
                         r = oa_notice_api(store, q.get("id", ""))
                         return self._json(r or {"ok": False, "error": "本地没有这条通知"}, 200 if r else 404)

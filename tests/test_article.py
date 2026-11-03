@@ -162,3 +162,21 @@ def test_oa_detail_uses_vpn_cookies_without_session(monkeypatch):
     monkeypatch.setattr(ui, "_client", no_login)
     c, has = ui._oa_detail_client()
     assert isinstance(c, jwxt.JwxtClient) and has is False
+
+
+def test_old_parse_version_refetched_once(tmp_path, monkeypatch):
+    _college_cache(tmp_path, {**ITEM, "html": "<p>旧</p>", "text": "旧"})  # 旧版本缓存：没有 dv
+    page = (FIX / "csw_detail.html").read_text(encoding="utf-8")
+    calls = []
+    monkeypatch.setattr(college, "_get", lambda url, timeout=10: calls.append(url) or page)
+    st = ui.Store(tmp_path)
+    assert ui.oa_notice_api(st, ITEM["id"])["item"]["html"].startswith("<p><strong>")
+    ui.oa_notice_api(st, ITEM["id"])
+    assert calls == [BASE]
+
+
+def test_old_parse_version_kept_when_offline(tmp_path, monkeypatch):
+    _college_cache(tmp_path, {**ITEM, "html": "<p>旧</p>", "text": "旧"})
+    monkeypatch.setattr(college, "_get", lambda url, timeout=10: (_ for _ in ()).throw(OSError("x")))
+    it = ui.oa_notice_api(ui.Store(tmp_path), ITEM["id"])["item"]
+    assert it["html"] == "<p>旧</p>" and "detail_error" not in it
