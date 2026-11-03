@@ -123,7 +123,7 @@ class _ListParser(HTMLParser):
             self._cur[k] = (self._cur[k] + data) if k != "top" else self._cur[k]
 
 
-def parse_list(html: str) -> dict:
+def parse_list(html: str, now: Optional[dt.datetime] = None) -> dict:
     p = _ListParser()
     p.feed(html or "")
     items = []
@@ -132,7 +132,7 @@ def parse_list(html: str) -> dict:
         # 置顶只认标题里的「[置顶]」字样；OA 也会用 <font> 标红「新」等，不能据此当置顶。
         it["top"] = bool(re.match(r"^\[?置顶\]?", t))
         t = re.sub(r"^\[?置顶\]?\s*", "", t)
-        items.append({"id": it["id"], "title": t, "dept": it["dept"].strip(), "time": parse_time(it["time"]),
+        items.append({"id": it["id"], "title": t, "dept": it["dept"].strip(), "time": parse_time(it["time"], now),
                       "top": it["top"], "channel": it["channel"],
                       "url": urllib.parse.urljoin(BASE + "/", it["href"])})
     total_pages = None
@@ -144,14 +144,69 @@ def parse_list(html: str) -> dict:
     return {"items": items, "channels": p.channels, "total_pages": total_pages}
 
 
-def parse_time(s: str) -> str:
-    s = (s or "").replace("\xa0", " ").strip()
+_CN = dt.timezone(dt.timedelta(hours=8))  # 学校 OA 显示的是北京时间
+_REL_DAYS = {"今天": 0, "昨天": 1, "前天": 2}
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def _now_cn(now: Optional[dt.datetime] = None) -> dt.datetime:
+    if now is None:
+        return dt.datetime.now(_CN)
+    return now.astimezone(_CN) if now.tzinfo else now
+
+
+def parse_time(s: str, now: Optional[dt.datetime] = None) -> str:
+    """统一成「YYYY-MM-DD[ HH:MM]」。OA 对近两天的通知显示「今天 09:09」「昨天 15:52」，
+    按 now（取列表的时间，北京时间）换算；无年份的「10-30」按 now 补年份（不晚于 now）。
+    无法识别时原样返回（is_dated() 为 False，排序时排在有日期的条目后面）。"""
+    s = re.sub(r"\s+", " ", (s or "").replace("\xa0", " ")).strip()
     m = re.search(r"(\d{4})\D(\d{1,2})\D(\d{1,2})\D*(?:(\d{1,2}):(\d{2}))?", s)
-    if not m:
-        return s
-    y, mo, d, h, mi = m.groups()
-    out = f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
-    return out + (f" {int(h):02d}:{mi}" if h else "")
+    if m:
+        y, mo, d, h, mi = m.groups()
+        out = f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+        return out + (f" {int(h):02d}:{mi}" if h else "")
+    base = _now_cn(now)
+    m = re.match(r"^(今天|昨天|前天)\s*(?:(\d{1,2}):(\d{2}))?", s)
+    if m:
+        day = base.date() - dt.timedelta(days=_REL_DAYS[m.group(1)])
+        out = day.isoformat()
+        return out + (f" {int(m.group(2)):02d}:{m.group(3)}" if m.group(2) else "")
+    m = re.match(r"^(\d{1,2})[-/月](\d{1,2})日?\s*(?:(\d{1,2}):(\d{2}))?$", s)
+    if m:
+        mo, d, h, mi = int(m.group(1)), int(m.group(2)), m.group(3), m.group(4)
+        try:
+            day = dt.date(base.year, mo, d)
+            if day > base.date():
+                day = dt.date(base.year - 1, mo, d)
+        except ValueError:
+            return s
+        return day.isoformat() + (f" {int(h):02d}:{mi}" if h else "")
+    return s
+
+
+def is_dated(s) -> bool:
+    return bool(_DATE_RE.match(str(s or "")))
+
+
+def _parse_iso(s) -> Optional[dt.datetime]:
+    try:
+        return dt.datetime.fromisoformat(str(s)) if s else None
+    except ValueError:
+        return None
+
+
+def normalize_cached(items: list, fetched_at=None) -> list:
+    """旧缓存里原样存下的「今天 09:09」等：按该栏目上次取列表的时间换算；
+    换算不了的保留原文，但排序时不会排到有日期的条目前面。"""
+    ref = _parse_iso(fetched_at)
+    out = []
+    for i in items or []:
+        if isinstance(i, dict) and i.get("time") and not is_dated(i["time"]) and ref is not None:
+            fixed = parse_time(i["time"], ref)
+            if is_dated(fixed):
+                i = {**i, "time": fixed}
+        out.append(i)
+    return out
 
 
 def parse_detail(html: str) -> dict:
@@ -373,9 +428,11 @@ def resolve_category(cat: str, known: dict) -> str:
 
 
 def sort_key(i: dict) -> tuple:
-    """按发布时间，再按数字 id（字符串比较会让 1000000 排在 999999 后面）。"""
+    """先有日期的（按日期），再无法识别日期的；同时间按数字 id（字符串比较会让 1000000 排在 999999 后面）。"""
     sid = str(i.get("id") or "")
-    return (str(i.get("time") or ""), int(sid) if sid.isdigit() else -1, sid)
+    t = str(i.get("time") or "")
+    dated = is_dated(t)
+    return (dated, t if dated else "", int(sid) if sid.isdigit() else -1, sid)
 
 
 def save(root: Path, res: dict) -> Path:
@@ -388,7 +445,8 @@ def save(root: Path, res: dict) -> Path:
         except (json.JSONDecodeError, ValueError):
             old = {}
     store = old.get("channels_items") or {}
-    prev = {i["id"]: i for i in store.get(res["channel"], [])}
+    ch_ref = (old.get("channels_updated") or {}).get(str(res["channel"])) or old.get("updated")
+    prev = {i["id"]: i for i in normalize_cached(store.get(res["channel"], []), ch_ref)}
     if res.get("page1"):
         # 置顶条目都在第 1 页；本次没出现在置顶里的旧条目说明已取消置顶，不能一直挂在最上面。
         pinned = {i["id"] for i in res["items"] if i.get("top")}

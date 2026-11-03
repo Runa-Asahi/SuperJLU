@@ -908,7 +908,8 @@ def oa_notices_api(store: Store, q: dict) -> dict:
                  "source_url": college.list_url(ch)}
         d = {**d, "updated": st.get("at") or d.get("updated")}
     else:
-        items = [_oa_item(i) for i in ((d.get("channels_items") or {}).get(ch) or []) if isinstance(i, dict)]
+        raw = oa.normalize_cached((d.get("channels_items") or {}).get(ch) or [], oa.channel_fetched_at(d, ch))
+        items = [_oa_item(i) for i in raw if isinstance(i, dict)]
     if kw:
         items = [i for i in items if kw in i["title"] or kw in i["dept"]]
     items.sort(key=lambda i: (i["top"], *oa.sort_key(i)), reverse=True)

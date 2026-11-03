@@ -251,3 +251,59 @@ def test_keyword_result_does_not_clear_pins(tmp_path):
 def test_numeric_id_tiebreak():
     items = [{"id": "999999", "time": "2026-10-01"}, {"id": "1000000", "time": "2026-10-01"}]
     assert sorted(items, key=oa.sort_key, reverse=True)[0]["id"] == "1000000"
+
+
+# ── 真实 OA 第 1 页节选（2026-11-03）：近两天的通知显示「今天/昨天 HH:MM」 ──
+import datetime as _dt
+from pathlib import Path as _P
+
+LIVE = (_P(__file__).parent / "fixtures" / "oa_live_p1.html").read_text(encoding="utf-8")
+NOW = _dt.datetime(2026, 11, 3, 10, 0, tzinfo=_dt.timezone(_dt.timedelta(hours=8)))
+
+
+def test_parse_time_relative_and_no_year():
+    assert oa.parse_time("今天\xa0\xa0 09:09", NOW) == "2026-11-03 09:09"
+    assert oa.parse_time("昨天  15:52", NOW) == "2026-11-02 15:52"
+    assert oa.parse_time("前天 08:00", NOW) == "2026-11-01 08:00"
+    assert oa.parse_time("10-30", NOW) == "2026-10-30"
+    assert oa.parse_time("12-30", NOW) == "2025-12-30"  # 不会跑到未来
+    assert oa.parse_time("2026-10-30", NOW) == "2026-10-30"
+    nyd = _dt.datetime(2027, 1, 1, 8, 0)
+    assert oa.parse_time("昨天 23:00", nyd) == "2026-12-31 23:00"
+
+
+def test_live_page1_fixture():
+    r = oa.parse_list(LIVE, NOW)
+    items = r["items"]
+    assert len(items) == 11 and sum(i["top"] for i in items) == 7 and r["total_pages"] == 2515
+    assert all(oa.is_dated(i["time"]) for i in items)
+    assert items[0]["time"] == "2026-11-02 09:18" and items[7]["time"] == "2026-11-03 09:09"
+    assert all(i["dept"] and not i["title"].startswith("[置顶]") for i in items)
+
+
+def test_relative_times_never_outrank_new_dates_after_days(tmp_path):
+    """#161 主因复现：旧缓存原样存了「今天 09:09」，字符串排序时永远压在真实日期上面。"""
+    from jlu_toolkit import ui
+    old_cache = {"updated": "2026-10-10T12:00:00", "channels_updated": {"179577": "2026-10-10T12:00:00"},
+                 "channels": {}, "channels_items": {"179577": [
+                     {"id": "100", "title": "示例奖学金", "dept": "示例处", "time": "今天 09:00", "top": False, "url": ""},
+                     {"id": "99", "title": "示例旧", "dept": "示例处", "time": "昨天 10:00", "top": False, "url": ""},
+                     {"id": "98", "title": "示例无日期", "dept": "示例处", "time": "未知", "top": False, "url": ""}]}}
+    (tmp_path / "oa_notices.json").write_text(json.dumps(old_cache, ensure_ascii=False), encoding="utf-8")
+    # 读取时就迁移，无需刷新
+    j = ui.oa_notices_api(ui.Store(tmp_path), {})
+    assert [(i["id"], i["time"]) for i in j["items"][:2]] == [("100", "2026-10-10 09:00"), ("99", "2026-10-09 10:00")]
+    # 刷新后新通知排在最上面，无法识别日期的排最后
+    r = oa.parse_list(LIVE, NOW)
+    oa.save(tmp_path, {"channel": "179577", "fetched_at": NOW.replace(tzinfo=None).isoformat(),
+                       "items": r["items"], "channels": {}, "page1": True})
+    ids = [i["id"] for i in ui.oa_notices_api(ui.Store(tmp_path), {})["items"] if not i["top"]]
+    assert ids[0] == "71736581" and ids[-1] == "98" and ids.index("100") > ids.index("71645669")
+    cached = json.loads((tmp_path / "oa_notices.json").read_text(encoding="utf-8"))["channels_items"]["179577"]
+    assert {i["id"]: i["time"] for i in cached}["100"] == "2026-10-10 09:00"
+
+
+def test_undated_item_without_reference_sorts_last():
+    items = [{"id": "1", "time": "今天 09:00"}, {"id": "2", "time": "2026-01-01"}]
+    assert oa.normalize_cached(items, None)[0]["time"] == "今天 09:00"
+    assert sorted(items, key=oa.sort_key, reverse=True)[0]["id"] == "2"
