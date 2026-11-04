@@ -518,6 +518,7 @@ def _client() -> "jwxt.JwxtClient":
     c = jwxt.JwxtClient()
     if not c.load_session():
         from . import sessions
+        c._loaded_gen = jwxt._SESSION_GEN  # 与读取会话同等对待：期间有新登录就不回写
         if c.route == "webvpn" and sessions.load_cookies("vpn"):
             for cookie in jwxt.jar_from_list(sessions.load_cookies("cas") or []):
                 c.jar.set_cookie(cookie)

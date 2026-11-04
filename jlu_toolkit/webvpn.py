@@ -113,6 +113,7 @@ def finish_connected(c):
     # by the existing SecretFile implementation. Never return them through API.
     sessions.save_cookies("vpn", jwxt.jar_to_list(c.jar))
     sessions.save_cas_from_jar(c.jar)
+    jwxt.bump_session_gen()  # 登录前开始的请求不再回写旧会话
     set_mode("webvpn")
     c.route = "webvpn"
     c._vpn_cookies_loaded = False
