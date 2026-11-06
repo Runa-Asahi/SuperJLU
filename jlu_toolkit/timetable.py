@@ -98,13 +98,31 @@ def build(official: list[core.Course], adjs: list[adjust.Adjustment], ops: list,
             "applied": sum(1 for n in notes if not n["skipped"]), "adjustments": adjs}
 
 
+def schedule_source(root: Path) -> str:
+    """课表来源：jwxt（教务）或 shared（同学分享导入）。刷新教务后会清掉 shared。"""
+    meta = _json(Path(root) / "schedule_meta.json", {}) or {}
+    if isinstance(meta, dict) and meta.get("source") == "shared":
+        return "shared"
+    return "jwxt"
+
+
 def view(root: Path) -> dict:
     root = Path(root)
     term = current_term(root)
     enabled = adjustments_enabled(root)
+    source = schedule_source(root)
+    # 分享导入已是合并结果：不再叠调停课；仍允许本机个人修改。
+    if source == "shared":
+        out = build(jwxt_courses(root), [],
+                    ov.term_ops(load_overlay(root, term), term), enabled=False)
+        for r in out["rows"]:
+            if r.get("src") == "official":
+                r["src"] = "shared"
+        out.update(term=term, enabled=False, source=source)
+        return out
     out = build(jwxt_courses(root), load_adjustments(root, term),
                 ov.term_ops(load_overlay(root, term), term), enabled)
-    out.update(term=term, enabled=enabled)
+    out.update(term=term, enabled=enabled, source=source)
     return out
 
 

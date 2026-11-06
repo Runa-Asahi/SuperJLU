@@ -253,6 +253,40 @@ class Store:
             if undo.exists():
                 undo.unlink()
 
+    def export_share(self) -> dict:
+        """当前看到的完整课表 → 可分享 JSON（不含账号凭据）。"""
+        from . import schedule_share
+        rows, _ = self.schedule_view()
+        return schedule_share.build(rows, self.current_term(), self.first_monday() or "",
+                                   self.periods() or {})
+
+    def import_share(self, doc, *, confirm: bool = False) -> None:
+        """用分享文件覆盖本地课表。必须 confirm=True；不写入任何凭据/会话。"""
+        from . import overlay as ov
+        from . import schedule_share
+        if not confirm:
+            raise ValueError("导入会覆盖现有课表，请先确认")
+        parsed = schedule_share.parse(doc)
+        term = parsed["term"] or self.current_term() or "shared"
+        with self.lock:
+            jwxt.export_courses_csv(parsed["courses"], str(self.p("schedule.csv")))
+            # 分享课表已是合并结果：清掉本学期个人修改与调停课，避免叠加上去
+            doc_ov = self.overlay_doc()
+            self._write_json(self.OVERLAY, ov.with_ops(doc_ov, term, []))
+            undo = self.p(self.OVERLAY_UNDO)
+            if undo.exists():
+                undo.unlink()
+            self._write_json("schedule_adjustments.json",
+                             {"term": term, "fetched_at": None, "items": []})
+            self._write_json("schedule_meta.json", {"term": term, "source": "shared"})
+            if parsed["first_monday"]:
+                s = self.settings()
+                s["first_monday"] = parsed["first_monday"]
+                self._write_json("settings.json", s)
+            if parsed["periods"]:
+                # periods.json 存 {"1": ["08:00","08:45"], ...}
+                self._write_json("periods.json", parsed["periods"])
+
     def grades(self) -> list[core.Grade]:
         f = self.p("grades.csv")
         return core.load_grades(str(f)) if f.exists() else []
@@ -404,7 +438,8 @@ class Store:
                 "schedule_edits": len(ops), "schedule_term": term,
                 "schedule_other_terms": sum(len(v) for k, v in doc["terms"].items() if k != term),
                 "schedule_can_undo_reset": isinstance(undo, dict) and undo.get("term") == term
-                                           and bool(undo.get("ops"))}
+                                           and bool(undo.get("ops")),
+                "schedule_shared": v.get("source") == "shared"}
 
     def snapshot(self, source: str = "jwxt") -> dict:
         from . import academic
@@ -1453,6 +1488,15 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
             if path == "/api/grades/colleges":
                 links = json.loads((Path(__file__).parent / "data" / "grade_colleges.json").read_text(encoding="utf-8"))
                 return self._json({"ok": True, "links": [x for x in links["links"] if _link_ok(x["url"])]})
+            if path == "/api/schedule/share":
+                from . import schedule_share
+                try:
+                    body = schedule_share.dumps(store.export_share())
+                except ValueError as e:
+                    return self._json({"ok": False, "error": str(e)}, 400)
+                return self._send(200, body, "application/json; charset=utf-8",
+                                  {"Content-Disposition":
+                                   f'attachment; filename="{schedule_share.FILENAME}"'})
             if path == "/api/ics":
                 fm = store.first_monday()
                 if not fm:
@@ -1497,6 +1541,12 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
                 elif self.path == "/api/schedule/overlay":
                     store.overlay_action(body)
                     return self._json({"ok": True, **store._schedule_snapshot()})
+                elif self.path == "/api/schedule/share":
+                    action = body.get("action")
+                    if action == "import":
+                        store.import_share(body.get("doc"), confirm=bool(body.get("confirm")))
+                        return self._json({"ok": True, **store.snapshot()})
+                    raise ValueError("未知的课表分享操作")
                 elif self.path == "/api/settings":
                     store.save_settings(body)
                 elif self.path == "/api/rooms":

@@ -1,8 +1,10 @@
 package cn.superjlu.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.net.Uri;
@@ -59,6 +61,9 @@ public class MainActivity extends Activity {
     private volatile String authToken;
     private String barTheme = "system";
     private long lastShareMs;
+    /** 冷启动时收到的课表分享 JSON，等本地服务就绪后再导入。 */
+    private String pendingShareJson;
+    private boolean uiReady;
     private boolean resumed;
     private final Runnable keepalive = new Runnable() {
         @Override public void run() {
@@ -81,8 +86,12 @@ public class MainActivity extends Activity {
             Uri parsed = Uri.parse(url);
             String host = parsed.getHost();
             if (!"127.0.0.1".equals(host) && !"localhost".equals(host)) return;
-            if (!"/api/ics".equals(parsed.getPath())) return;
-            new Thread(() -> fetchAndShare(url), "jlu-ics").start();
+            String path = parsed.getPath();
+            if ("/api/ics".equals(path)) {
+                new Thread(() -> fetchAndShare(url), "jlu-ics").start();
+            } else if ("/api/schedule/share".equals(path)) {
+                new Thread(() -> fetchAndShareSchedule(url), "jlu-share").start();
+            }
         });
         browsers = new BrowserPicker(this);
         WebSettings s = web.getSettings();
@@ -121,6 +130,15 @@ public class MainActivity extends Activity {
                         .setText("启动失败：" + t));
             }
         }, "jlu-start").start();
+        captureShareIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        captureShareIntent(intent);
+        if (uiReady) offerPendingShareImport();
     }
 
     /**
@@ -241,6 +259,8 @@ public class MainActivity extends Activity {
         cm.setCookie(url, TOKEN_COOKIE + "=" + token + "; Path=/; HttpOnly; SameSite=Strict", ok -> {
             web.loadUrl(Boolean.TRUE.equals(ok) ? url : url + "?t=" + Uri.encode(token));
             scheduleKeepalive();
+            uiReady = true;
+            offerPendingShareImport();
         });
     }
 
@@ -324,6 +344,161 @@ public class MainActivity extends Activity {
         }
     }
 
+
+    /** WebView 下载 /api/schedule/share 时的兜底。 */
+    private void fetchAndShareSchedule(String url) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(url).openConnection();
+            if (authToken != null) c.setRequestProperty(TOKEN_HEADER, authToken);
+            c.setInstanceFollowRedirects(false);
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(20000);
+            int code = c.getResponseCode();
+            InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+            byte[] body = readLimited(in, ScheduleShareHelper.MAX_BYTES);
+            presentScheduleShare(body);
+        } catch (Exception e) {
+            main.post(() -> Toast.makeText(this, "分享失败", Toast.LENGTH_LONG).show());
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private void presentScheduleShare(byte[] data) {
+        if (data == null) data = new byte[0];
+        String text = new String(data, StandardCharsets.UTF_8);
+        if (!ScheduleShareHelper.looksLikeShare(text)) {
+            String msg = "分享失败";
+            try {
+                String err = new JSONObject(text).optString("error");
+                if (!err.isEmpty()) msg = err;
+            } catch (Exception ignored) { }
+            String toast = msg;
+            main.post(() -> Toast.makeText(this, toast, Toast.LENGTH_LONG).show());
+            return;
+        }
+        if (!beginShare()) return;
+        try {
+            File dir = new File(getCacheDir(), "exports");
+            if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("mkdir");
+            File out = new File(dir, ScheduleShareHelper.FILENAME);
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                fos.write(text.getBytes(StandardCharsets.UTF_8));
+            }
+            main.post(() -> openScheduleShare(out));
+        } catch (Exception e) {
+            main.post(() -> Toast.makeText(this, "分享失败", Toast.LENGTH_LONG).show());
+        }
+    }
+
+    private void openScheduleShare(File out) {
+        if (isDestroyed()) return;
+        Uri uri = ExportProvider.uriFor(this, out);
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType(ScheduleShareHelper.MIME);
+        send.putExtra(Intent.EXTRA_STREAM, uri);
+        send.putExtra(Intent.EXTRA_SUBJECT, "SuperJLU 课表");
+        send.setClipData(ClipData.newRawUri("SuperJLU 课表", uri));
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(Intent.createChooser(send, "分享课表"));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "没有可以分享的应用", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void captureShareIntent(Intent intent) {
+        if (intent == null) return;
+        String action = intent.getAction();
+        Uri uri = null;
+        if (Intent.ACTION_SEND.equals(action)) {
+            uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (uri == null) {
+                String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+                if (ScheduleShareHelper.looksLikeShare(text)) pendingShareJson = text.trim();
+                return;
+            }
+        } else if (Intent.ACTION_VIEW.equals(action)) {
+            uri = intent.getData();
+        }
+        if (uri == null) return;
+        try {
+            byte[] body = readUriLimited(uri, ScheduleShareHelper.MAX_BYTES);
+            if (ScheduleShareHelper.looksLikeShare(body)) {
+                pendingShareJson = new String(body, StandardCharsets.UTF_8);
+            }
+        } catch (Exception ignored) { }
+    }
+
+    private byte[] readUriLimited(Uri uri, int max) throws java.io.IOException {
+        ContentResolver cr = getContentResolver();
+        try (InputStream in = cr.openInputStream(uri)) {
+            return readLimited(in, max);
+        }
+    }
+
+    private void offerPendingShareImport() {
+        final String json = pendingShareJson;
+        if (json == null || isDestroyed()) return;
+        pendingShareJson = null;
+        new AlertDialog.Builder(this)
+                .setTitle("导入分享课表")
+                .setMessage("将覆盖你现有的课表，确定导入？")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("覆盖导入", (d, w) -> new Thread(
+                        () -> postShareImport(json), "jlu-share-import").start())
+                .show();
+    }
+
+    private void postShareImport(String json) {
+        final String b = baseUrl;
+        final String t = authToken;
+        if (b == null) {
+            main.post(() -> Toast.makeText(this, "应用尚未就绪，请稍后在「更多 → 课表分享」里导入",
+                    Toast.LENGTH_LONG).show());
+            return;
+        }
+        HttpURLConnection c = null;
+        try {
+            JSONObject body = new JSONObject();
+            body.put("action", "import");
+            body.put("confirm", true);
+            body.put("doc", new JSONObject(json));
+            byte[] payload = body.toString().getBytes(StandardCharsets.UTF_8);
+            c = (HttpURLConnection) new URL(b + "api/schedule/share").openConnection();
+            if (t != null) c.setRequestProperty(TOKEN_HEADER, t);
+            c.setRequestMethod("POST");
+            c.setConnectTimeout(8000);
+            c.setReadTimeout(20000);
+            c.setDoOutput(true);
+            c.setRequestProperty("Content-Type", "application/json");
+            try (OutputStream o = c.getOutputStream()) { o.write(payload); }
+            int code = c.getResponseCode();
+            InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+            byte[] resp = readLimited(in, ScheduleShareHelper.MAX_BYTES);
+            String text = new String(resp, StandardCharsets.UTF_8);
+            if (code >= 400) {
+                String msg = "导入失败";
+                try {
+                    String err = new JSONObject(text).optString("error");
+                    if (!err.isEmpty()) msg = err;
+                } catch (Exception ignored) { }
+                String toast = msg;
+                main.post(() -> Toast.makeText(this, toast, Toast.LENGTH_LONG).show());
+                return;
+            }
+            main.post(() -> {
+                Toast.makeText(this, "已导入分享课表", Toast.LENGTH_LONG).show();
+                if (web != null) web.reload();
+            });
+        } catch (Exception e) {
+            main.post(() -> Toast.makeText(this, "导入失败", Toast.LENGTH_LONG).show());
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
     public final class PageBridge {
         /** 本机版本号（APK versionName），供「版本」卡片兜底显示。 */
         @JavascriptInterface public String appVersion() { return MainActivity.appVersion(MainActivity.this); }
@@ -397,6 +572,14 @@ public class MainActivity extends Activity {
                 return;
             }
             presentIcs(body.getBytes(StandardCharsets.UTF_8));
+        }
+
+        @JavascriptInterface public void shareSchedule(String body) {
+            if (body == null || body.length() > ScheduleShareHelper.MAX_BYTES) {
+                main.post(() -> Toast.makeText(MainActivity.this, "分享失败", Toast.LENGTH_LONG).show());
+                return;
+            }
+            presentScheduleShare(body.getBytes(StandardCharsets.UTF_8));
         }
     }
 

@@ -401,6 +401,13 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
   <div id="kb-backup-box" hidden><p class="sub">把下面的内容复制下来保存好（比如发给自己），换手机后用「粘贴备份内容」恢复。</p><textarea id="kb-backup-text" readonly rows="5"></textarea><button type="button" class="btn" id="kb-copy">复制</button></div>
   <details style="margin-top:8px"><summary class="sub">粘贴备份内容</summary><textarea id="kb-paste" rows="4" placeholder="把之前复制的备份内容粘贴到这里"></textarea><button type="button" class="btn" id="kb-paste-ok">导入</button></details></details>
   <div class="srow flat"><span>导出到手机日历<small class="sub">课前 15 分钟提醒</small></span><a class="btn" id="ics" href="/api/ics" download>导出</a></div>
+  <details class="srow" id="kb-share-card"><summary>课表分享</summary>
+  <p class="sub">把当前课表发给同学；对方导入后会<strong>覆盖</strong>自己的课表，桌面小组件也会跟着更新。</p>
+  <div class="row" style="margin-top:10px"><a class="btn" id="kb-share" href="/api/schedule/share" download="superjlu-schedule.json">分享课表</a><button type="button" class="btn" id="kb-share-import-btn">导入分享</button><input type="file" id="kb-share-import" accept=".json,application/json,text/plain" hidden></div>
+  <div id="kb-share-box" hidden><p class="sub">也可以复制下面内容发给同学，对方用「粘贴分享内容」导入。</p><textarea id="kb-share-text" readonly rows="5"></textarea><button type="button" class="btn" id="kb-share-copy">复制</button></div>
+  <details style="margin-top:8px"><summary class="sub">粘贴分享内容</summary><textarea id="kb-share-paste" rows="4" placeholder="把同学发来的课表内容粘贴到这里"></textarea><button type="button" class="btn" id="kb-share-paste-ok">导入</button></details>
+  <p class="sub" id="kb-share-hint" style="margin-top:8px" hidden>当前课表来自分享。从教务刷新后会恢复为自己的课表。</p>
+  </details>
  </div>
  <!--BROWSER_PREFERENCES_CARD-->
  <!--ANDROID_EXTRAS_CARD-->
@@ -527,11 +534,12 @@ function kbOpText(o){if(o.op==="add"){const c=o.course||{};return"添加了「"+
 function kbIssueTitle(i){return i.kind==="changed"?"教务更新了这门课":i.kind==="missing"?"这条修改暂未生效":"这条修改已损坏"}
 function kbIssueActions(i){if(i.kind==="invalid")return[["remove","删掉这条修改"]];const a=[["ack","我知道了"]];if(i.kind==="missing"&&i.op==="edit")a.push(["detach","保留为自定义课"]);a.push(["remove","删掉这条修改"]);return a}
 function kbCls(c){return c.src==="cancelled"?" cancelled":c.src==="custom"?" custom":c.src==="edited"?" edited":c.adj?" adjusted":""}
-function kbSrcText(c){if(c.src==="cancelled")return"教务"+(c.adj||"停课");if(c.src==="custom")return"你自己添加的课";if(c.src==="official"&&c.adj)return"教务"+c.adj;if(c.src==="edited"){const t=kbTarget(c.from);return"你改过的课（教务原来是 "+(t.weekday?kbSlot(t):t.name)+"）"}return"教务课表"}
+function kbSrcText(c){if(c.src==="cancelled")return"教务"+(c.adj||"停课");if(c.src==="custom")return"你自己添加的课";if(c.src==="shared")return"分享的课表";if(c.src==="official"&&c.adj)return"教务"+c.adj;if(c.src==="edited"){const t=kbTarget(c.from);return"你改过的课（教务原来是 "+(t.weekday?kbSlot(t):t.name)+"）"}return"教务课表"}
+function kbIsBase(c){return c&&(c.src==="official"||c.src==="shared")}
 function kbCourse(c,patch){return Object.assign({name:c.name,teacher:c.teacher,location:c.location,weekday:c.weekday,start:c.start,end:c.end,weeks:c.weeks},patch||{})}
 function kbOpSet(id){const o=((D&&D.schedule_ops)||[]).find(x=>x.id===id);return(o&&o.set)||{}}
-function kbSkipReq(c,wk){if(c.src==="official")return{action:"hide",target:c.key,jxbid:c.jxbid||undefined,weeks:[wk]};if(c.src==="custom"){const rest=c.weeks.filter(w=>w!==wk);return rest.length?{action:"update",id:c.oid,course:kbCourse(c,{weeks:rest})}:{action:"remove",id:c.oid}}return null}
-function kbDeleteReq(c){return c.src==="official"?{action:"hide",target:c.key,jxbid:c.jxbid||undefined}:{action:"remove",id:c.oid}}
+function kbSkipReq(c,wk){if(kbIsBase(c))return{action:"hide",target:c.key,jxbid:c.jxbid||undefined,weeks:[wk]};if(c.src==="custom"){const rest=c.weeks.filter(w=>w!==wk);return rest.length?{action:"update",id:c.oid,course:kbCourse(c,{weeks:rest})}:{action:"remove",id:c.oid}}return null}
+function kbDeleteReq(c){return kbIsBase(c)?{action:"hide",target:c.key,jxbid:c.jxbid||undefined}:{action:"remove",id:c.oid}}
 function kbEditReq(c,vals,scope,wk){if(c.src==="custom")return{action:"update",id:c.oid,course:kbCourse(c,vals)};const set={};for(const k of Object.keys(KB_FIELD))if(vals[k]!==undefined&&String(vals[k])!==String(c[k]))set[k]=vals[k];if(c.src==="edited")return{action:"update",id:c.oid,set:Object.assign({},kbOpSet(c.oid),set)};return{action:"edit",target:c.key,jxbid:c.jxbid||undefined,weeks:scope==="week"?[wk]:null,set}}
 async function kbPost(body,okMsg){try{const j=await api("/api/schedule/overlay",body);for(const k of Object.keys(j))if(k!=="ok")D[k]=j[k];renderGrid();renderKbExtras();if(okMsg)toast(okMsg);return true}catch(e){toast(e.message,true);return false}}
 function kbOpen(c){if(!c)return;const b=$("#kb-dlg-body"),ed=c.src==="edited";if(c.src==="cancelled"){b.innerHTML=`<h2 style="margin:0 0 6px">${esc(c.name)} <span class="chip">本周停课</span></h2><p class="sub">${esc(kbSlot(c))} · ${esc(c.location)}${c.teacher?" · "+esc(c.teacher):""}<br>${esc(kbSrcText(c))}</p><p class="sub">这节课第 ${esc(c.weeks.join("、"))} 周不上，其他周照常。关闭「更多 → 学期」里的「自动应用调课/停课」可按原始安排显示。</p><div class="row" style="margin-top:12px"><span class="sp"></span><button type="button" class="btn ghost" data-k="close">关闭</button></div>`;b.onclick=e=>{if(e.target.dataset&&e.target.dataset.k==="close")$("#kb-dlg").close()};const d=$("#kb-dlg");if(!d.open)d.showModal();return}
@@ -541,7 +549,7 @@ function kbOpen(c){if(!c)return;const b=$("#kb-dlg-body"),ed=c.src==="edited";if
   if(!confirm(ed?"撤销你对这门课的修改，恢复教务原样？":c.src==="custom"?"删除你添加的「"+c.name+"」？":"在你的课表里隐藏「"+c.name+"」的所有周？刷新课表也不会再出现，可以在「更多 → 我的课表修改」里恢复。"))return;
   if(await kbPost(kbDeleteReq(c),ed?"已恢复教务原样":"已删除"))$("#kb-dlg").close()};
  const d=$("#kb-dlg");if(!d.open)d.showModal()}
-function kbForm(c,seed){const add=!c,custom=add||c.src==="custom",official=!!c&&c.src==="official",mx=maxWeek(),cur=c||Object.assign({name:"",location:"",teacher:"",weekday:1,start:1,end:2,weeks:kbPreset("all",mx)},seed||{});
+function kbForm(c,seed){const add=!c,custom=add||c.src==="custom",official=!!c&&kbIsBase(c),mx=maxWeek(),cur=c||Object.assign({name:"",location:"",teacher:"",weekday:1,start:1,end:2,weeks:kbPreset("all",mx)},seed||{});
  const opt=(n,v,lab)=>`<option value="${n}"${n==v?" selected":""}>${lab}</option>`,secs=Math.max(12,cur.end,...Object.keys(D.periods||{}).map(Number).filter(n=>n>0)),sel=(id,v)=>`<select id="${id}">${Array.from({length:secs},(_,i)=>opt(i+1,v,"第"+(i+1)+"节")).join("")}</select>`;
  const weeksHtml=custom?`<div class="sub" style="margin-top:10px">上课周</div><div class="row" style="margin:4px 0"><button type="button" class="btn ghost" data-p="all">全选</button><button type="button" class="btn ghost" data-p="odd">单周</button><button type="button" class="btn ghost" data-p="even">双周</button><button type="button" class="btn ghost" data-p="none">清空</button></div><div class="wkpick">${Array.from({length:mx},(_,i)=>`<label><input type="checkbox" value="${i+1}"${cur.weeks.includes(i+1)?" checked":""}>${i+1}</label>`).join("")}</div>`:official?`<div class="kb-scope" role="radiogroup" aria-label="修改范围"><label><input type="radio" name="kb-scope" value="week" checked> 只改本周（第${week}周）</label><label><input type="radio" name="kb-scope" value="all"> 所有周</label></div>`:"";
  const b=$("#kb-dlg-body");b.innerHTML=`<h2 style="margin:0 0 10px">${add?"添加课程":"修改「"+esc(c.name)+"」"}</h2>${add&&seed?`<p class="sub" style="margin:0 0 8px">已按空白格填好：${esc(kbSlot(cur))}，${esc(kbWeeks(cur.weeks))}。填写课程名即可保存，星期、节次和周次还能改。</p>`:""}<form id="kb-form" class="kb-form"><label>课程名<input id="kb-f-name" value="${esc(cur.name)}" maxlength="60" required></label><label>地点<input id="kb-f-location" value="${esc(cur.location==="待定"&&add?"":cur.location)}" maxlength="60"></label><label>教师<input id="kb-f-teacher" value="${esc(cur.teacher)}" maxlength="40"></label><div class="row"><label>星期 <select id="kb-f-weekday">${[1,2,3,4,5,6,7].map(d=>opt(d,cur.weekday,"周"+KB_WD[d-1])).join("")}</select></label><label>从 ${sel("kb-f-start",cur.start)}</label><label>到 ${sel("kb-f-end",cur.end)}</label></div>${weeksHtml}<div class="row" style="margin-top:14px"><span class="sp"></span><button type="button" class="btn ghost" id="kb-f-cancel">取消</button><button class="btn pri">保存</button></div></form>`;
@@ -558,7 +566,7 @@ function renderKbExtras(){const is=(D&&D.schedule_issues)||[],box=$("#kb-issues"
  const ops=(D&&D.schedule_ops)||[],n=ops.length,o=(D&&D.schedule_other_terms)||0;
  $("#kb-edits-sum").textContent=(n?`本学期你改了 ${n} 处课表，刷新课表不会覆盖这些修改。`:"你还没有修改过课表。在课表里点一节课就能修改或隐藏，也可以点「＋ 添加课程」，或双击空白格按这一节添加。")+(o?` 其他学期还有 ${o} 处修改，已经保存，不会显示在本学期课表里。`:"");
  $("#kb-edits-list").innerHTML=ops.map(x=>`<div class="kb-op"><span>${esc(kbOpText(x))}</span><button type="button" class="btn ghost" data-a="remove" data-id="${esc(x.id)}">撤销</button></div>`).join("");
- $("#kb-reset").hidden=!n;$("#kb-undo").hidden=!(D&&D.schedule_can_undo_reset)}
+ $("#kb-reset").hidden=!n;$("#kb-undo").hidden=!(D&&D.schedule_can_undo_reset);renderShareHint()}
 const KB_DONE={ack:"好的，不再提醒",detach:"已保留为自定义课",remove:"已删掉这条修改"};
 function kbActionClick(e){const t=e.target.closest&&e.target.closest("button[data-a]");if(t)kbPost({action:t.dataset.a,id:t.dataset.id},KB_DONE[t.dataset.a])}
 function kbImportText(text){let doc;try{doc=JSON.parse(text)}catch(_){return toast("这不是课表修改备份",true)}return kbPost({action:"import",doc},"备份已导入")}
@@ -712,7 +720,7 @@ function widgetExport(d){
  return {v:1,first_monday:String(d.first_monday||"").slice(0,10),periods:per,courses:cs,updated:String(d.updated||"")};
  }
 function widgetPush(){try{if(window.SuperJLU&&SuperJLU.saveWidgetData){const w=widgetExport(D);if(w)SuperJLU.saveWidgetData(JSON.stringify(w))}}catch(_){}}
-function renderAll(){try{renderOffline();renderSession()}catch(_){}widgetPush();
+function renderAll(){try{renderOffline();renderSession()}catch(_){}try{renderShareHint()}catch(_){}widgetPush();
  $("#upd").textContent=D.updated?"更新于 "+D.updated.replace("T"," "):"";
  $("#fm").value=D.first_monday||"";
  const terms=[...new Set(D.grades.map(g=>g.term))].sort().reverse();const tf=$("#termf"),keep=tf.value;
@@ -777,6 +785,15 @@ $("#kb-import").onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.
 $("#kb-paste-ok").onclick=()=>{const t=$("#kb-paste").value.trim();if(!t)return toast("请先粘贴备份内容",true);kbImportText(t).then(ok=>{if(ok)$("#kb-paste").value=""})};
 $("#kb-export").onclick=async e=>{if(!/SuperJLU-Android/.test(navigator.userAgent))return;e.preventDefault();let t;try{t=await fetch("/api/schedule/overlay").then(r=>r.text())}catch(_){return toast("读取备份失败",true)}$("#kb-backup-text").value=t;$("#kb-backup-box").hidden=false;try{const f=new File([t],"superjlu-schedule-edits.json",{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f],title:"SuperJLU 课表修改备份"})}catch(_){}};
 $("#kb-copy").onclick=async()=>{const t=$("#kb-backup-text");t.select();let ok=false;try{await navigator.clipboard.writeText(t.value);ok=true}catch(_){try{ok=document.execCommand("copy")}catch(_){}}toast(ok?"已复制，可以粘贴到聊天或备忘录里保存":"复制失败，请长按文字手动复制",!ok)};
+async function shareImportDoc(doc){if(!confirm("将覆盖你现有的课表，确定导入这份分享课表？"))return false;try{const j=await api("/api/schedule/share",{action:"import",doc,confirm:true});D=j;renderAll();toast("已导入分享课表");return true}catch(e){toast(e.message,true);return false}}
+function shareImportText(text){let doc;try{doc=JSON.parse(text)}catch(_){return toast("这不是课表分享文件",true)}return shareImportDoc(doc)}
+function renderShareHint(){const h=$("#kb-share-hint");if(h)h.hidden=!(D&&D.schedule_shared)}
+$("#kb-share-import-btn").onclick=()=>$("#kb-share-import").click();
+$("#kb-share-import").onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;if(f.size>512*1024)return toast("文件过大（上限 512 KB）",true);const r=new FileReader();r.onload=()=>shareImportText(String(r.result));r.onerror=()=>toast("无法读取这个文件",true);r.readAsText(f)};
+$("#kb-share-paste-ok").onclick=()=>{const t=$("#kb-share-paste").value.trim();if(!t)return toast("请先粘贴分享内容",true);Promise.resolve(shareImportText(t)).then(ok=>{if(ok)$("#kb-share-paste").value=""})};
+async function kbShare(e){if(e)e.preventDefault();if(kbShare.busy)return;kbShare.busy=1;try{const r=await fetch("/api/schedule/share"),text=await r.text();if(!r.ok){let m="分享失败";try{const j=JSON.parse(text);if(j&&j.error)m=j.error}catch(_){}toast(m,true);return}$("#kb-share-text").value=text;$("#kb-share-box").hidden=false;if(window.SuperJLU&&typeof SuperJLU.shareSchedule==="function"){SuperJLU.shareSchedule(text);return}try{const f=new File([text],"superjlu-schedule.json",{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"SuperJLU 课表"});return}}catch(_){}toast("已生成分享内容，可复制发给同学")}catch(err){if(err&&err.name==="AbortError")return;toast("分享失败",true)}finally{kbShare.busy=0}}
+$("#kb-share").onclick=kbShare;
+$("#kb-share-copy").onclick=async()=>{const t=$("#kb-share-text");t.select();let ok=false;try{await navigator.clipboard.writeText(t.value);ok=true}catch(_){try{ok=document.execCommand("copy")}catch(_){}}toast(ok?"已复制，可以发给同学":"复制失败，请长按文字手动复制",!ok)};
 $("#today").onclick=()=>{week=Math.min(Math.max(1,weekOf(new Date())),maxWeek());renderGrid()};
 function kbSwipe(dx,dy,dt,width){
  // 只认「明确、完整的左右滑」：水平位移 ≥ 视图宽度 35%（至少 120px），水平分量 > 2.5 倍竖直分量，且速度够快（≥0.3px/ms，≤900ms）。返回 1=下一周，-1=上一周，0=不切换。
