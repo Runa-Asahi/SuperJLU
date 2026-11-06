@@ -52,6 +52,10 @@ def test_app_name_icon_and_insets():
     assert "setInsetHeight(R.id.status_inset" in act and "setInsetHeight(R.id.nav_inset" in act
     assert "#0B4EA2" not in act and "#f6f7f9" in act and "#ffffff" in act
     assert "shareIcs" in act and "/api/ics" in act
+    assert "shareSchedule" in act and "/api/schedule/share" in act
+    helper = ANDROID / "java/cn/superjlu/app/ScheduleShareHelper.java"
+    assert helper.is_file() and "superjlu.schedule.share" in helper.read_text(encoding="utf-8")
+    assert "singleTop" in man and "android.intent.action.SEND" in man
     layout = (ANDROID / "res" / "layout" / "activity_main.xml").read_text(encoding="utf-8")
     assert "#0B4EA2" not in layout and "status_inset" in layout and "nav_inset" in layout
     assert "ExportProvider" in (ANDROID / "AndroidManifest.xml").read_text(encoding="utf-8")

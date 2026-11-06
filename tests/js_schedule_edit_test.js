@@ -3,8 +3,8 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const src=fs.readFileSync(__dirname+'/../jlu_toolkit/ui_page.py','utf8').split('\n');
 const pick=n=>{const i=src.findIndex(l=>l.startsWith(n));if(i<0)throw Error('missing '+n);let j=i+1;while(j<src.length&&/^[ \t]/.test(src[j]))j++;return src.slice(i,j).join('\n')};
 const names=['function nextClass(','function nextClassLabel(','const KB_WD=','const KB_FIELD=','function kbSlot(','function kbOcc(','function kbBlankSeed(','function kbWeeks(','function kbPreset(','function kbTarget(','function kbOpText(',
- 'function kbIssueTitle(','function kbIssueActions(','function kbCls(','function kbSrcText(','function kbCourse(','function kbOpSet(','function kbSkipReq(',
- 'function kbDeleteReq(','function kbEditReq(','function adjInfoText(','function renderAdjToggle(','function renderKbExtras(','const KB_DONE=','function kbActionClick(','function kbImportText(','async function kbPost('];
+ 'function kbIssueTitle(','function kbIssueActions(','function kbCls(','function kbSrcText(','function kbIsBase(','function kbCourse(','function kbOpSet(','function kbSkipReq(',
+ 'function kbDeleteReq(','function kbEditReq(','function adjInfoText(','function renderAdjToggle(','function renderShareHint(','function renderKbExtras(','const KB_DONE=','function kbActionClick(','function kbImportText(','async function kbPost('];
 const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{id,hidden:false,innerHTML:'',textContent:''});return nodes.get(id)};
 const calls=[],toasts=[];
 const ctx=vm.createContext({D:null,$:node,esc:s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';'),toast:(m,bad)=>toasts.push([m,!!bad]),
