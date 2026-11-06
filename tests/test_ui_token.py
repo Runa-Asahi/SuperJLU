@@ -207,4 +207,4 @@ def test_main_activity_sends_token():
     act = next((Path(__file__).resolve().parents[1] / "android").rglob("MainActivity.java")).read_text(encoding="utf-8")
     assert f'TOKEN_COOKIE = "{ui.TOKEN_COOKIE}"' in act and f'TOKEN_HEADER = "{ui.TOKEN_HEADER}"' in act
     assert 'callAttr("auth_token")' in act and "CookieManager" in act and "HttpOnly" in act
-    assert act.count("setRequestProperty(TOKEN_HEADER") == 2  # keepalive 和 ics 兜底下载
+    assert act.count("setRequestProperty(TOKEN_HEADER") == 4  # keepalive、ics 兜底下载、课表分享导出、课表分享导入
