@@ -603,6 +603,18 @@ public class MainActivity extends Activity {
             }
             presentScheduleShare(body.getBytes(StandardCharsets.UTF_8));
         }
+
+        /** 网页在用户手势里打开外链：复用 BrowserPicker，不依赖 target=_blank。 */
+        @JavascriptInterface public void openExternal(String url) {
+            final Uri uri;
+            try {
+                uri = Uri.parse(url == null ? "" : url.trim());
+            } catch (RuntimeException bad) {
+                main.post(() -> Toast.makeText(MainActivity.this, R.string.browser_unsupported, Toast.LENGTH_SHORT).show());
+                return;
+            }
+            main.post(() -> browsers.open(uri));
+        }
     }
 
     /**
