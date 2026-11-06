@@ -80,13 +80,13 @@ nav button.on{color:var(--pri);font-weight:650;background:var(--pri2)}
 .banner.slim{align-items:center;gap:8px;padding:7px 12px;margin-bottom:8px}
 .banner.slim span{flex:1;min-width:0;font-size:13px;font-weight:650;color:var(--warn)}
 .banner.slim .btn{padding:4px 12px;font-size:13px}
-.grid{display:grid;grid-template-columns:22px repeat(7,minmax(0,1fr));gap:4px;margin-top:12px}
-.card.kb{padding:14px 10px}
-.grid .h{font-size:11px;line-height:1.35;color:var(--sub);text-align:center;padding:4px 0;border-radius:10px}
+.grid{display:grid;grid-template-columns:22px repeat(7,minmax(0,1fr));grid-template-rows:auto;grid-auto-rows:34px;gap:2px;margin-top:10px;align-items:stretch}
+.card.kb{padding:12px 8px}
+.grid .h{font-size:11px;line-height:1.25;color:var(--sub);text-align:center;padding:3px 0;border-radius:8px}
 .grid .h.today{color:var(--pri);font-weight:700;background:var(--pri2)}
-.grid .p{font-size:11px;color:var(--sub);text-align:center;display:flex;align-items:center;justify-content:center;line-height:1.15}
-.grid .p em{font-style:normal;font-size:8.5px;opacity:.8}.grid .p em.pe{opacity:.5}
-@media(min-width:640px){.grid .p em{font-size:10px}}
+.grid .p{font-size:11px;color:var(--sub);text-align:center;display:flex;align-items:center;justify-content:center;line-height:1.1;min-height:0;overflow:hidden}
+.grid .p em{font-style:normal;font-size:8px;opacity:.8}.grid .p em.pe{display:none}
+@media(min-width:640px){.grid .p em{font-size:10px}.grid .p em.pe{display:inline;opacity:.5}}
 .off-card h3{font-size:15px;margin:0 0 10px;font-weight:680}.ogpa{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px 20px}
 .ogpa div{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding:7px 0;font-size:13.5px}.ogpa b{color:var(--pri);font-variant-numeric:tabular-nums;font-size:15px}
 .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--pri);border-radius:99px;transition:width .4s}
@@ -95,19 +95,27 @@ nav button.on{color:var(--pri);font-weight:650;background:var(--pri2)}
 .miss,.done{display:inline-block;font-weight:600;font-size:12px;padding:1px 9px;border-radius:99px;line-height:1.6}
 .miss{color:var(--bad);background:var(--bad2)}.done{color:var(--ok);background:var(--ok2)}
 .big{font-size:34px;font-weight:750;color:var(--txt);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-.cell{min-height:46px;border-radius:10px;background:var(--card2);border:1px dashed var(--line);cursor:pointer}
+.cell{min-height:0;border-radius:8px;background:var(--card2);border:1px dashed var(--line);cursor:pointer}
 .cell{position:relative}.cell::after{content:"双击添加课程";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:2px;font-size:10px;line-height:1.2;color:var(--pri);opacity:0;transition:opacity .15s;pointer-events:none}
 @media(hover:hover){.cell:hover{background:color-mix(in srgb,var(--pri) 12%,var(--card2));border-color:color-mix(in srgb,var(--pri) 55%,var(--line))}.cell:hover::after{opacity:.85}}
 .cell.hint,.cell:focus-visible{background:color-mix(in srgb,var(--pri) 12%,var(--card2));border-color:color-mix(in srgb,var(--pri) 55%,var(--line))}.cell.hint::after,.cell:focus-visible::after{opacity:.85}
-.cls{border-radius:10px;padding:4px 5px;font-size:10.5px;line-height:1.3;color:#fff;overflow:hidden;word-break:break-all;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
-.cls b{display:block;font-size:11px;font-weight:650}
-@media(min-width:640px){.grid{grid-template-columns:36px repeat(7,minmax(0,1fr))}.cls{font-size:12.5px;padding:7px 8px}.cls b{font-size:13.5px}.cell{min-height:52px}}
-.cls i{font-style:normal;opacity:.9}.cls i.tm span{display:inline-block;white-space:nowrap}.cls i.tm{display:block;margin-top:1px;font-size:.92em;opacity:.8;font-variant-numeric:tabular-nums}
+.cls{border-radius:8px;padding:2px 3px;font-size:10.5px;line-height:1.2;color:#fff;overflow:hidden;min-height:0;height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:1px;word-break:break-word;overflow-wrap:anywhere;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.cls b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;font-size:11px;font-weight:650;line-height:1.25;max-height:2.5em}
+.cls>i:not(.tm){display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;line-clamp:1;overflow:hidden;font-style:normal;opacity:.9;line-height:1.2;max-height:1.2em}
+.cls i.tm{display:none}.cls i.tm span{display:inline-block;white-space:nowrap}
 .cls{cursor:pointer;position:relative}.cls:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
 .cls.custom{outline:2px dashed rgba(255,255,255,.95);outline-offset:-3px}
-.cls.edited::after,.cls.custom::after,.cls.adjusted::after,.cls.cancelled::after{position:absolute;bottom:2px;right:2px;font-size:9px;font-weight:700;font-style:normal;line-height:14px;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.92);color:#333}
+.cls.edited::after,.cls.custom::after,.cls.adjusted::after,.cls.cancelled::after{position:absolute;bottom:1px;right:1px;z-index:1;font-size:9px;font-weight:700;font-style:normal;line-height:13px;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.92);color:#333;pointer-events:none}
 .cls.edited::after{content:"改"}.cls.custom::after{content:"自"}.cls.adjusted::after{content:"调";background:#ffe08a}
 .cls.cancelled{opacity:.62;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}.cls.cancelled b,.cls.cancelled i{text-decoration:line-through}.cls.cancelled::after{content:"停";background:#fff;color:#b42318}
+/* 宽松模式：行高更大、显示块内时间，仍保留 clamp，避免长课名撑高整行 */
+.grid.kb-comfy{grid-auto-rows:44px;gap:4px;margin-top:12px}
+.grid.kb-comfy .p em.pe{display:inline;opacity:.5}
+.grid.kb-comfy .cls{padding:4px 5px;border-radius:10px;line-height:1.3;gap:2px}
+.grid.kb-comfy .cls i.tm{display:block;margin-top:1px;font-size:.92em;opacity:.8;font-variant-numeric:tabular-nums;font-style:normal}
+.grid.kb-comfy .cell,.grid.kb-comfy .cls{border-radius:10px}
+@media(min-width:640px){.grid{grid-template-columns:36px repeat(7,minmax(0,1fr));grid-auto-rows:40px}.cls{font-size:12px;padding:4px 6px}.cls b{font-size:12.5px}.grid.kb-comfy{grid-auto-rows:52px}.grid.kb-comfy .cls{font-size:12.5px;padding:7px 8px}.grid.kb-comfy .cls b{font-size:13.5px}}
+.kb-compact-lab{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:13px;font-weight:600;color:var(--txt);user-select:none}.kb-compact-lab input{width:16px;height:16px}
 .adj-toggle{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:600}.adj-toggle input{width:18px;height:18px}
 .kb-tools{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 #kb-issues{border-left:4px solid #e0a106}#kb-issues .kb-iss{border-top:1px solid var(--line);padding:10px 0 4px}#kb-issues .kb-iss:first-of-type{border-top:0}
@@ -294,7 +302,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
   <div class="kb-next" id="kb-next" hidden></div>
   <div class="row wk"><button class="btn ghost" id="prev">‹</button><div class="n" id="wkn">第 1 周</div><button class="btn ghost" id="next">›</button><span class="sp"></span><button class="btn" id="today">本周</button></div>
   <div class="grid" id="grid"></div>
-  <div class="kb-tools"><button type="button" class="btn" id="kb-add">＋ 添加课程</button><span class="sub" style="align-self:center">点一节课可以修改或隐藏，双击空白格添加这一节</span></div>
+  <div class="kb-tools"><button type="button" class="btn" id="kb-add">＋ 添加课程</button><label class="kb-compact-lab" title="收紧行高，一屏多看几节；点课程仍可看全文"><input type="checkbox" id="kb-compact" checked> 紧凑显示</label><span class="sub" style="align-self:center">点一节课可以修改或隐藏，双击空白格添加这一节</span></div>
  </div>
 </section>
 <section class="tab" id="t-cj">
@@ -387,7 +395,7 @@ dialog#login .vpn-hint a{color:var(--pri);font-weight:600}
  </div>
  <div class="card sl"><h2>设置</h2>
   <div class="srow flat"><span>外观</span><div class="thm" role="group" aria-label="外观"><button type="button" data-theme="system" aria-pressed="true" title="跟随系统">跟随系统</button><button type="button" data-theme="light" aria-pressed="false" title="浅色">浅色</button><button type="button" data-theme="dark" aria-pressed="false" title="深色">深色</button></div></div>
-  <details class="srow"><summary>学期与调课</summary><p class="sub" id="calinfo"></p><details><summary class="sub">手动设置开学日期</summary><div class="row" style="margin-top:8px"><input type="date" id="fm"><button class="btn pri" id="savefm">保存覆盖</button><button class="btn ghost" id="clrfm">恢复教务校历</button></div></details><label class="adj-toggle"><input type="checkbox" id="adj-on" checked> 自动应用调课/停课</label><p class="sub" id="adj-info" style="margin:4px 0 0"></p></details>
+  <details class="srow"><summary>学期与调课</summary><p class="sub" id="calinfo"></p><details><summary class="sub">手动设置开学日期</summary><div class="row" style="margin-top:8px"><input type="date" id="fm"><button class="btn pri" id="savefm">保存覆盖</button><button class="btn ghost" id="clrfm">恢复教务校历</button></div></details><label class="adj-toggle"><input type="checkbox" id="adj-on" checked> 自动应用调课/停课</label><p class="sub" id="adj-info" style="margin:4px 0 0"></p><label class="adj-toggle"><input type="checkbox" id="kb-compact-sz" checked> 课表紧凑显示</label><p class="sub" style="margin:4px 0 0">默认开启：一屏多看几节；关闭后行高更大。点课程块可看全文。</p></details>
   <details class="srow" id="kb-edits-card"><summary>我的课表修改</summary><p class="sub" id="kb-edits-sum"></p><div id="kb-edits-list"></div>
   <div class="row" style="margin-top:10px"><a class="btn" id="kb-export" href="/api/schedule/overlay" download="superjlu-schedule-edits.json">导出备份</a><button type="button" class="btn" id="kb-import-btn">导入备份</button><input type="file" id="kb-import" accept=".json,application/json,text/plain" hidden><button type="button" class="btn ghost" id="kb-reset" hidden>恢复教务原样</button><button type="button" class="btn ghost" id="kb-undo" hidden>撤销恢复</button></div>
   <div id="kb-backup-box" hidden><p class="sub">把下面的内容复制下来保存好（比如发给自己），换手机后用「粘贴备份内容」恢复。</p><textarea id="kb-backup-text" readonly rows="5"></textarea><button type="button" class="btn" id="kb-copy">复制</button></div>
@@ -496,8 +504,8 @@ function renderGrid(){
  days.forEach((d,i)=>{let lab="周"+d,today=false;if(fm){const dd=new Date(fm+"T00:00:00");dd.setDate(dd.getDate()+(week-1)*7+i);lab+=`<br>${dd.getMonth()+1}/${dd.getDate()}`;today=dd.toDateString()===now.toDateString()}html+=`<div class="h${today?" today":""}">${lab}</div>`});
  const cs=KB_CS=D.courses.filter(c=>c.weeks.includes(week)),PM=periodMap();
  const maxP=Math.max(11,...cs.map(c=>c.end));
- for(let p=1;p<=maxP;p++){const pt=PM[p]||PM[String(p)];html+=`<div class="p" style="grid-row:${p+1};grid-column:1;flex-direction:column">${p}${pt?`<em>${pt[0]}</em>${pt[1]?`<em class="pe">${pt[1]}</em>`:""}`:""}</div>`;for(let d=1;d<=7;d++)html+=`<div class="cell" style="grid-row:${p+1};grid-column:${d+1}"></div>`}
- cs.forEach((c,i)=>{html+=`<div class="cls${kbCls(c)}" data-i="${i}" role="button" tabindex="0" style="grid-row:${c.start+1}/${c.end+2};grid-column:${c.weekday+1};background:${c.src==="cancelled"?"#8a9099":color(c.name)}"><b>${esc(c.name)}</b><i>${esc(c.location)}</i>${kbTime(c,PM)?`<i class="tm">${kbTime(c,PM).split("–").map((t,k)=>`<span>${k?"–":""}${t}</span>`).join("")}</i>`:""}</div>`});
+ for(let p=1;p<=maxP;p++){const pt=PM[p]||PM[String(p)];html+=`<div class="p" style="grid-row:${p+1};grid-column:1;flex-direction:column">${p}${pt?`<em>${pt[0]}</em>${pt[1]?`<em class="pe">${pt[1]}</em>`:""}`:""}</div>`;for(let d=1;d<=7;d++)html+=`<div class="cell" data-d="${d}" data-p="${p}" style="grid-row:${p+1};grid-column:${d+1}"></div>`}
+ cs.forEach((c,i)=>{const tip=esc([c.name,c.location,kbTime(c,PM)].filter(Boolean).join(" · "));html+=`<div class="cls${kbCls(c)}" data-i="${i}" role="button" tabindex="0" title="${tip}" style="grid-row:${c.start+1}/${c.end+2};grid-column:${c.weekday+1};background:${c.src==="cancelled"?"#8a9099":color(c.name)}"><b>${esc(c.name)}</b><i>${esc(c.location)}</i>${kbTime(c,PM)?`<i class="tm">${kbTime(c,PM).split("–").map((t,k)=>`<span>${k?"–":""}${t}</span>`).join("")}</i>`:""}</div>`});
 
  g.innerHTML=html;
  if(!D.courses.length)g.insertAdjacentHTML("afterend",'<p class="empty" id="noc">还没有课表数据，点右上角「刷新」同步</p>');
@@ -748,6 +756,11 @@ function renderSession(){try{renderNextClass()}catch(_){}const box=$("#sess"),s=
 setInterval(()=>{try{if(D)renderNextClass()}catch(_){}},60000);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)return;try{renderNextClass()}catch(_){}});
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));b.classList.add("on");$("#t-"+b.dataset.t).classList.add("on");scrollTo(0,0);scheduleGradeCompact();try{renderSession()}catch(_){}if(b.dataset.t==="cj"&&!gradeHelpSeen())openGradeHelp()});
+function kbCompactOn(){try{return localStorage.getItem("jlu-kb-compact")!=="false"}catch(_){return true}}
+function applyKbCompact(){const on=kbCompactOn(),g=$("#grid");if(g)g.classList.toggle("kb-comfy",!on);for(const id of["kb-compact","kb-compact-sz"]){const el=$(`#${id}`);if(el)el.checked=on}}
+function setKbCompact(on){try{localStorage.setItem("jlu-kb-compact",on?"true":"false")}catch(_){}applyKbCompact()}
+applyKbCompact();
+for(const id of["kb-compact","kb-compact-sz"]){const el=$(`#${id}`);if(el)el.onchange=()=>setKbCompact(el.checked)}
 $("#prev").onclick=()=>{if(week>1){week--;renderGrid()}};$("#next").onclick=()=>{if(week<maxWeek()){week++;renderGrid()}};
 function kbAddAt(el){if(!el||!el.classList||!el.classList.contains("cell"))return;const now=Date.now();if(kbAddAt.lock&&now-kbAddAt.lock<500)return;const maxP=Math.max(11,...(KB_CS||[]).map(c=>+c.end||0));const seed=kbBlankSeed(+el.dataset.d,+el.dataset.p,kbOcc(KB_CS),week,maxP);if(!seed)return;kbAddAt.lock=now;kbForm(null,seed)}
 $("#grid").addEventListener("click",e=>{const el=e.target.closest(".cls");if(el)return kbOpen(KB_CS[+el.dataset.i]);const c=e.target.closest(".cell");if(c&&e.detail<2)kbHint(c)});
