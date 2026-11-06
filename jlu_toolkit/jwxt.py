@@ -23,6 +23,7 @@ import http.client
 import json
 import os
 import re
+import threading
 import ssl
 import time
 import urllib.error
@@ -142,6 +143,18 @@ class PendingSecondFactor:
     execution: str
     event_id: str = "submit"
     service: str = CAS_SERVICE
+
+
+# 本进程内已保存会话的「代数」：每次写入默认会话文件 +1（见 save_session）
+_SESSION_GEN = 0
+_SESSION_LOCK = threading.Lock()
+
+
+def bump_session_gen() -> None:
+    """登录状态在 save_session 之外被写入（如 WebVPN 登录单独保存 CAS/VPN Cookie）时调用。"""
+    global _SESSION_GEN
+    with _SESSION_LOCK:
+        _SESSION_GEN += 1
 
 
 def config_dir() -> Path:
@@ -678,10 +691,26 @@ class JwxtClient:
             raise NetworkError(message, kind) from e
 
     def save_session(self, path: Optional[Path] = None) -> Path:
-        """保存 cookie（加密存储见 secure_store），并把会话状态记为 ok。"""
+        """保存 cookie（加密存储见 secure_store），并把会话状态记为 ok。
+
+        读取过已保存会话的请求，如果在它读取之后别的请求（典型是刚完成的登录）已经写过新会话，
+        就不再覆盖：否则登录前开始、登录后才结束的请求会把旧的失效 Cookie 写回去，
+        紧接着的刷新就会报「统一认证的登录状态已失效」。
+        """
+        global _SESSION_GEN
         path = path or default_session_path()
-        out = _secret(path).save({"cookies": jar_to_list(self.jar)})
-        if path == default_session_path():
+        default = path == default_session_path()
+        with _SESSION_LOCK:
+            loaded = getattr(self, "_loaded_gen", None)
+            if default and loaded is not None and loaded != _SESSION_GEN:
+                self._dbg(step="session_save_skipped", reason="newer_session_on_disk")
+                return path
+            out = _secret(path).save({"cookies": jar_to_list(self.jar)})
+            if default:
+                _SESSION_GEN += 1
+                if loaded is not None:
+                    self._loaded_gen = _SESSION_GEN
+        if default:
             _write_session_status(SESSION_OK)
             try:  # CAS 单点登录状态单独加密保存（站点 'cas'），供会话过期时静默换票
                 from . import sessions
@@ -711,6 +740,7 @@ class JwxtClient:
 
     def load_session(self, path: Optional[Path] = None) -> bool:
         path = path or default_session_path()
+        gen = _SESSION_GEN
         try:
             data = _secret(path).load()
         except secure_store.SecureStoreError:
@@ -718,6 +748,8 @@ class JwxtClient:
         if not isinstance(data, dict):
             return False
         self.jar = jar_from_list(data.get("cookies") or [])
+        if path == default_session_path():
+            self._loaded_gen = gen
         self._rebuild_opener()
         try:  # 旧会话可能已含 CAS cookie，但站点 cas 为空（#20 之前登录的）
             from . import sessions
@@ -727,8 +759,12 @@ class JwxtClient:
         return True
 
     def clear_session_file(self, path: Optional[Path] = None) -> None:
+        global _SESSION_GEN
         path = path or default_session_path()
-        _secret(path).delete()
+        with _SESSION_LOCK:
+            _secret(path).delete()
+            if path == default_session_path():
+                _SESSION_GEN += 1  # 退出登录后，进行中的旧请求不能把会话写回来
 
     def session_alive(self) -> bool:
         """探测已保存会话是否还能访问教务（不落在 CAS 登录页）。"""
