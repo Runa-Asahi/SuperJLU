@@ -23,4 +23,32 @@ async function main(){
  request=ctx.openOA('a');ctx.oaLeave();pending.shift().resolve(result);await request;assert.equal($('#oa-detail-v').hidden,true);assert.equal(history.state.sjNotice,undefined);
  console.log('Notice navigation: scroll restoration, browser back/forward, loading/error back and stale responses passed.');
 }
+function roomChecks(){
+ const start=source.indexOf('// Room detail navigation:'),end=source.indexOf('function showRoomDetail(',start);
+ const actions=[],frames=[],listeners={},stack=[{}];let index=0,y=2400,focus=0;
+ const dialog={open:false,close(){if(this.open){this.open=false;actions.push(()=>listeners.close?.({}))}}};
+ const history={scrollRestoration:'auto',get state(){return stack[index]},pushState(s){stack.splice(++index);stack[index]=s},replaceState(s){stack[index]=s},back(){actions.push(()=>{if(index)index--;listeners.popstate({state:stack[index]})})}};
+ const query={periods:[1,2]},room={name:'Synthetic classroom'};
+ const c=vm.createContext({history,get scrollY(){return y},scrollTo(o){y=o.top},requestAnimationFrame:f=>frames.push(f),ROOM_DETAIL:null,ROOM_RESULT:query,roomBackdropStart:null,
+  $:()=>dialog,window:{addEventListener:(n,f)=>listeners[n]=f},document:{activeElement:{isConnected:true,focus(o){assert.equal(o.preventScroll,true);focus++}},querySelector:()=>({click(){}})}});
+ vm.runInContext(source.slice(start,end),c);
+ c.showRoomDetail=(r,j,b,entry)=>{if(c.roomHistoryOpen(r,j,b,entry)){dialog.open=true;c.ROOM_DETAIL={room:r,j,block:b}}};
+ const flush=()=>{while(actions.length)actions.shift()();frames.splice(0).forEach(f=>f())};
+ // Execute production cancel/close handlers too (the backdrop is tested separately).
+ dialog.addEventListener=(n,f)=>listeners[n]=f;
+ vm.runInContext(source.split('\n').filter(l=>l.startsWith('$("#room-detail").addEventListener("cancel"')||l.startsWith('$("#room-detail").addEventListener("close"')).join('\n'),c);
+ c.showRoomDetail(room,query,-1);assert.equal(index,1);assert.equal(dialog.open,true);
+ // Browser/WebView Back closes only the dialog and keeps the result position.
+ index--;listeners.popstate({state:stack[index]});flush();assert.equal(dialog.open,false);assert.equal(y,2400);assert.equal(c.ROOM_DETAIL,null);assert.equal(history.scrollRestoration,'auto');assert.equal(focus,1);
+ // Forward reopens the saved classroom without inserting another history entry.
+ index++;listeners.popstate({state:stack[index]});assert.equal(dialog.open,true);assert.equal(stack.length,2);
+ let cancelled=false;listeners.cancel({preventDefault(){cancelled=true}});flush();assert.ok(cancelled);assert.equal(index,0);assert.equal(dialog.open,false);
+ // X/backdrop share one close path; duplicate closes must not back out of the app.
+ c.showRoomDetail(room,query,-1);c.closeRoomDetail();c.closeRoomDetail();flush();assert.equal(index,0);assert.equal(dialog.open,false);
+ // Programmatic closure (new query) also consumes its history marker once.
+ c.showRoomDetail(room,query,-1);dialog.close();flush();assert.equal(index,0);assert.equal(c.ROOM_DETAIL,null);
+ c.showRoomDetail(room,query,-1);c.roomLeave();flush();assert.equal(dialog.open,false);assert.equal(history.state.sjRoom,undefined);
+ console.log('Room navigation: Back/Forward, Escape, repeated close, programmatic close, tab leave and result position passed.');
+}
+roomChecks();
 main().catch(e=>{console.error(e);process.exitCode=1});

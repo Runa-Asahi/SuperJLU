@@ -757,7 +757,7 @@ function renderSession(){try{renderNextClass()}catch(_){}const box=$("#sess"),s=
  box.innerHTML=`<div class="banner slim" role="status"><span>${s.missing?"尚未登录":(D&&D.session_site?esc(SITEN(D.session_site))+" ":"")+"登录已过期"}</span><button class="btn" type="button" onclick="openLogin()">${s.missing?"登录":"重新登录"}</button></div>`}
 setInterval(()=>{try{if(D)renderNextClass()}catch(_){}},60000);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)return;try{renderNextClass()}catch(_){}});
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.t!=="oa"&&typeof oaLeave==="function")oaLeave();document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));b.classList.add("on");$("#t-"+b.dataset.t).classList.add("on");scrollTo(0,0);scheduleGradeCompact();try{renderSession()}catch(_){}if(b.dataset.t==="cj"&&!gradeHelpSeen())openGradeHelp()});
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.t!=="js"&&typeof roomLeave==="function")roomLeave();if(b.dataset.t!=="oa"&&typeof oaLeave==="function")oaLeave();document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));b.classList.add("on");$("#t-"+b.dataset.t).classList.add("on");scrollTo(0,0);scheduleGradeCompact();try{renderSession()}catch(_){}if(b.dataset.t==="cj"&&!gradeHelpSeen())openGradeHelp()});
 function kbCompactOn(){try{return localStorage.getItem("jlu-kb-compact")!=="false"}catch(_){return true}}
 function applyKbCompact(){const on=kbCompactOn(),g=$("#grid");if(g)g.classList.toggle("kb-comfy",!on);for(const id of["kb-compact","kb-compact-sz"]){const el=$(`#${id}`);if(el)el.checked=on}}
 function setKbCompact(on){try{localStorage.setItem("jlu-kb-compact",on?"true":"false")}catch(_){}applyKbCompact()}
@@ -965,8 +965,15 @@ function paintRoomColors(){
  });
 }
 function roomScrollTo(selector){requestAnimationFrame(()=>{const el=$(selector);if(!el)return;const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;el.scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});if(selector==="#rres")el.focus({preventScroll:true})})}
-function showRoomDetail(room,j,block=-1){
- ROOM_DETAIL={room,j,block};$("#room-detail-title").textContent=roomCardName(room);
+// Room detail navigation: keep browser/WebView Back inside the application.
+let ROOM_NAV=null,ROOM_NAV_SAVED=null,ROOM_NAV_SERIAL=0,ROOM_NAV_RETURNING=false;
+function roomHistoryOpen(room,j,block,entry=null){if(ROOM_NAV_RETURNING)return false;if(!$("#room-detail").open){const nav=entry||{key:++ROOM_NAV_SERIAL,room,j,block,y:scrollY,restoration:history.scrollRestoration,focus:document.activeElement};ROOM_NAV=ROOM_NAV_SAVED=nav;history.scrollRestoration="manual";if(!entry)history.pushState({...history.state,sjRoom:nav.key},"")}return true}
+function roomFinishClose(restore=true){const nav=ROOM_NAV;ROOM_NAV=null;ROOM_DETAIL=null;ROOM_NAV_RETURNING=false;roomBackdropStart=null;if(nav){if(restore)scrollTo({top:nav.y,left:0,behavior:"instant"});requestAnimationFrame(()=>{if(!ROOM_NAV){history.scrollRestoration=nav.restoration;if(restore&&nav.focus&&nav.focus.isConnected)nav.focus.focus({preventScroll:true})}})}}
+function closeRoomDetail(fromHistory=false){const dialog=$("#room-detail");if(dialog.open)dialog.close();if(ROOM_NAV&&!fromHistory&&history.state&&history.state.sjRoom===ROOM_NAV.key){if(!ROOM_NAV_RETURNING){ROOM_NAV_RETURNING=true;history.back()}}else roomFinishClose()}
+function roomLeave(){if(!ROOM_NAV)return;const state={...history.state};delete state.sjRoom;history.replaceState(state,"");$("#room-detail").close();roomFinishClose(false)}
+window.addEventListener("popstate",e=>{const key=e.state&&e.state.sjRoom;if(key&&ROOM_NAV_SAVED&&key===ROOM_NAV_SAVED.key&&ROOM_RESULT===ROOM_NAV_SAVED.j){const n=ROOM_NAV_SAVED;document.querySelector('nav button[data-t="js"]').click();showRoomDetail(n.room,n.j,n.block,n)}else if(ROOM_NAV)closeRoomDetail(true)});
+function showRoomDetail(room,j,block=-1,entry=null){
+ if(!roomHistoryOpen(room,j,block,entry))return;ROOM_DETAIL={room,j,block};$("#room-detail-title").textContent=roomCardName(room);
  $("#room-detail-hint").textContent=j.day?"全天 12 节分别显示：绿色为空闲，灰色为无空闲记录，虚线为尚未确认。":"所选时段空闲 · 以本次教务查询结果为准";
  const fields=[["教室全名",room.name],["校区",room.campus],["教学楼",room.building],["教室类型",room.kind],["上课座位数",room.seats],["考试座位数",room.exam_seats],["查询日期",roomQueryLabel(j)],["查询节次",`第 ${j.periods[0]}–${j.periods[1]} 节`],["空闲日期",room.free_date],["空闲节次",room.free_periods],["空闲时间",room.free_time]];
  $("#room-detail-fields").innerHTML=fields.map(([label,value])=>`<dt>${esc(label)}</dt><dd>${esc(value==null||value===""?"未提供":String(value))}</dd>`).join("");
@@ -980,13 +987,14 @@ function renderRoomDayDetail(){
  if($("#room-day-retry"))$("#room-day-retry").onclick=()=>loadRoomDay(j,ROOM_REQUEST);
  document.querySelectorAll("#room-detail-day [data-room-day-block]").forEach(b=>b.onclick=()=>{ROOM_DETAIL.block=+b.dataset.roomDayBlock;renderRoomDayDetail();$(`#room-detail-day [data-detail-block="${ROOM_DETAIL.block}"]`).scrollIntoView({block:"nearest",behavior:"auto"})});
 }
-$("#room-detail-close").onclick=()=>$("#room-detail").close();
+$("#room-detail-close").onclick=()=>closeRoomDetail();
 let roomBackdropStart=null;
 function roomDetailOutside(e){const dialog=$("#room-detail"),r=dialog.getBoundingClientRect();return e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)}
 $("#room-detail").addEventListener("pointerdown",e=>{roomBackdropStart=roomDetailOutside(e)?{x:e.clientX,y:e.clientY}:null});
 $("#room-detail").addEventListener("pointercancel",()=>{roomBackdropStart=null});
-$("#room-detail").addEventListener("click",e=>{const start=roomBackdropStart;roomBackdropStart=null;if(start&&roomDetailOutside(e)&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<12)$("#room-detail").close()});
-$("#room-detail").addEventListener("close",()=>{ROOM_DETAIL=null;roomBackdropStart=null});
+$("#room-detail").addEventListener("click",e=>{const start=roomBackdropStart;roomBackdropStart=null;if(start&&roomDetailOutside(e)&&Math.hypot(e.clientX-start.x,e.clientY-start.y)<12)closeRoomDetail()});
+$("#room-detail").addEventListener("cancel",e=>{e.preventDefault();closeRoomDetail()});
+$("#room-detail").addEventListener("close",()=>{if(!$("#room-detail").open)closeRoomDetail()});
 window.addEventListener("resize",paintRoomColors);
 function roomDayGauge(r,j,index){
  const stats=roomDayStats(r,j);
