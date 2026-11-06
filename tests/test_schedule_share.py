@@ -68,10 +68,12 @@ def test_parse_rejects_bad_json_unknown_fields_sensitive_and_huge():
         ss.parse("{nope")
     with pytest.raises(ValueError, match="不是"):
         ss.parse({"version": 1, "courses": []})
-    with pytest.raises(ValueError, match="无法识别"):
+    with pytest.raises(ValueError, match="账号或登录"):
         ss.parse({"kind": ss.KIND, "version": 1, "courses": [], "password": "x"})
     with pytest.raises(ValueError, match="账号或登录"):
         ss.parse({"kind": ss.KIND, "version": 1, "courses": [], "nested": {"access_token": "x"}})
+    with pytest.raises(ValueError, match="无法识别"):
+        ss.parse({"kind": ss.KIND, "version": 1, "courses": [], "extra_field": 1})
     with pytest.raises(ValueError, match="过大"):
         ss.parse(b"{" + b"a" * (ss.MAX_BYTES + 10))
     with pytest.raises(ValueError, match="无法识别的课程字段"):

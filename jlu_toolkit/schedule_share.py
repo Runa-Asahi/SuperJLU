@@ -52,7 +52,7 @@ def _reject_sensitive(obj: Any, path: str = "$") -> None:
 
 
 def _course_dict(c) -> dict:
-    g = (lambda k: c[k]) if isinstance(c, dict) else (lambda k: getattr(c, k, ""))
+    g = (lambda k: c.get(k, "")) if isinstance(c, dict) else (lambda k: getattr(c, k, ""))
     weeks = sorted({int(w) for w in (g("weeks") or []) if 1 <= int(w) <= MAX_WEEKS})
     name = str(g("name") or "").strip()[:60]
     if not name:

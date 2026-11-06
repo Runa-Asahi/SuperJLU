@@ -566,7 +566,7 @@ function renderKbExtras(){const is=(D&&D.schedule_issues)||[],box=$("#kb-issues"
  const ops=(D&&D.schedule_ops)||[],n=ops.length,o=(D&&D.schedule_other_terms)||0;
  $("#kb-edits-sum").textContent=(n?`本学期你改了 ${n} 处课表，刷新课表不会覆盖这些修改。`:"你还没有修改过课表。在课表里点一节课就能修改或隐藏，也可以点「＋ 添加课程」，或双击空白格按这一节添加。")+(o?` 其他学期还有 ${o} 处修改，已经保存，不会显示在本学期课表里。`:"");
  $("#kb-edits-list").innerHTML=ops.map(x=>`<div class="kb-op"><span>${esc(kbOpText(x))}</span><button type="button" class="btn ghost" data-a="remove" data-id="${esc(x.id)}">撤销</button></div>`).join("");
- $("#kb-reset").hidden=!n;$("#kb-undo").hidden=!(D&&D.schedule_can_undo_reset);renderShareHint()}
+ $("#kb-reset").hidden=!n;$("#kb-undo").hidden=!(D&&D.schedule_can_undo_reset);if(typeof renderShareHint==="function")renderShareHint()}
 const KB_DONE={ack:"好的，不再提醒",detach:"已保留为自定义课",remove:"已删掉这条修改"};
 function kbActionClick(e){const t=e.target.closest&&e.target.closest("button[data-a]");if(t)kbPost({action:t.dataset.a,id:t.dataset.id},KB_DONE[t.dataset.a])}
 function kbImportText(text){let doc;try{doc=JSON.parse(text)}catch(_){return toast("这不是课表修改备份",true)}return kbPost({action:"import",doc},"备份已导入")}
