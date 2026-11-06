@@ -169,7 +169,7 @@ SuperJLU 也能接入 AI 助手（MCP），让 Claude、Cursor 等 AI 助手直�
 
 ## 特别鸣谢
 
-- **[@Aohpup](https://github.com/Aohpup)**：成绩加权分析、模板与导入等（[PR #44](https://github.com/Runa-Asahi/SuperJLU/pull/44)、[#45](https://github.com/Runa-Asahi/SuperJLU/pull/45)、[#67](https://github.com/Runa-Asahi/SuperJLU/pull/67)、[#81](https://github.com/Runa-Asahi/SuperJLU/pull/81)、[#85](https://github.com/Runa-Asahi/SuperJLU/pull/85)），以及通知同步问题的排查（[#161](https://github.com/Runa-Asahi/SuperJLU/issues/161)）。
+- **[@Aohpup](https://github.com/Aohpup)**：成绩分析与导入、校外登录与校园服务、教室查询和界面交互、学业同步与重算，以及通知问题排查与详情返回（通过 [#45](https://github.com/Runa-Asahi/SuperJLU/pull/45) 集成 [#44](https://github.com/Runa-Asahi/SuperJLU/pull/44)；[#67](https://github.com/Runa-Asahi/SuperJLU/pull/67)、[#81](https://github.com/Runa-Asahi/SuperJLU/pull/81)、[#85](https://github.com/Runa-Asahi/SuperJLU/pull/85)、[#118](https://github.com/Runa-Asahi/SuperJLU/pull/118)、[#125](https://github.com/Runa-Asahi/SuperJLU/pull/125)、[#140](https://github.com/Runa-Asahi/SuperJLU/pull/140)、[#154](https://github.com/Runa-Asahi/SuperJLU/pull/154)、[#173](https://github.com/Runa-Asahi/SuperJLU/pull/173)；[#161](https://github.com/Runa-Asahi/SuperJLU/issues/161)）。
 - **[@Dramadan-wow](https://github.com/Dramadan-wow)**：微信小程序端（[PR #82](https://github.com/Runa-Asahi/SuperJLU/pull/82)）。
 - **[@4520-Ui](https://github.com/4520-Ui)**：反馈校内通知停止更新的问题（[#161](https://github.com/Runa-Asahi/SuperJLU/issues/161)）。
 
