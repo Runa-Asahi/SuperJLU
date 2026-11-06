@@ -74,7 +74,11 @@ def test_notices_shape_filter_and_sanitize(srv):
 
 def test_notice_detail(srv):
     base, root = srv
-    (root / "oa_notices.json").write_text(json.dumps(SAMPLE, ensure_ascii=False), encoding="utf-8")
+    # A cache-only assertion must use the current parse version; otherwise it
+    # fetches the synthetic /x?id=2 URL from the real school server on a miss.
+    sample = json.loads(json.dumps(SAMPLE))
+    sample["channels_items"]["179577"][1].update(html="<p>正文示例</p>", dv=oa.DETAIL_VERSION)
+    (root / "oa_notices.json").write_text(json.dumps(sample, ensure_ascii=False), encoding="utf-8")
     _, j = _get(base + "/api/oa/notice?id=2")
     it = j["item"]
     assert it["text"] == "正文示例"
