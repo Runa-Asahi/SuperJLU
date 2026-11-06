@@ -79,6 +79,11 @@ def test_parse_rejects_bad_json_unknown_fields_sensitive_and_huge():
     with pytest.raises(ValueError, match="无法识别的课程字段"):
         ss.parse({"kind": ss.KIND, "version": 1, "courses": [
             {"name": "a", "weekday": 1, "start": 1, "end": 2, "weeks": [1], "evil": 1}]})
+    # 课程名/地点含 password、token 等字样是值不是键，不应误杀
+    ok = ss.parse({"kind": ss.KIND, "version": 1, "courses": [
+        {"name": "password theory", "teacher": "token", "location": "cookie lab",
+         "weekday": 1, "start": 1, "end": 2, "weeks": [1]}]})
+    assert ok["courses"][0].name == "password theory"
     empty = ss.parse({"kind": ss.KIND, "version": 1, "courses": []})
     assert empty["courses"] == []
 
@@ -150,3 +155,83 @@ def test_is_share_doc():
     assert ss.is_share_doc(json.dumps(ok))
     assert not ss.is_share_doc('{"kind":"other"}')
     assert not ss.is_share_doc(b"short")
+
+
+def test_term_mismatch_requires_confirm_term(tmp_path):
+    st = _store(tmp_path)
+    doc = st.export_share()
+    other = tmp_path / "o2"
+    other.mkdir()
+    jwxt.export_courses_csv([C("本学期课", 1, 1, 2, [1])], str(other / "schedule.csv"))
+    (other / "schedule_meta.json").write_text(json.dumps({"term": "2025-2026-2"}), encoding="utf-8")
+    dst = ui.Store(other)
+    assert dst.current_term() == "2025-2026-2"
+    with pytest.raises(ss.TermMismatch, match="学期不同") as ei:
+        dst.import_share(doc, confirm=True, confirm_term=False)
+    assert ei.value.share_term == TERM and ei.value.local_term == "2025-2026-2"
+    assert [c.name for c in dst.jwxt_courses()] == ["本学期课"]
+    dst.import_share(doc, confirm=True, confirm_term=True)
+    assert {r["name"] for r in dst.schedule_view()[0]} == {"高等数学", "大学英语"}
+    assert dst._json("schedule_meta.json", {})["term"] == TERM
+
+
+def test_http_term_mismatch_returns_409(tmp_path):
+    import urllib.request
+    st = _store(tmp_path)
+    doc = st.export_share()
+    (tmp_path / "schedule_meta.json").write_text(json.dumps({"term": "2025-2026-2"}), encoding="utf-8")
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), ui.make_handler(st))
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+
+        def post(body):
+            req = urllib.request.Request(
+                base + "/api/schedule/share", json.dumps(body).encode(),
+                {"Content-Type": "application/json", "Host": "127.0.0.1"})
+            try:
+                with urllib.request.urlopen(req) as r:
+                    return r.status, json.loads(r.read())
+            except urllib.error.HTTPError as e:
+                return e.code, json.loads(e.read())
+
+        code, j = post({"action": "import", "doc": doc, "confirm": True})
+        assert code == 409 and j["need_confirm_term"] is True
+        assert j["share_term"] == TERM and j["local_term"] == "2025-2026-2"
+        code, j = post({"action": "import", "doc": doc, "confirm": True, "confirm_term": True})
+        assert code == 200 and j["ok"] and j["schedule_shared"] is True
+    finally:
+        srv.shutdown()
+
+
+def test_import_share_restores_on_midway_failure(tmp_path, monkeypatch):
+    st = _store(tmp_path)
+    before_csv = (tmp_path / "schedule.csv").read_bytes()
+    before_meta = (tmp_path / "schedule_meta.json").read_bytes()
+    doc = st.export_share()
+    doc["courses"] = [{"name": "新课", "weekday": 2, "start": 3, "end": 4, "weeks": [1],
+                       "location": "X", "teacher": "Y"}]
+    calls = {"n": 0}
+    import os
+    real_replace = os.replace
+
+    def flaky(src, dst):
+        calls["n"] += 1
+        if calls["n"] >= 2:
+            raise OSError("simulated replace failure")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", flaky)
+    with pytest.raises(OSError, match="simulated"):
+        st.import_share(doc, confirm=True)
+    assert (tmp_path / "schedule.csv").read_bytes() == before_csv
+    assert (tmp_path / "schedule_meta.json").read_bytes() == before_meta
+    assert st._json("schedule_meta.json", {}).get("source") != "shared"
+
+
+def test_page_mentions_term_mismatch_confirm():
+    from jlu_toolkit.ui_page import PAGE
+    assert "need_confirm_term" in PAGE
+    assert "confirm_term" in PAGE
+    assert "学期不同" in PAGE

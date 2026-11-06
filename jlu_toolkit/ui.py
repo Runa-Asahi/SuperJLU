@@ -260,32 +260,86 @@ class Store:
         return schedule_share.build(rows, self.current_term(), self.first_monday() or "",
                                    self.periods() or {})
 
-    def import_share(self, doc, *, confirm: bool = False) -> None:
-        """用分享文件覆盖本地课表。必须 confirm=True；不写入任何凭据/会话。"""
+    def import_share(self, doc, *, confirm: bool = False, confirm_term: bool = False) -> None:
+        """用分享文件覆盖本地课表。必须 confirm=True；学期不一致还要 confirm_term=True。
+
+        写入策略（折中原子性）：先在临时目录写好全部新文件并备份将要覆盖的旧文件，
+        再逐个 os.replace 就位；中途失败则从备份恢复，避免半覆盖。
+        不写入任何凭据/会话。
+        """
+        import os
+        import shutil
+        import tempfile
         from . import overlay as ov
         from . import schedule_share
         if not confirm:
             raise ValueError("导入会覆盖现有课表，请先确认")
         parsed = schedule_share.parse(doc)
-        term = parsed["term"] or self.current_term() or "shared"
+        local_term = self.current_term()
+        share_term = parsed["term"]
+        if share_term and local_term and share_term != local_term and not confirm_term:
+            raise schedule_share.TermMismatch(share_term, local_term)
+        term = share_term or local_term or "shared"
         with self.lock:
-            jwxt.export_courses_csv(parsed["courses"], str(self.p("schedule.csv")))
-            # 分享课表已是合并结果：清掉本学期个人修改与调停课，避免叠加上去
-            doc_ov = self.overlay_doc()
-            self._write_json(self.OVERLAY, ov.with_ops(doc_ov, term, []))
-            undo = self.p(self.OVERLAY_UNDO)
-            if undo.exists():
-                undo.unlink()
-            self._write_json("schedule_adjustments.json",
-                             {"term": term, "fetched_at": None, "items": []})
-            self._write_json("schedule_meta.json", {"term": term, "source": "shared"})
+            overlay_doc = ov.with_ops(self.overlay_doc(), term, [])
+            meta = {"term": term, "source": "shared"}
+            adjustments = {"term": term, "fetched_at": None, "items": []}
+            settings = None
             if parsed["first_monday"]:
-                s = self.settings()
-                s["first_monday"] = parsed["first_monday"]
-                self._write_json("settings.json", s)
-            if parsed["periods"]:
-                # periods.json 存 {"1": ["08:00","08:45"], ...}
-                self._write_json("periods.json", parsed["periods"])
+                settings = dict(self.settings())
+                settings["first_monday"] = parsed["first_monday"]
+            periods = parsed["periods"] or None
+
+            stage = Path(tempfile.mkdtemp(prefix="share-import-", dir=str(self.root)))
+            backups: dict[str, bytes | None] = {}
+            written: list[str] = []
+            try:
+                jwxt.export_courses_csv(parsed["courses"], str(stage / "schedule.csv"))
+                (stage / self.OVERLAY).write_text(
+                    json.dumps(overlay_doc, ensure_ascii=False, indent=1), encoding="utf-8")
+                (stage / "schedule_adjustments.json").write_text(
+                    json.dumps(adjustments, ensure_ascii=False, indent=1), encoding="utf-8")
+                (stage / "schedule_meta.json").write_text(
+                    json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+                if settings is not None:
+                    (stage / "settings.json").write_text(
+                        json.dumps(settings, ensure_ascii=False, indent=1), encoding="utf-8")
+                if periods:
+                    (stage / "periods.json").write_text(
+                        json.dumps(periods, ensure_ascii=False, indent=1), encoding="utf-8")
+
+                names = ["schedule.csv", self.OVERLAY, "schedule_adjustments.json",
+                         "schedule_meta.json"]
+                if settings is not None:
+                    names.append("settings.json")
+                if periods:
+                    names.append("periods.json")
+
+                for name in names:
+                    dest = self.p(name)
+                    backups[name] = dest.read_bytes() if dest.exists() else None
+
+                for name in names:
+                    os.replace(stage / name, self.p(name))
+                    written.append(name)
+
+                undo = self.p(self.OVERLAY_UNDO)
+                if undo.exists():
+                    undo.unlink()
+            except Exception:
+                for name in written:
+                    raw = backups.get(name)
+                    dest = self.p(name)
+                    if raw is None:
+                        try:
+                            dest.unlink()
+                        except FileNotFoundError:
+                            pass
+                    else:
+                        dest.write_bytes(raw)
+                raise
+            finally:
+                shutil.rmtree(stage, ignore_errors=True)
 
     def grades(self) -> list[core.Grade]:
         f = self.p("grades.csv")
@@ -1544,7 +1598,16 @@ def make_handler(store: Store, login: Optional[LoginFlow] = None, token: Optiona
                 elif self.path == "/api/schedule/share":
                     action = body.get("action")
                     if action == "import":
-                        store.import_share(body.get("doc"), confirm=bool(body.get("confirm")))
+                        from . import schedule_share
+                        try:
+                            store.import_share(body.get("doc"),
+                                               confirm=bool(body.get("confirm")),
+                                               confirm_term=bool(body.get("confirm_term")))
+                        except schedule_share.TermMismatch as e:
+                            return self._json({
+                                "ok": False, "error": str(e), "need_confirm_term": True,
+                                "share_term": e.share_term, "local_term": e.local_term,
+                            }, 409)
                         return self._json({"ok": True, **store.snapshot()})
                     raise ValueError("未知的课表分享操作")
                 elif self.path == "/api/settings":

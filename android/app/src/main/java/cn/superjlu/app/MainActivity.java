@@ -447,11 +447,24 @@ public class MainActivity extends Activity {
                 .setMessage("将覆盖你现有的课表，确定导入？")
                 .setNegativeButton("取消", null)
                 .setPositiveButton("覆盖导入", (d, w) -> new Thread(
-                        () -> postShareImport(json), "jlu-share-import").start())
+                        () -> postShareImport(json, false), "jlu-share-import").start())
                 .show();
     }
 
-    private void postShareImport(String json) {
+    private void offerTermMismatchImport(String json, String shareTerm, String localTerm) {
+        if (isDestroyed()) return;
+        String msg = "分享课表属于 " + shareTerm + " 学期，与你当前 " + localTerm
+                + " 学期不同，仍会覆盖。确定导入？";
+        new AlertDialog.Builder(this)
+                .setTitle("学期不一致")
+                .setMessage(msg)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("仍要覆盖", (d, w) -> new Thread(
+                        () -> postShareImport(json, true), "jlu-share-import-term").start())
+                .show();
+    }
+
+    private void postShareImport(String json, boolean confirmTerm) {
         final String b = baseUrl;
         final String t = authToken;
         if (b == null) {
@@ -464,6 +477,7 @@ public class MainActivity extends Activity {
             JSONObject body = new JSONObject();
             body.put("action", "import");
             body.put("confirm", true);
+            if (confirmTerm) body.put("confirm_term", true);
             body.put("doc", new JSONObject(json));
             byte[] payload = body.toString().getBytes(StandardCharsets.UTF_8);
             c = (HttpURLConnection) new URL(b + "api/schedule/share").openConnection();
@@ -479,13 +493,21 @@ public class MainActivity extends Activity {
             byte[] resp = readLimited(in, ScheduleShareHelper.MAX_BYTES);
             String text = new String(resp, StandardCharsets.UTF_8);
             if (code >= 400) {
-                String msg = "导入失败";
                 try {
-                    String err = new JSONObject(text).optString("error");
-                    if (!err.isEmpty()) msg = err;
-                } catch (Exception ignored) { }
-                String toast = msg;
-                main.post(() -> Toast.makeText(this, toast, Toast.LENGTH_LONG).show());
+                    JSONObject err = new JSONObject(text);
+                    if (err.optBoolean("need_confirm_term") && !confirmTerm) {
+                        String shareTerm = err.optString("share_term", "?");
+                        String localTerm = err.optString("local_term", "?");
+                        main.post(() -> offerTermMismatchImport(json, shareTerm, localTerm));
+                        return;
+                    }
+                    String msg = err.optString("error");
+                    if (msg.isEmpty()) msg = "导入失败";
+                    String toast = msg;
+                    main.post(() -> Toast.makeText(this, toast, Toast.LENGTH_LONG).show());
+                } catch (Exception ignored) {
+                    main.post(() -> Toast.makeText(this, "导入失败", Toast.LENGTH_LONG).show());
+                }
                 return;
             }
             main.post(() -> {

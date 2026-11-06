@@ -22,6 +22,17 @@ from typing import Any, Iterable, Optional
 
 from . import core
 
+
+class TermMismatch(ValueError):
+    """分享学期与本地当前学期不一致，需要 confirm_term。"""
+
+    def __init__(self, share_term: str, local_term: str):
+        self.share_term = share_term
+        self.local_term = local_term
+        super().__init__(
+            f"分享课表属于 {share_term} 学期，与你当前 {local_term} 学期不同，仍会覆盖现有课表。请再次确认。"
+        )
+
 KIND = "superjlu.schedule.share"
 VERSION = 1
 MAX_BYTES = 512 * 1024
@@ -39,16 +50,18 @@ SENSITIVE = frozenset({
 })
 
 
-def _reject_sensitive(obj: Any, path: str = "$") -> None:
+def _reject_sensitive(obj: Any, *, skip_courses: bool = False) -> None:
+    """只按精确键名拦截敏感字段；courses 交给 _parse_course 白名单，避免误杀。"""
     if isinstance(obj, dict):
         for k, v in obj.items():
-            key = str(k).lower()
-            if key in SENSITIVE or any(s in key for s in ("password", "passwd", "secret", "token", "cookie")):
+            if str(k).lower() in SENSITIVE:
                 raise ValueError("分享文件里不能包含账号或登录信息")
-            _reject_sensitive(v, f"{path}.{k}")
+            if skip_courses and k == "courses":
+                continue  # 每门课字段由 COURSE_KEYS 白名单校验
+            _reject_sensitive(v)
     elif isinstance(obj, list):
-        for i, v in enumerate(obj[: MAX_COURSES + 5]):
-            _reject_sensitive(v, f"{path}[{i}]")
+        for v in obj[: MAX_COURSES + 5]:
+            _reject_sensitive(v)
 
 
 def _course_dict(c) -> dict:
@@ -161,7 +174,7 @@ def parse(raw) -> dict:
             raise ValueError("这不是 SuperJLU 课表分享文件") from e
     if not isinstance(raw, dict):
         raise ValueError("这不是 SuperJLU 课表分享文件")
-    _reject_sensitive(raw)
+    _reject_sensitive(raw, skip_courses=True)
     if set(raw) - TOP_KEYS:
         raise ValueError("分享文件含有无法识别的字段")
     if raw.get("kind") != KIND:
