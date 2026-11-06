@@ -30,6 +30,11 @@ def current_version():
 REPO = "Runa-Asahi/SuperJLU"
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/latest"
+# 国内网盘镜像：同步文件夹链接，发版后手动同步安装包；版本检查仍走 GitHub。
+MIRRORS = {
+    "quark": {"label": "夸克网盘", "url": "https://pan.quark.cn/s/216d5fbd8095", "note": "同步文件夹"},
+    "baidu": {"label": "百度网盘", "url": "https://pan.baidu.com/s/50ch5v2DmkgXIirwbN-1Brw", "note": "同步文件夹"},
+}
 TTL = 6 * 3600          # 成功结果缓存 6 小时
 FAIL_TTL = 30 * 60      # 失败后 30 分钟内不再重试
 _lock = threading.Lock()
@@ -54,18 +59,46 @@ def _safe_url(u):
     return u if u.startswith(f"https://github.com/{REPO}/releases") else RELEASES_PAGE
 
 
+def _safe_mirror_url(u, prefix):
+    u = str(u or "")
+    return u if u.startswith(prefix) else ""
+
+
+def mirrors_payload():
+    """国内备用下载：固定同步文件夹链接（不是按版本号的直链）。"""
+    return {
+        "quark": {
+            "label": str(MIRRORS["quark"]["label"]),
+            "url": _safe_mirror_url(MIRRORS["quark"]["url"], "https://pan.quark.cn/"),
+            "note": str(MIRRORS["quark"]["note"]),
+        },
+        "baidu": {
+            "label": str(MIRRORS["baidu"]["label"]),
+            "url": _safe_mirror_url(MIRRORS["baidu"]["url"], "https://pan.baidu.com/"),
+            "note": str(MIRRORS["baidu"]["note"]),
+        },
+        "note": "同步文件夹，打开后自行选择最新安装包",
+    }
+
+
+def _with_mirrors(payload):
+    out = dict(payload)
+    out["mirrors"] = mirrors_payload()
+    return out
+
+
 def summarize(release, current=None):
     """Turn a GitHub release JSON into the small payload the UI needs."""
     current = current or current_version()
     if not isinstance(release, dict) or not release.get("tag_name") or release.get("draft") or release.get("prerelease"):
-        return {"ok": True, "current": current, "has_update": False}
+        return _with_mirrors({"ok": True, "current": current, "has_update": False})
     tag = str(release.get("tag_name") or "")
     latest = tag.lstrip("vV") or None
     out = {"ok": True, "current": current, "latest": latest,
            "has_update": is_newer(tag, current), "url": _safe_url(release.get("html_url"))}
     if release.get("published_at"):
         out["published_at"] = str(release["published_at"])[:10]
-    return out
+    return _with_mirrors(out)
 
 
 def _request(url=API, accept="application/vnd.github+json"):
@@ -187,8 +220,8 @@ def check(force=False, timeout=6, fetch=None, now=None, deadline=DEADLINE):
     except Exception as e:  # noqa: BLE001
         # 查不到就安静地当作没有更新，不打扰用户；原因只放进「技术信息」。
         reason = e.reason if isinstance(e, CheckFailed) else _brief(e)
-        result, ttl = {"ok": True, "current": current_version(), "has_update": False,
-                       "unavailable": True, "reason": reason}, FAIL_TTL
+        result, ttl = _with_mirrors({"ok": True, "current": current_version(), "has_update": False,
+                       "unavailable": True, "reason": reason}), FAIL_TTL
     result["checked_at"] = time.strftime("%Y-%m-%d %H:%M", time.localtime(now))
     with _lock:
         _cache.update(at=now, ttl=ttl, result=result)
@@ -197,4 +230,4 @@ def check(force=False, timeout=6, fetch=None, now=None, deadline=DEADLINE):
 
 def local():
     """不联网：只报本机版本。"""
-    return {"ok": True, "current": current_version(), "has_update": False}
+    return _with_mirrors({"ok": True, "current": current_version(), "has_update": False})

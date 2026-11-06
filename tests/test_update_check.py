@@ -24,6 +24,10 @@ def test_summarize_new_release():
     out = uc.summarize(rel, current="1.1.1")
     assert out["has_update"] and out["latest"] == "9.0.0"
     assert out["url"].endswith("/v9.0.0") and out["published_at"] == "2026-11-01"
+    m = out["mirrors"]
+    assert m["quark"]["url"] == "https://pan.quark.cn/s/216d5fbd8095"
+    assert m["baidu"]["url"] == "https://pan.baidu.com/s/50ch5v2DmkgXIirwbN-1Brw"
+    assert "同步文件夹" in m["note"]
 
 
 def test_summarize_rejects_foreign_url_and_prerelease():
@@ -51,8 +55,19 @@ def test_ui_is_non_intrusive():
     block = PAGE.split("新版本提醒")[1].split("\n// ----")[0]
     assert "showModal" not in block and "confirm(" not in block and "alert(" not in block
     assert 'id="upd-auto"' in PAGE and 'id="upd-go"' in PAGE
-    assert "不更新也能照常使用" in PAGE
+    assert 'id="upd-quark"' in PAGE and 'id="upd-baidu"' in PAGE and 'id="upd-dl"' in PAGE
+    assert "夸克网盘" in PAGE and "百度网盘" in PAGE
+    assert 'target="_blank"' in PAGE and 'rel="noopener noreferrer"' in PAGE
+    assert "updOk" in PAGE and "不更新也能照常使用" in PAGE
     assert "127.0.0.1" not in block
+
+
+def test_mirrors_reject_foreign_urls(monkeypatch):
+    monkeypatch.setitem(uc.MIRRORS, "quark", {"label": "夸克网盘", "url": "https://evil.example/x", "note": "同步文件夹"})
+    monkeypatch.setitem(uc.MIRRORS, "baidu", {"label": "百度网盘", "url": "http://pan.baidu.com/s/x", "note": "同步文件夹"})
+    m = uc.mirrors_payload()
+    assert m["quark"]["url"] == "" and m["baidu"]["url"] == ""
+    assert uc.local()["mirrors"]["note"]
 
 
 def test_card_id_is_unique():
@@ -92,6 +107,7 @@ def test_android_start_injects_version(monkeypatch, tmp_path):
         assert uc.current_version() == "1.2.0"
     finally:
         mod.stop()
+        os.environ.pop("SUPERJLU_APP_VERSION", None)  # stop() 不会清掉注入的版本
     java = Path("android/app/src/main/java/cn/superjlu/app/MainActivity.java").read_text(encoding="utf-8")
     assert '"start", getFilesDir().getAbsolutePath(), appVersion(this)' in java
     assert "getPackageInfo(ctx.getPackageName(), 0).versionName" in java
