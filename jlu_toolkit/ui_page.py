@@ -1235,17 +1235,20 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&document.
 // ---- 新版本提醒：不弹窗、不强制，只在「更多」里显示，并在导航上加一个小圆点 ----
 let UPD=null;
 function updAuto(){try{return localStorage.getItem("jlu-update-auto")!=="off"}catch(_){return true}}
-const UPD_TXT={ok:"当前已是最新版本哦！",fail:"暂时连不上 GitHub，稍后再试",page:"页面没拿到版本信息，请稍后重试"};
+const UPD_TXT={ok:"当前已是最新版本哦！",fail:"暂时连不上 GitHub，稍后再试",page:"页面没拿到版本信息，请稍后重试",link:"下载链接暂不可用，请稍后再试"};
 // 版本号放在独立的 #upd-v 里，状态只写 #upd-m，避免覆盖掉版本号（#122 之前点「检查更新」会清掉 #upd-v 导致报错）
 function updVer(j){const v=$("#upd-v");if(!v)return;let c=j&&j.current;if(!c){try{c=window.SuperJLU&&SuperJLU.appVersion&&SuperJLU.appVersion()}catch(_){}}if(c)v.textContent=String(c).replace(/^v/i,"");}
 function updMsg(html){const m=$("#upd-m");if(m)m.innerHTML=html?" · "+html:""}
 function updWhy(r){const t=$("#upd-tech"),w=$("#upd-why");if(!t||!w)return;w.textContent=r||"";t.hidden=!r}
 function updOk(u,hosts){try{const p=new URL(u||"");if(p.protocol!=="https:")return"";const h=p.hostname;if(!(hosts||[]).some(x=>h===x||h.endsWith("."+x)))return"";return String(u)}catch(_){return""}}
+function updHosts(id){return id==="upd-go"?["github.com"]:id==="upd-quark"?["pan.quark.cn"]:id==="upd-baidu"?["pan.baidu.com"]:[]}
+function updOpen(e){if(e)e.preventDefault();const a=e&&e.currentTarget;if(!a)return;const hosts=updHosts(a.id);const raw=(a.getAttribute&&a.getAttribute("href"))||a.href||"";const u=updOk(raw,hosts);if(!u){toast(UPD_TXT.link,true);return}try{if(window.SuperJLU&&typeof SuperJLU.openExternal==="function"){SuperJLU.openExternal(u);return}}catch(_){}try{const w=window.open(u,"_blank","noopener,noreferrer");if(w)return}catch(_){}try{location.assign(u)}catch(_){toast(UPD_TXT.link,true)}}
 function updRender(j,manual){const go=$("#upd-go"),qk=$("#upd-quark"),bd=$("#upd-baidu"),dl=$("#upd-dl"),hint=$("#upd-dl-hint"),nav=document.querySelector('nav button[data-t="sz"]');updVer(j);const has=!!(j&&j.has_update&&j.latest);if(dl)dl.hidden=!has;if(hint)hint.hidden=!has;if(has){const m=(j&&j.mirrors)||{};go.href=updOk(j.url,["github.com"])||"#";if(qk)qk.href=updOk(m.quark&&m.quark.url,["pan.quark.cn"])||"#";if(bd)bd.href=updOk(m.baidu&&m.baidu.url,["pan.baidu.com"])||"#"}let seen=null;try{seen=localStorage.getItem("jlu-update-seen")}catch(_){}if(nav)nav.classList.toggle("upd-dot",has&&seen!==j.latest);updWhy(j&&j.unavailable?(j.reason||"unavailable")+(j.checked_at?" @ "+j.checked_at:""):"");if(has)updMsg(`<b style="color:var(--pri)">有新版本 v${esc(j.latest)}</b>，可随时下载，不更新也能照常使用。`);else if(manual){updMsg(esc(j&&j.unavailable?UPD_TXT.fail:"已是最新版本"));toast(j&&j.unavailable?UPD_TXT.fail:UPD_TXT.ok,!!(j&&j.unavailable))}}
 async function updCheck(manual){let j;try{const ctl=typeof AbortController=="function"?new AbortController():null;const tm=ctl&&setTimeout(()=>ctl.abort(),25000);try{const r=await fetch("/api/update"+(manual?"?force=1":""),ctl?{signal:ctl.signal}:{});j=await r.json()}finally{if(tm)clearTimeout(tm)}}catch(e){if(manual){updVer(null);updMsg(esc(UPD_TXT.page));updWhy("page "+((e&&e.name)||"error")+": "+((e&&e.message)||"").slice(0,80));toast(UPD_TXT.page,true)}return}UPD=j;try{updRender(j,manual)}catch(e){updWhy("render "+((e&&e.message)||e))}}
 updVer(null);
 $("#upd-auto").checked=updAuto();$("#upd-auto").onchange=e=>{try{localStorage.setItem("jlu-update-auto",e.target.checked?"on":"off")}catch(_){}if(!e.target.checked)document.querySelector('nav button[data-t="sz"]').classList.remove("upd-dot")};
 $("#upd-chk").onclick=()=>{updMsg("正在检查…");updCheck(true)};
+["#upd-go","#upd-quark","#upd-baidu"].forEach(sel=>{const a=$(sel);if(a)a.onclick=updOpen});
 document.querySelector('nav button[data-t="sz"]').addEventListener("click",()=>{if(UPD&&UPD.has_update&&UPD.latest){try{localStorage.setItem("jlu-update-seen",UPD.latest)}catch(_){}document.querySelector('nav button[data-t="sz"]').classList.remove("upd-dot")}});
 setTimeout(()=>{if(updAuto())updCheck(false);else fetch("/api/update?local=1").then(r=>r.json()).then(j=>updRender(j,false)).catch(()=>{})},4000);
 fetch("/api/update?local=1").then(r=>r.json()).then(updVer).catch(()=>{});

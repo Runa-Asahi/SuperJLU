@@ -53,6 +53,7 @@ def test_app_name_icon_and_insets():
     assert "#0B4EA2" not in act and "#f6f7f9" in act and "#ffffff" in act
     assert "shareIcs" in act and "/api/ics" in act
     assert "shareSchedule" in act and "/api/schedule/share" in act
+    assert "openExternal" in act and "browsers.open" in act
     helper = ANDROID / "java/cn/superjlu/app/ScheduleShareHelper.java"
     assert helper.is_file() and "superjlu.schedule.share" in helper.read_text(encoding="utf-8")
     assert "singleTop" in man and "android.intent.action.SEND" in man

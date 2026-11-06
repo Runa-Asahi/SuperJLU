@@ -51,6 +51,19 @@ def test_network_failure_is_silent_and_cached():
     assert len(calls) == 2
 
 
+
+def test_update_download_opens_via_android_bridge():
+    """Android WebView 不依赖 target=_blank；点击校验 https 白名单后走 SuperJLU.openExternal。"""
+    assert "function updOpen(" in PAGE and "function updHosts(" in PAGE
+    assert "SuperJLU.openExternal" in PAGE
+    assert "UPD_TXT.link" in PAGE or "下载链接暂不可用" in PAGE
+    main = Path("android/app/src/main/java/cn/superjlu/app/MainActivity.java").read_text(encoding="utf-8")
+    assert "@JavascriptInterface public void openExternal(String url)" in main
+    assert "browsers.open(uri)" in main
+    # 失败时可见提示，不允许静默把 href=# 交给原生
+    assert 'toast(UPD_TXT.link,true)' in PAGE or "下载链接暂不可用" in PAGE
+
+
 def test_ui_is_non_intrusive():
     block = PAGE.split("新版本提醒")[1].split("\n// ----")[0]
     assert "showModal" not in block and "confirm(" not in block and "alert(" not in block
