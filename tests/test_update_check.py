@@ -58,7 +58,7 @@ def test_ui_is_non_intrusive():
     assert 'id="upd-quark"' in PAGE and 'id="upd-baidu"' in PAGE and 'id="upd-dl"' in PAGE
     assert "夸克网盘" in PAGE and "百度网盘" in PAGE
     assert 'target="_blank"' in PAGE and 'rel="noopener noreferrer"' in PAGE
-    assert "updHttps" in PAGE and "不更新也能照常使用" in PAGE
+    assert "updOk" in PAGE and "不更新也能照常使用" in PAGE
     assert "127.0.0.1" not in block
 
 
